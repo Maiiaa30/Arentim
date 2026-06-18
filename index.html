@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#0B0C10" />
+    <meta
+      name="description"
+      content="Arentim — a play-money social casino and football sportsbook. No real money involved."
+    />
+
+    <!--
+      Content-Security-Policy. The authoritative CSP is set as a real HTTP header
+      at the host/CDN (see docs/SECURITY.md and vercel.json). This meta tag is a
+      defence-in-depth fallback for environments that serve static files directly.
+      'unsafe-inline' for styles is required by Tailwind's injected styles; scripts
+      stay locked to 'self'. connect-src is widened to Supabase at build time.
+    -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'"
+    />
+
+    <title>Arentim</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
