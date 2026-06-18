@@ -7,13 +7,25 @@ plain, versioned SQL. Apply them in filename order.
 
 You can apply migrations any of these ways — pick one:
 
-**A. Supabase Dashboard (simplest)**
+**A. Repo runner (recommended)** — idempotent, tracks what's applied.
+
+```bash
+npm run db:migrate
+```
+
+Reads `DATABASE_URL` from `supabase/.env`, applies any un-applied files in
+`migrations/` (each in its own transaction), and records them in
+`public.arentim_migrations`. Re-running is safe. This is the command used to
+delegate migrations — it only ever runs the versioned files in `migrations/`,
+never ad-hoc SQL.
+
+**B. Supabase Dashboard**
 
 1. Open your project → **SQL Editor** → **New query**.
 2. Paste the contents of the next un-applied file in `migrations/` (in order).
 3. Run it. Re-running is safe — the SQL is written to be idempotent.
 
-**B. Supabase CLI** (no Docker needed for a remote push)
+**C. Supabase CLI** (no Docker needed for a remote push)
 
 ```bash
 npx supabase db push --db-url "$DATABASE_URL"
