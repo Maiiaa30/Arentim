@@ -21,6 +21,14 @@ export type RouletteBetResult = {
   return: number;
 };
 
+/** Result returned by the claim_daily_bonus RPC. */
+export type DailyBonusResult = {
+  status: 'claimed' | 'already_claimed' | 'play_required';
+  streak: number;
+  reward: number;
+  balance: number;
+};
+
 /** Result object returned by the play_roulette RPC. */
 export type RouletteSpinResult = {
   round_id: number;
@@ -93,6 +101,10 @@ export type Database = {
       play_roulette: {
         Args: { p_bets: RouletteBetPayload[]; p_idempotency_key: string | null };
         Returns: RouletteSpinResult;
+      };
+      claim_daily_bonus: {
+        Args: Record<string, never>;
+        Returns: DailyBonusResult;
       };
     };
     Enums: {
