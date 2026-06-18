@@ -23,6 +23,24 @@ updated as each build phase lands.
 
 Legend: ✅ implemented · ⏳ scheduled for a later phase.
 
+## Casino RNG & settlement (Phase 3+)
+
+Casino rounds settle inside a single atomic `SECURITY DEFINER` RPC (e.g.
+`play_roulette`) rather than an Edge Function, because the whole round —
+validate → lock balance → debit → spin → credit → record — must be one
+transaction so a mid-round failure rolls back cleanly (A06/A10).
+
+- **RNG is server-side and unbiased.** Outcomes come from pgcrypto's
+  `gen_random_bytes` (a CSPRNG), mapped to the outcome range with **rejection
+  sampling** to avoid modulo bias. The client never supplies or influences the
+  result.
+- **All bet inputs are validated server-side** (kind, selection range, positive
+  integer stake, bet count cap) before any money moves.
+- **Idempotent:** every round carries an idempotency key; a replayed call
+  returns the original settled round instead of spinning again.
+- Edge Functions remain reserved for work that genuinely needs Deno/secrets:
+  the API-Football proxy, live-score polling, the poker dealer, and Gemini.
+
 ## Database authorization model
 
 - **RLS enabled** (not forced) on every table — clients connect as `anon`/`authenticated` (always subject to RLS) or `service_role` (bypasses by design for trusted server code).

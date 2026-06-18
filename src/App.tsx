@@ -6,7 +6,9 @@ import { LoginPage } from '@/pages/auth/LoginPage';
 import { SignupPage } from '@/pages/auth/SignupPage';
 import { ProfilePage } from '@/pages/ProfilePage';
 import { WalletPage } from '@/pages/WalletPage';
-import { CasinoPage, SportsbookPage, PokerPage, FriendsPage, NotFoundPage } from '@/pages/stubs';
+import { CasinoLobby } from '@/pages/casino/CasinoLobby';
+import { RoulettePage } from '@/pages/casino/RoulettePage';
+import { SportsbookPage, PokerPage, FriendsPage, NotFoundPage } from '@/pages/stubs';
 
 export default function App() {
   return (
@@ -19,7 +21,8 @@ export default function App() {
 
         {/* Authenticated only */}
         <Route element={<RequireAuth />}>
-          <Route path="casino" element={<CasinoPage />} />
+          <Route path="casino" element={<CasinoLobby />} />
+          <Route path="casino/roulette" element={<RoulettePage />} />
           <Route path="sportsbook" element={<SportsbookPage />} />
           <Route path="poker" element={<PokerPage />} />
           <Route path="friends" element={<FriendsPage />} />

@@ -1,15 +1,5 @@
 import { PagePlaceholder } from '@/components/PagePlaceholder';
 
-export function CasinoPage() {
-  return (
-    <PagePlaceholder
-      title="Casino"
-      description="Roulette, Blackjack, Slots and quick games. Transparent, server-seeded RNG."
-      phase="Phases 3 & 5"
-    />
-  );
-}
-
 export function SportsbookPage() {
   return (
     <PagePlaceholder
