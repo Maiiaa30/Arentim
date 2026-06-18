@@ -65,3 +65,13 @@ select cron.schedule(
 > Keep request volume under the API-Football free tier (~100/day): the daily
 > sync makes a couple of requests per league. Don't schedule it more often than
 > needed.
+
+### Free-tier coverage caveat
+
+The API-Football **Free plan only covers seasons 2022–2024** — current/future
+seasons return `{"errors":{"plan":"Free plans do not have access to this
+season…"}}` and therefore **no upcoming fixtures**. The function is verified
+working (e.g. Primeira Liga 2023 returns 308 fixtures), but until the plan
+covers the current season the sportsbook runs on the **seeded fixtures** from
+Phase 6a. Upgrade the API-Football plan (or set `FOOTBALL_SEASON` to a covered
+season for testing) to pull live data.
