@@ -21,6 +21,32 @@ export type RouletteBetResult = {
   return: number;
 };
 
+/** A single player hand in the blackjack view. */
+export type BlackjackHandView = {
+  cards: number[];
+  total: number;
+  stake: number;
+  status: string;
+};
+
+/** Sanitized blackjack state returned by bj_deal / bj_action / bj_current. */
+export type BlackjackView = {
+  hand_id: number;
+  status: 'player_turn' | 'complete';
+  active: number;
+  dealer: number[];
+  dealer_total: number | null;
+  dealer_hidden: boolean;
+  hands: BlackjackHandView[];
+  payout: number;
+  options: {
+    can_hit: boolean;
+    can_stand: boolean;
+    can_double: boolean;
+    can_split: boolean;
+  } | null;
+};
+
 /** Result returned by the play_coinflip RPC. */
 export type CoinflipResult = {
   outcome: 'heads' | 'tails';
@@ -131,6 +157,18 @@ export type Database = {
       play_slots: {
         Args: { p_stake: number; p_idempotency_key: string | null };
         Returns: SlotsResult;
+      };
+      bj_deal: {
+        Args: { p_stake: number };
+        Returns: BlackjackView;
+      };
+      bj_action: {
+        Args: { p_hand_id: number; p_action: string };
+        Returns: BlackjackView;
+      };
+      bj_current: {
+        Args: Record<string, never>;
+        Returns: BlackjackView | null;
       };
     };
     Enums: {
