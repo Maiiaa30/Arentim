@@ -40,16 +40,6 @@ export function FriendsPage() {
   );
 }
 
-export function ProfilePage() {
-  return (
-    <PagePlaceholder
-      title="Profile"
-      description="Balance, lifetime stats, daily streak, transaction history and achievements."
-      phase="Phase 2"
-    />
-  );
-}
-
 export function NotFoundPage() {
   return (
     <PagePlaceholder title="Not found" description="That page does not exist. Head back home." />
