@@ -5,6 +5,33 @@
 
 export type TransactionType = 'bonus' | 'bet' | 'win' | 'loss' | 'refund' | 'adjustment';
 
+/** Bet payload sent to the play_roulette RPC. */
+export type RouletteBetPayload = {
+  kind: string;
+  selection: number | null;
+  stake: number;
+};
+
+/** Per-bet settlement detail returned by play_roulette. */
+export type RouletteBetResult = {
+  kind: string;
+  selection: number | null;
+  stake: number;
+  won: boolean;
+  return: number;
+};
+
+/** Result object returned by the play_roulette RPC. */
+export type RouletteSpinResult = {
+  round_id: number;
+  number: number;
+  stake: number;
+  payout: number;
+  balance: number;
+  results: RouletteBetResult[];
+  replayed: boolean;
+};
+
 export type Profile = {
   id: string;
   display_name: string;
@@ -62,6 +89,10 @@ export type Database = {
       touch_last_online: {
         Args: Record<string, never>;
         Returns: undefined;
+      };
+      play_roulette: {
+        Args: { p_bets: RouletteBetPayload[]; p_idempotency_key: string | null };
+        Returns: RouletteSpinResult;
       };
     };
     Enums: {
