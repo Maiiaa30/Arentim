@@ -7,6 +7,7 @@ node_modules
 dist
 dist-ssr
 *.local
+*.tsbuildinfo
 
 # Environment & secrets — NEVER commit real secrets. Only .env.example is tracked.
 .env
