@@ -1,15 +1,5 @@
 import { PagePlaceholder } from '@/components/PagePlaceholder';
 
-export function SportsbookPage() {
-  return (
-    <PagePlaceholder
-      title="Sportsbook"
-      description="Primeira Liga and World Cup fixtures with 1X2, over/under and BTTS markets, plus a bet slip with accumulators."
-      phase="Phase 6"
-    />
-  );
-}
-
 export function PokerPage() {
   return (
     <PagePlaceholder

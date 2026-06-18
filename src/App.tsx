@@ -11,7 +11,8 @@ import { RoulettePage } from '@/pages/casino/RoulettePage';
 import { SlotsPage } from '@/pages/casino/SlotsPage';
 import { CoinflipPage } from '@/pages/casino/CoinflipPage';
 import { BlackjackPage } from '@/pages/casino/BlackjackPage';
-import { SportsbookPage, PokerPage, FriendsPage, NotFoundPage } from '@/pages/stubs';
+import { SportsbookPage } from '@/pages/SportsbookPage';
+import { PokerPage, FriendsPage, NotFoundPage } from '@/pages/stubs';
 
 export default function App() {
   return (
