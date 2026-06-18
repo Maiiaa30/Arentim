@@ -21,6 +21,60 @@ export type RouletteBetResult = {
   return: number;
 };
 
+export type Fixture = {
+  id: number;
+  external_ref: string | null;
+  league: string;
+  season: number | null;
+  home: string;
+  away: string;
+  kickoff: string;
+  status: 'scheduled' | 'live' | 'finished' | 'postponed';
+  minute: number | null;
+  home_score: number | null;
+  away_score: number | null;
+  odds: Record<string, Record<string, number>>;
+  created_at: string;
+  updated_at: string;
+};
+
+export type Bet = {
+  id: number;
+  user_id: string;
+  stake: number;
+  combined_odds: number;
+  potential_payout: number;
+  status: 'pending' | 'won' | 'lost' | 'void';
+  created_at: string;
+  settled_at: string | null;
+};
+
+export type BetSelectionRow = {
+  id: number;
+  bet_id: number;
+  fixture_id: number;
+  market: string;
+  selection: string;
+  odds: number;
+  result: 'pending' | 'won' | 'lost' | 'void';
+};
+
+/** A selection sent to place_bet. */
+export type BetSelectionInput = {
+  fixture_id: number;
+  market: string;
+  selection: string;
+};
+
+/** Result returned by place_bet. */
+export type PlaceBetResult = {
+  bet_id: number;
+  stake: number;
+  combined_odds: number;
+  potential_payout: number;
+  balance: number;
+};
+
 /** A single player hand in the blackjack view. */
 export type BlackjackHandView = {
   cards: number[];
@@ -131,6 +185,24 @@ export type Database = {
         Update: Partial<Transaction>;
         Relationships: [];
       };
+      fixtures: {
+        Row: Fixture;
+        Insert: Partial<Fixture> & { league: string; home: string; away: string; kickoff: string };
+        Update: Partial<Fixture>;
+        Relationships: [];
+      };
+      bets: {
+        Row: Bet;
+        Insert: Partial<Bet> & { user_id: string; stake: number };
+        Update: Partial<Bet>;
+        Relationships: [];
+      };
+      bet_selections: {
+        Row: BetSelectionRow;
+        Insert: Partial<BetSelectionRow> & { bet_id: number; fixture_id: number; market: string; selection: string; odds: number };
+        Update: Partial<BetSelectionRow>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
@@ -169,6 +241,14 @@ export type Database = {
       bj_current: {
         Args: Record<string, never>;
         Returns: BlackjackView | null;
+      };
+      place_bet: {
+        Args: { p_selections: BetSelectionInput[]; p_stake: number };
+        Returns: PlaceBetResult;
+      };
+      admin_settle_fixture: {
+        Args: { p_fixture_id: number; p_home: number; p_away: number };
+        Returns: undefined;
       };
     };
     Enums: {
