@@ -9,9 +9,9 @@ interface GameTile {
 
 const GAMES: GameTile[] = [
   { to: '/casino/roulette', title: 'Roulette', body: 'European single-zero wheel.', available: true },
+  { to: '/casino/slots', title: 'Slots', body: 'Three-reel, Arentim-themed.', available: true },
+  { to: '/casino/coinflip', title: 'Coin flip', body: 'Double or nothing, even money.', available: true },
   { to: '/casino/blackjack', title: 'Blackjack', body: 'Hit, stand, double, split.', available: false },
-  { to: '/casino/slots', title: 'Slots', body: 'Three-reel, Arentim-themed.', available: false },
-  { to: '/casino/quick', title: 'Quick games', body: 'Dice, crash & coin-flip.', available: false },
 ];
 
 export function CasinoLobby() {

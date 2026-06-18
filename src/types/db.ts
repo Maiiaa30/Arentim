@@ -21,6 +21,24 @@ export type RouletteBetResult = {
   return: number;
 };
 
+/** Result returned by the play_coinflip RPC. */
+export type CoinflipResult = {
+  outcome: 'heads' | 'tails';
+  won: boolean;
+  payout: number;
+  balance: number;
+  replayed: boolean;
+};
+
+/** Result returned by the play_slots RPC. */
+export type SlotsResult = {
+  reels: string[];
+  multiplier: number;
+  payout: number;
+  balance: number;
+  replayed: boolean;
+};
+
 /** Result returned by the claim_daily_bonus RPC. */
 export type DailyBonusResult = {
   status: 'claimed' | 'already_claimed' | 'play_required';
@@ -105,6 +123,14 @@ export type Database = {
       claim_daily_bonus: {
         Args: Record<string, never>;
         Returns: DailyBonusResult;
+      };
+      play_coinflip: {
+        Args: { p_stake: number; p_choice: string; p_idempotency_key: string | null };
+        Returns: CoinflipResult;
+      };
+      play_slots: {
+        Args: { p_stake: number; p_idempotency_key: string | null };
+        Returns: SlotsResult;
       };
     };
     Enums: {
