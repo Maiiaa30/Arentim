@@ -6,12 +6,28 @@ balance is an in-app currency called **Tostões**.
 
 > Play money only — no real currency involved.
 
+## Features
+
+- **Accounts & wallet** — email/password auth, profile with lifetime stats, an
+  integer-only Tostões ledger where every bet/win/bonus/adjustment reconciles.
+- **Daily bonus** — play-gated, escalating streak (must play to keep the streak).
+- **Casino** — Roulette, Blackjack (hit/stand/double/split), Slots, and Coin-flip,
+  all settled server-side with a CSPRNG.
+- **Sportsbook** — Primeira Liga & World Cup fixtures, 1X2 / over-under / BTTS
+  markets, singles + parlays, live scores, and automatic settlement.
+- **Poker** — Texas Hold'em vs AI bots and private multiplayer tables with
+  friends (invite codes, bot-fill), with a server-authoritative dealer.
+- **Social** — friend requests, online presence, and global/friends leaderboards.
+- **Challenges** — recovery (anti-stuck rescue) and high-roller milestones + badges.
+- **Admin** — role-gated, fully audited player/economy/sportsbook management.
+- **AI content** — optional Gemini Flash match previews (text-only, untrusted).
+
 ## Stack
 
 - **Frontend:** React + Vite + TypeScript (strict) + Tailwind CSS
-- **Data / backend:** Supabase (Postgres + Auth + Realtime + Edge Functions)
-- **State:** React Query + Zustand, with Supabase Realtime for presence and live tables
-- **Tooling:** ESLint (flat config) + Prettier, Vitest (unit/integration), Playwright (e2e)
+- **Backend:** Supabase — Postgres (RLS + atomic RPCs), Auth, Realtime, Edge Functions (Deno)
+- **State:** React Query + Zustand
+- **Tooling:** ESLint + Prettier, Vitest (unit), Playwright (e2e)
 
 Server-authoritative wherever money or hidden information is involved: the client
 never awards itself balance and never sees other players' hidden cards.
@@ -20,52 +36,55 @@ never awards itself balance and never sees other players' hidden cards.
 
 ```bash
 npm install
-cp .env.example .env   # then fill in your Supabase URL + anon key
+cp .env.example .env       # fill in your Supabase URL + anon (publishable) key
+npm run db:migrate         # apply DB migrations (reads supabase/.env)
 npm run dev
 ```
 
-The app runs at http://localhost:5173.
+App runs at http://localhost:5173.
 
-### Environment
+### Configuration
 
-Only the Supabase **URL** and **anon key** belong in `.env` (they are safe to
-expose). All other keys are secrets and live in Supabase Edge Function secrets —
-see [`docs/SECURITY.md`](docs/SECURITY.md). Never prefix a secret with `VITE_`.
+- **Frontend `.env`** (safe to expose): `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`.
+  Do **not** create a `.env.local` with placeholder values — it shadows `.env`.
+- **Server secrets** (gitignored `supabase/.env`): DB URL, service key, access
+  token, API-Football & Gemini keys. Never prefixed `VITE_`. See
+  [`docs/SECURITY.md`](docs/SECURITY.md).
+- **Database:** apply migrations with `npm run db:migrate` (or the Supabase
+  dashboard) — see [`supabase/README.md`](supabase/README.md). Then grant
+  yourself admin with the snippet there.
+- **Edge Functions:** deploy with the Supabase CLI — see
+  [`docs/EDGE_FUNCTIONS.md`](docs/EDGE_FUNCTIONS.md).
 
 ## Scripts
 
 | Script | Purpose |
 | --- | --- |
-| `npm run dev` | Start the Vite dev server |
-| `npm run build` | Typecheck + production build |
-| `npm run preview` | Serve the production build locally |
-| `npm run lint` | ESLint |
-| `npm run typecheck` | TypeScript, no emit |
-| `npm run format` | Prettier write |
-| `npm test` | Unit/integration tests (Vitest) |
-| `npm run test:e2e` | End-to-end tests (Playwright) |
-
-## Currency
-
-- **Tostões** (singular *tostão*) — stored as whole integers, never floats.
-- New accounts start with **5.000 Tostões**.
+| `npm run dev` / `build` / `preview` | Vite dev / production build / serve build |
+| `npm run lint` / `typecheck` / `format` | ESLint / TypeScript / Prettier |
+| `npm test` / `test:e2e` | Vitest unit/integration / Playwright e2e |
+| `npm run db:migrate` | Apply pending SQL migrations |
+| `npm run check:secrets` | Fail if a secret leaked into the built bundle |
 
 ## Quality gate
 
-`npm run lint`, `npm run typecheck`, `npm audit`, the test suite, and `npm run
-build` must all pass. CI ([`.github/workflows/ci.yml`](.github/workflows/ci.yml))
-enforces this on every push and pull request to `main`.
+`lint`, `typecheck`, `npm audit --audit-level=high`, the test suite, `build`, and
+the bundle secret scan must all pass. CI
+([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) enforces this on every
+push and PR to `main`, and branch protection requires it before merge. Security
+posture and verification are documented in [`docs/SECURITY.md`](docs/SECURITY.md).
 
 ## Project layout
 
 ```
 src/
-  components/      Shared UI + layout shell
-  lib/             Pure domain helpers (money, formatting)
-  pages/           Route screens
-  test/            Test setup
-e2e/               Playwright end-to-end tests
-docs/              Security and architecture notes
+  components/  Shared UI + layout shell
+  features/    Domain logic + hooks (auth, casino, poker, sportsbook, friends, …)
+  lib/         Money + formatting helpers
+  pages/       Route screens
+supabase/
+  migrations/  Versioned SQL (schema, RLS, atomic RPCs)
+  functions/   Edge Functions (Deno) + shared engines (poker, API clients)
+e2e/           Playwright tests
+docs/          Security & Edge Function docs
 ```
-
-Built phase by phase — see the build plan for the current roadmap.
