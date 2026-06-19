@@ -20,6 +20,7 @@ import {
   score,
   seasonYear,
   sleep,
+  teamCrest,
   teamName,
 } from '../_shared/footballData.ts';
 
@@ -79,6 +80,8 @@ Deno.serve(async (req) => {
             minute: status === 'live' ? (m.minute ?? null) : null,
             home_score: sc.home,
             away_score: sc.away,
+            home_crest: teamCrest(m.homeTeam),
+            away_crest: teamCrest(m.awayTeam),
             odds: computeOdds(home, away, strength),
             updated_at: new Date().toISOString(),
           };

@@ -33,6 +33,8 @@ export type Fixture = {
   minute: number | null;
   home_score: number | null;
   away_score: number | null;
+  home_crest: string | null;
+  away_crest: string | null;
   odds: Record<string, Record<string, number>>;
   events: { type?: string; minute?: number | null; team?: string | null; player?: string | null }[];
   preview: string | null;

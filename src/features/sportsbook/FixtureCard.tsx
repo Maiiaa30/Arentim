@@ -13,8 +13,11 @@ function crest(name: string): { abbr: string; color: string } {
   return { abbr: abbr || name.slice(0, 3).toUpperCase(), color: CREST_COLORS[h % CREST_COLORS.length]! };
 }
 
-function Crest({ name }: { name: string }) {
+function Crest({ name, src }: { name: string; src?: string | null }) {
   const { abbr, color } = crest(name);
+  if (src) {
+    return <img src={src} alt="" loading="lazy" className="h-[30px] w-[30px] shrink-0 object-contain" aria-hidden />;
+  }
   return (
     <span
       className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full font-sans text-[9px] font-semibold text-white/90"
@@ -68,13 +71,13 @@ export function FixtureCard({ fixture }: { fixture: Fixture }) {
 
       <div className="mb-3 flex items-center gap-3">
         <div className="flex flex-1 items-center gap-2">
-          <Crest name={fixture.home} />
+          <Crest name={fixture.home} src={fixture.home_crest} />
           <span className="truncate font-sans text-sm text-body">{fixture.home}</span>
         </div>
         <span className={`shrink-0 font-mono text-sm ${live || finished ? 'text-gold' : 'text-muted-2'}`}>{score}</span>
         <div className="flex flex-1 items-center justify-end gap-2">
           <span className="truncate text-right font-sans text-sm text-body">{fixture.away}</span>
-          <Crest name={fixture.away} />
+          <Crest name={fixture.away} src={fixture.away_crest} />
         </div>
       </div>
 
