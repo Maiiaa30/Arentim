@@ -8,8 +8,10 @@ test('home page loads with brand and disclaimer', async ({ page }) => {
 
 test('logged-out visitors see entrar / criar conta', async ({ page }) => {
   await page.goto('/');
-  await expect(page.getByRole('link', { name: 'Entrar', exact: true })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Criar conta' })).toBeVisible();
+  // Scope to the header: the landing page also has its own Entrar/Criar conta CTAs.
+  const header = page.getByRole('banner');
+  await expect(header.getByRole('link', { name: 'Entrar', exact: true })).toBeVisible();
+  await expect(header.getByRole('button', { name: 'Criar conta' })).toBeVisible();
 });
 
 test('protected routes redirect to login when logged out', async ({ page }) => {
