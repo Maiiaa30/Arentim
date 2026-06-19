@@ -66,6 +66,32 @@ select cron.schedule(
 > sync makes a couple of requests per league. Don't schedule it more often than
 > needed.
 
+## poll-live-scores
+
+Polls API-Football's live feed and writes score/minute/events into
+`public.fixtures` (which streams to clients over Realtime). On full-time it
+records the final score and auto-settles the fixture's bets via the idempotent
+`settle_fixture` RPC. Only updates fixtures already in the DB, so off-window
+runs are cheap no-ops.
+
+Uses the same `API_FOOTBALL_KEY` / `SYNC_SECRET` secrets as `sync-fixtures`.
+
+```bash
+supabase functions deploy poll-live-scores
+```
+
+Schedule it more frequently during live windows (cron's minimum is 1 minute):
+
+```sql
+select cron.schedule(
+  'poll-live-scores', '* * * * *',
+  $$ select net.http_post(
+       url := 'https://kactlxdjoxjrqhmkjtfj.functions.supabase.co/poll-live-scores',
+       headers := jsonb_build_object('x-sync-secret', '<SYNC_SECRET>')
+     ); $$
+);
+```
+
 ### Free-tier coverage caveat
 
 The API-Football **Free plan only covers seasons 2022–2024** — current/future

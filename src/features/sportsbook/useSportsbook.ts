@@ -1,8 +1,50 @@
+import { useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/features/auth/AuthProvider';
 import { profileKey } from '@/features/profile/useProfile';
 import type { Bet, BetSelectionInput, BetSelectionRow, Fixture, PlaceBetResult } from '@/types/db';
+
+/** Currently-live fixtures (score, minute, events stream in over Realtime). */
+export function useLiveFixtures() {
+  return useQuery({
+    queryKey: ['fixtures', 'live'] as const,
+    queryFn: async (): Promise<Fixture[]> => {
+      const { data, error } = await supabase
+        .from('fixtures')
+        .select('*')
+        .eq('status', 'live')
+        .order('kickoff', { ascending: true });
+      if (error) throw error;
+      return data;
+    },
+    refetchInterval: 30_000, // safety net in case a Realtime event is missed
+  });
+}
+
+/**
+ * Subscribes to fixture + own-bet changes over Supabase Realtime and refreshes
+ * the relevant queries, so scores and bet settlement update live.
+ */
+export function useSportsbookRealtime() {
+  const qc = useQueryClient();
+  const { user } = useAuth();
+  useEffect(() => {
+    const channel = supabase
+      .channel('sportsbook')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'fixtures' }, () => {
+        void qc.invalidateQueries({ queryKey: ['fixtures'] });
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'bets' }, () => {
+        void qc.invalidateQueries({ queryKey: ['bets', user?.id] });
+        void qc.invalidateQueries({ queryKey: profileKey(user?.id) });
+      })
+      .subscribe();
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [qc, user?.id]);
+}
 
 /** Upcoming, open-for-betting fixtures. */
 export function useFixtures() {

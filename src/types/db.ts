@@ -34,6 +34,7 @@ export type Fixture = {
   home_score: number | null;
   away_score: number | null;
   odds: Record<string, Record<string, number>>;
+  events: { type?: string; minute?: number | null; team?: string | null; player?: string | null }[];
   created_at: string;
   updated_at: string;
 };

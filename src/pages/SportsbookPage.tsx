@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { useFixtures } from '@/features/sportsbook/useSportsbook';
+import { useFixtures, useSportsbookRealtime } from '@/features/sportsbook/useSportsbook';
 import { FixtureCard } from '@/features/sportsbook/FixtureCard';
+import { LiveFixtures } from '@/features/sportsbook/LiveFixtures';
 import { BetSlip } from '@/features/sportsbook/BetSlip';
 import { MyBets } from '@/features/sportsbook/MyBets';
 
@@ -9,6 +10,7 @@ type Tab = 'fixtures' | 'bets';
 export function SportsbookPage() {
   const { data: fixtures, isLoading } = useFixtures();
   const [tab, setTab] = useState<Tab>('fixtures');
+  useSportsbookRealtime();
 
   return (
     <div className="animate-fade-in space-y-6">
@@ -35,16 +37,20 @@ export function SportsbookPage() {
         <MyBets />
       ) : (
         <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
-          <div className="space-y-3">
-            {isLoading ? (
-              <p className="py-8 text-center text-muted">Loading fixtures…</p>
-            ) : !fixtures || fixtures.length === 0 ? (
-              <div className="card p-8 text-center text-sm text-muted">
-                No upcoming fixtures yet. The daily sync will populate them (Phase 6b).
-              </div>
-            ) : (
-              fixtures.map((f) => <FixtureCard key={f.id} fixture={f} />)
-            )}
+          <div className="space-y-6">
+            <LiveFixtures />
+            <div className="space-y-3">
+              <h2 className="font-display text-lg font-semibold text-text">Upcoming</h2>
+              {isLoading ? (
+                <p className="py-8 text-center text-muted">Loading fixtures…</p>
+              ) : !fixtures || fixtures.length === 0 ? (
+                <div className="card p-8 text-center text-sm text-muted">
+                  No upcoming fixtures yet. The daily sync will populate them.
+                </div>
+              ) : (
+                fixtures.map((f) => <FixtureCard key={f.id} fixture={f} />)
+              )}
+            </div>
           </div>
           <div className="hidden lg:block">
             <BetSlip />
