@@ -76,6 +76,40 @@ export type PlaceBetResult = {
   balance: number;
 };
 
+export type UserSearchResult = { id: string; display_name: string; avatar_url: string | null };
+
+export type FriendRow = {
+  id: string;
+  display_name: string;
+  avatar_url: string | null;
+  balance: number;
+  total_wagered: number;
+  total_won: number;
+  total_lost: number;
+  games_played: number;
+  games_won: number;
+  biggest_win: number;
+  streak_count: number;
+  last_online: string | null;
+};
+
+export type FriendRequest = {
+  id: number;
+  direction: 'incoming' | 'outgoing';
+  other_id: string;
+  display_name: string;
+  avatar_url: string | null;
+  created_at: string;
+};
+
+export type LeaderboardRow = {
+  id: string;
+  display_name: string;
+  avatar_url: string | null;
+  value: number;
+  is_me: boolean;
+};
+
 /** A single player hand in the blackjack view. */
 export type BlackjackHandView = {
   cards: number[];
@@ -250,6 +284,34 @@ export type Database = {
       admin_settle_fixture: {
         Args: { p_fixture_id: number; p_home: number; p_away: number };
         Returns: undefined;
+      };
+      search_users: {
+        Args: { p_query: string };
+        Returns: UserSearchResult[];
+      };
+      send_friend_request: {
+        Args: { p_addressee: string };
+        Returns: string;
+      };
+      respond_friend_request: {
+        Args: { p_request_id: number; p_accept: boolean };
+        Returns: undefined;
+      };
+      remove_friend: {
+        Args: { p_other: string };
+        Returns: undefined;
+      };
+      list_friends: {
+        Args: Record<string, never>;
+        Returns: FriendRow[];
+      };
+      list_friend_requests: {
+        Args: Record<string, never>;
+        Returns: FriendRequest[];
+      };
+      leaderboard: {
+        Args: { p_scope: string; p_metric: string };
+        Returns: LeaderboardRow[];
       };
     };
     Enums: {

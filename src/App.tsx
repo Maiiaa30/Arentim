@@ -13,7 +13,8 @@ import { CoinflipPage } from '@/pages/casino/CoinflipPage';
 import { BlackjackPage } from '@/pages/casino/BlackjackPage';
 import { SportsbookPage } from '@/pages/SportsbookPage';
 import { PokerPage } from '@/pages/PokerPage';
-import { FriendsPage, NotFoundPage } from '@/pages/stubs';
+import { FriendsPage } from '@/pages/FriendsPage';
+import { NotFoundPage } from '@/pages/stubs';
 
 export default function App() {
   return (
