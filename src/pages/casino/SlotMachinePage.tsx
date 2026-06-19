@@ -46,7 +46,9 @@ function Reel({
   accent: string;
   glyphById: Record<string, string>;
 }) {
-  const spinStrip = [...ids, ...ids, ...ids];
+  // Begin the spinning strip on the currently-shown symbol so the reel scrolls
+  // away smoothly instead of snapping to a different symbol when a spin starts.
+  const spinStrip = [target, ...ids, ...ids, ...ids];
   const landStrip = useRef<string[]>([target]);
   const [go, setGo] = useState(false);
 
