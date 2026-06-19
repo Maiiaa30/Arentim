@@ -21,11 +21,27 @@ export function SignupPage() {
 
     const parsed = signupSchema.safeParse({ email, displayName, password });
     if (!parsed.success) {
-      setError(parsed.error.issues[0]?.message ?? 'Invalid input');
+      setError(parsed.error.issues[0]?.message ?? 'Dados inválidos');
       return;
     }
 
     setBusy(true);
+
+    // Check the display name isn't already taken (case-insensitive).
+    const { data: available, error: checkError } = await supabase.rpc('username_available', {
+      p_name: parsed.data.displayName,
+    });
+    if (checkError) {
+      setBusy(false);
+      setError('Não foi possível validar o nome. Tente novamente.');
+      return;
+    }
+    if (!available) {
+      setBusy(false);
+      setError('Esse nome de exibição já está em uso. Escolha outro.');
+      return;
+    }
+
     const { data, error: signUpError } = await supabase.auth.signUp({
       email: parsed.data.email,
       password: parsed.data.password,
@@ -34,7 +50,19 @@ export function SignupPage() {
     setBusy(false);
 
     if (signUpError) {
-      setError(signUpError.message);
+      // Supabase surfaces a duplicate email as a "registered" error.
+      setError(
+        /registered|already/i.test(signUpError.message)
+          ? 'Este email já está registado.'
+          : signUpError.message,
+      );
+      return;
+    }
+
+    // With confirmations on, an already-registered email returns a user with no
+    // identities (Supabase obscures it) — treat that as "email in use".
+    if (data.user && (data.user.identities?.length ?? 0) === 0) {
+      setError('Este email já está registado.');
       return;
     }
 

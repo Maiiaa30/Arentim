@@ -6,6 +6,7 @@ import {
   type LeaderboardMetric,
   type LeaderboardScope,
 } from '@/features/friends/useLeaderboard';
+import { PlayerCard } from '@/features/friends/PlayerCard';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { formatAmount } from '@/lib/format';
@@ -74,6 +75,7 @@ function FriendCard({ f, online, showBalance, onRemove }: {
 export function FriendsPage() {
   const [tab, setTab] = useState<Tab>('friends');
   const [showBalance, setShowBalance] = useState(false);
+  const [selected, setSelected] = useState<string | null>(null);
   const online = usePresence();
   const { data: friends } = useFriends();
   const { data: requests } = useFriendRequests();
@@ -101,6 +103,7 @@ export function FriendsPage() {
 
   return (
     <div className="animate-fade-in space-y-6">
+      {selected && <PlayerCard userId={selected} onClose={() => setSelected(null)} />}
       <div>
         <Eyebrow>Comunidade</Eyebrow>
         <h1 className="mt-2 font-display text-[34px] font-medium leading-tight text-text">Amigos</h1>
@@ -215,15 +218,19 @@ export function FriendsPage() {
           </div>
           <ol className="space-y-1">
             {(board ?? []).map((row, i) => (
-              <li key={row.id}
-                className={`flex items-center justify-between rounded px-3 py-2 ${row.is_me ? 'bg-gold/10 ring-1 ring-gold/30' : 'bg-surface'}`}>
-                <span className="flex items-center gap-3">
-                  <span className="w-6 text-right font-mono tabular-nums text-muted-2">{i + 1}</span>
-                  <span className="font-sans text-sm text-text">{row.display_name}</span>
-                </span>
-                <span className="font-mono font-semibold tabular-nums text-gold">
-                  {metric === 'streak' ? `${row.value} 🔥` : formatAmount(row.value)}
-                </span>
+              <li key={row.id}>
+                <button
+                  onClick={() => setSelected(row.id)}
+                  className={`focus-ring flex w-full items-center justify-between rounded px-3 py-2 text-left transition-colors hover:ring-1 hover:ring-gold/30 ${row.is_me ? 'bg-gold/10 ring-1 ring-gold/30' : 'bg-surface'}`}
+                >
+                  <span className="flex items-center gap-3">
+                    <span className="w-6 text-right font-mono tabular-nums text-muted-2">{i + 1}</span>
+                    <span className="font-sans text-sm text-text">{row.display_name}</span>
+                  </span>
+                  <span className="font-mono font-semibold tabular-nums text-gold">
+                    {metric === 'streak' ? `${row.value} 🔥` : formatAmount(row.value)}
+                  </span>
+                </button>
               </li>
             ))}
             {board && board.length === 0 && <p className="py-4 text-center font-sans text-sm text-muted-2">Ainda sem dados.</p>}

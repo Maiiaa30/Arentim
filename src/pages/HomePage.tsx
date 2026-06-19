@@ -1,8 +1,10 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/features/auth/AuthProvider';
 import { useFriends } from '@/features/friends/useFriends';
 import { usePresence } from '@/features/friends/usePresence';
 import { useLeaderboard } from '@/features/friends/useLeaderboard';
+import { PlayerCard } from '@/features/friends/PlayerCard';
 import { DailyBonusCard } from '@/features/bonus/DailyBonusCard';
 import { Button } from '@/components/ui/Button';
 import { Eyebrow, FramedPanel, RingAvatar, SectionHeader } from '@/components/ui/primitives';
@@ -53,22 +55,23 @@ function GameCard({ g }: { g: GameTile }) {
   );
 }
 
-function HighRollers() {
+function HighRollers({ onSelect }: { onSelect: (id: string) => void }) {
   const { data } = useLeaderboard('global', 'net');
   return (
     <div className="space-y-3">
       <SectionHeader title="Grandes Apostadores" right="Esta semana" />
       <div className="space-y-1">
         {(data ?? []).slice(0, 5).map((row, i) => (
-          <div
+          <button
             key={row.id}
-            className={`flex items-center gap-3 rounded px-3 py-2 ${row.is_me ? 'bg-gold/[0.07]' : ''}`}
+            onClick={() => onSelect(row.id)}
+            className={`focus-ring flex w-full items-center gap-3 rounded px-3 py-2 text-left transition-colors hover:bg-gold/[0.07] ${row.is_me ? 'bg-gold/[0.07]' : ''}`}
           >
             <span className={`w-5 text-right font-display ${i < 3 ? 'text-gold' : 'text-muted-2'}`}>{i + 1}</span>
             <RingAvatar initials={row.display_name.slice(0, 2).toUpperCase()} size={34} tone={i < 3 ? 'gold' : 'muted'} />
             <span className="flex-1 truncate font-sans text-sm text-body">{row.display_name}</span>
             <span className="font-mono text-sm text-gold">{formatTos(row.value)}</span>
-          </div>
+          </button>
         ))}
         {(!data || data.length === 0) && <p className="px-3 py-2 text-sm text-muted-2">Ainda sem dados.</p>}
       </div>
@@ -76,7 +79,7 @@ function HighRollers() {
   );
 }
 
-function Circle() {
+function Circle({ onSelect }: { onSelect: (id: string) => void }) {
   const { data: friends } = useFriends();
   const online = usePresence();
   return (
@@ -84,11 +87,15 @@ function Circle() {
       <SectionHeader title="O Seu Círculo" right={<Link to="/friends" className="hover:text-text">+ Convidar</Link>} />
       <div className="space-y-1">
         {(friends ?? []).slice(0, 5).map((f) => (
-          <div key={f.id} className="flex items-center gap-3 rounded px-3 py-2">
+          <button
+            key={f.id}
+            onClick={() => onSelect(f.id)}
+            className="focus-ring flex w-full items-center gap-3 rounded px-3 py-2 text-left transition-colors hover:bg-gold/[0.07]"
+          >
             <RingAvatar initials={f.display_name.slice(0, 2).toUpperCase()} size={34} presence={online.has(f.id) ? 'online' : 'offline'} />
             <span className="flex-1 truncate font-sans text-sm text-body">{f.display_name}</span>
             <span className="font-sans text-xs text-muted-2">{online.has(f.id) ? 'Online' : 'Offline'}</span>
-          </div>
+          </button>
         ))}
         {(!friends || friends.length === 0) && (
           <p className="px-3 py-2 text-sm text-muted-2">
@@ -102,9 +109,11 @@ function Circle() {
 
 export function HomePage() {
   const { user } = useAuth();
+  const [selected, setSelected] = useState<string | null>(null);
 
   return (
     <div className="animate-fade-in space-y-10">
+      {selected && <PlayerCard userId={selected} onClose={() => setSelected(null)} />}
       {user && <DailyBonusCard />}
 
       <FramedPanel>
@@ -138,8 +147,8 @@ export function HomePage() {
         </div>
         {user && (
           <aside className="min-w-[296px] flex-[1_1_300px] space-y-8">
-            <HighRollers />
-            <Circle />
+            <HighRollers onSelect={setSelected} />
+            <Circle onSelect={setSelected} />
           </aside>
         )}
       </div>
