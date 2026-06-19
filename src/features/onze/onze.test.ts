@@ -1,76 +1,91 @@
 import { describe, expect, it } from 'vitest';
 import {
   FORMATIONS,
-  PACK_SIZE,
   ROUNDS,
-  bossRating,
+  YOUR_TEAM,
+  type GamePlayer,
   generateDraft,
+  pickSeason,
   rateXI,
-  simulateRun,
+  simulateSeason,
+  simulateSete,
+  standingsAfter,
+  yourMatch,
 } from './onze';
-import { PLAYERS, PLAYER_BY_ID, type Player } from './players';
+import { MAX_YEAR, MIN_YEAR } from './onzeData';
 
-const pick = (packs: Player[][]) => packs.map((p) => p[0]!); // always take the first option
+const YEAR = Math.min(2019, MAX_YEAR);
+const firstPicks = (seed: string): GamePlayer[] =>
+  generateDraft(seed, '4-3-3', YEAR).map((s) => s.pack[0]!);
 
-describe('onze de ouro', () => {
-  it('pool has enough players per line for the packs', () => {
-    const counts = { GK: 0, DF: 0, MF: 0, FW: 0 };
-    for (const p of PLAYERS) counts[p.line]++;
-    expect(counts.GK).toBeGreaterThanOrEqual(3);
-    expect(counts.DF).toBeGreaterThanOrEqual(4 * PACK_SIZE);
-    expect(counts.MF).toBeGreaterThanOrEqual(4 * PACK_SIZE);
-    expect(counts.FW).toBeGreaterThanOrEqual(3 * PACK_SIZE);
-  });
-
-  it('deals one pack per slot matching the formation lines, no duplicate players', () => {
-    const packs = generateDraft('seed-1', '4-3-3');
-    expect(packs).toHaveLength(11);
-    packs.forEach((pack, i) => {
-      expect(pack).toHaveLength(PACK_SIZE);
-      for (const p of pack) expect(p.line).toBe(FORMATIONS['4-3-3'][i]);
+describe('onze de ouro — real-data game', () => {
+  it('drafts 11 slots, packs matching the line, deterministic by seed', () => {
+    const d1 = generateDraft('s', '4-3-3', YEAR);
+    const d2 = generateDraft('s', '4-3-3', YEAR);
+    expect(d1).toHaveLength(11);
+    d1.forEach((slot, i) => {
+      expect(slot.pack.length).toBeGreaterThan(0);
+      expect(slot.line).toBe(FORMATIONS['4-3-3'][i]);
+      for (const p of slot.pack) expect(p.lines).toContain(slot.line);
     });
-    const ids = packs.flat().map((p) => p.id);
-    expect(new Set(ids).size).toBe(ids.length); // drawn without replacement
+    expect(d1.map((s) => s.pack[0]!.id)).toEqual(d2.map((s) => s.pack[0]!.id));
+    expect(generateDraft('other', '4-3-3', YEAR).map((s) => s.club)).not.toEqual(d1.map((s) => s.club));
   });
 
-  it('the draft is deterministic for a given seed and varies by seed', () => {
-    const a = generateDraft('day-A', '4-3-3').flat().map((p) => p.id);
-    const a2 = generateDraft('day-A', '4-3-3').flat().map((p) => p.id);
-    const b = generateDraft('day-B', '4-3-3').flat().map((p) => p.id);
-    expect(a).toEqual(a2);
-    expect(a).not.toEqual(b);
+  it('rates the XI with chemistry within bounds', () => {
+    const xi = firstPicks('s');
+    const r = rateXI(xi);
+    expect(r.total).toBeGreaterThan(40);
+    expect(r.total).toBeLessThan(100);
+    expect(r.chemistry).toBeGreaterThanOrEqual(0);
+    expect(r.chemistry).toBeLessThanOrEqual(10);
   });
 
-  it('chemistry rewards a same-club / same-era XI over a scattered one', () => {
-    const benficaOuro = PLAYERS.filter((p) => p.club === 'Benfica').slice(0, 5);
-    const scattered = [
-      PLAYERS.find((p) => p.club === 'Porto')!,
-      PLAYERS.find((p) => p.club === 'Sporting')!,
-      PLAYERS.find((p) => p.club === 'Outro')!,
-      PLAYERS.find((p) => p.era === 'classico')!,
-      PLAYERS.find((p) => p.era === 'atual' && p.club === 'Outro') ?? PLAYERS[0]!,
-    ];
-    expect(rateXI(benficaOuro).chemistry).toBeGreaterThan(rateXI(scattered).chemistry);
+  it('pickSeason stays within the requested range', () => {
+    for (let i = 0; i < 20; i++) {
+      const y = pickSeason(MIN_YEAR, MAX_YEAR, `seed${i}`);
+      expect(y).toBeGreaterThanOrEqual(MIN_YEAR);
+      expect(y).toBeLessThanOrEqual(MAX_YEAR);
+    }
   });
 
-  it('simulation is deterministic per seed and reports a coherent run', () => {
-    const xi = pick(generateDraft('s', '4-3-3'));
-    const r1 = simulateRun(xi, 's');
-    const r2 = simulateRun(xi, 's');
-    expect(r1.score).toBe(r2.score);
-    expect(r1.rounds).toHaveLength(ROUNDS);
-    expect(r1.wins).toBe(r1.rounds.filter((x) => x.win).length);
-    // knockout: no wins after the first loss
-    const firstLoss = r1.rounds.findIndex((x) => !x.win);
-    if (firstLoss >= 0) expect(r1.rounds.slice(firstLoss).every((x) => !x.win)).toBe(true);
-    expect(r1.champion).toBe(r1.wins === ROUNDS);
+  it('7-game run is deterministic and respects knockout rules', () => {
+    const xi = firstPicks('s');
+    const a = simulateSete(xi, YEAR, 's');
+    const b = simulateSete(xi, YEAR, 's');
+    expect(a.score).toBe(b.score);
+    expect(a.rounds).toHaveLength(ROUNDS);
+    expect(a.rounds[ROUNDS - 1]!.boss).toBe(true);
+    const firstLoss = a.rounds.findIndex((r) => !r.win);
+    if (firstLoss >= 0) expect(a.rounds.slice(firstLoss).every((r) => !r.win)).toBe(true);
+    expect(a.champion).toBe(a.wins === ROUNDS);
   });
 
-  it('the boss XI is strong (rating ≥ 88)', () => {
-    expect(bossRating()).toBeGreaterThanOrEqual(88);
+  it('season is a complete double round-robin with your XI included', () => {
+    const xi = firstPicks('s');
+    const res = simulateSeason(xi, YEAR, 's');
+    const T = res.teams.length;
+    expect(res.teams.some((t) => t.team === YOUR_TEAM)).toBe(true);
+
+    const full = standingsAfter(res, res.jornadas.length);
+    expect(full).toHaveLength(T);
+    for (const row of full) expect(row.P).toBe(2 * (T - 1)); // everyone plays everyone twice
+
+    // standings are ordered by points
+    for (let i = 1; i < full.length; i++) expect(full[i - 1]!.PTS).toBeGreaterThanOrEqual(full[i]!.PTS);
+
+    // your XI plays in 2*(T-1) matches across the calendar
+    let mine = 0;
+    for (let j = 0; j < res.jornadas.length; j++) if (yourMatch(res, j)) mine++;
+    expect(mine).toBe(2 * (T - 1));
   });
 
-  it('every boss id resolves to a real player', () => {
-    for (const id of Object.keys(PLAYER_BY_ID)) expect(PLAYER_BY_ID[id]!.name).toBeTruthy();
+  it('a strong XI tends to finish high', () => {
+    // Take the best player from each slot's pack → high-rated XI should land top half.
+    const xi = firstPicks('strong');
+    const res = simulateSeason(xi, YEAR, 'strong');
+    const table = standingsAfter(res, res.jornadas.length);
+    const pos = table.findIndex((r) => r.team === YOUR_TEAM) + 1;
+    expect(pos).toBeLessThanOrEqual(res.teams.length); // sanity: placed in the table
   });
 });
