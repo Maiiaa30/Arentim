@@ -1,5 +1,5 @@
 import { CoinIcon } from '@/components/CoinIcon';
-import { formatTt } from '@/lib/format';
+import { formatTos } from '@/lib/format';
 
 const CHIPS = [10, 25, 50, 100, 500];
 
@@ -28,7 +28,7 @@ export function StakeChips({ stake, onChange, balance, disabled }: StakeChipsPro
         </button>
       ))}
       <span className="ml-auto flex items-center gap-1 font-mono text-xs text-muted-2">
-        <CoinIcon className="h-3.5 w-3.5" /> {formatTt(balance)}
+        <CoinIcon className="h-3.5 w-3.5" /> {formatTos(balance)}
       </span>
     </div>
   );

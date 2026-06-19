@@ -3,7 +3,7 @@
  *
  * Amounts are whole-integer Tostões. Thousands are grouped with a narrow
  * no-break space (e.g. 12500 -> "12 500"), matching the Aretim design. The
- * compact suffix is "Tt"; prose uses the full word "Tostões".
+ * compact suffix is "tós"; prose uses the full word "Tostões".
  */
 
 /** Narrow no-break space (U+202F) — groups digits without allowing a line break. */
@@ -16,9 +16,12 @@ export function formatAmount(amount: number): string {
   return sign + n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, GROUP_SEP);
 }
 
-/** Compact currency, e.g. 12500 -> "12 500 Tt". Used for balances, odds, stakes. */
-export function formatTt(amount: number): string {
-  return `${formatAmount(amount)} Tt`;
+/** The compact currency suffix shown after grouped amounts. */
+export const CURRENCY_SUFFIX = 'tós';
+
+/** Compact currency, e.g. 12500 -> "12 500 tós". Used for balances, odds, stakes. */
+export function formatTos(amount: number): string {
+  return `${formatAmount(amount)} ${CURRENCY_SUFFIX}`;
 }
 
 /** Prose currency with the full word, e.g. 1 -> "1 Tostão", 1250 -> "1 250 Tostões". */

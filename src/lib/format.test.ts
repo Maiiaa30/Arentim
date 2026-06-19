@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { formatAmount, formatTostoes, formatTt, formatDelta, GROUP_SEP } from './format';
+import { formatAmount, formatTostoes, formatTos, formatDelta, GROUP_SEP } from './format';
 
 describe('formatAmount', () => {
   it('groups thousands with a thin space', () => {
@@ -10,10 +10,10 @@ describe('formatAmount', () => {
   });
 });
 
-describe('formatTt', () => {
-  it('appends the compact Tt suffix', () => {
-    expect(formatTt(12500)).toBe(`12${GROUP_SEP}500 Tt`);
-    expect(formatTt(0)).toBe('0 Tt');
+describe('formatTos', () => {
+  it('appends the compact tós suffix', () => {
+    expect(formatTos(12500)).toBe(`12${GROUP_SEP}500 tós`);
+    expect(formatTos(0)).toBe('0 tós');
   });
 });
 

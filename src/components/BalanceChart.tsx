@@ -37,7 +37,7 @@ export function BalanceChart({ points, className }: BalanceChartProps) {
   if (!path) {
     return (
       <div className={`flex h-40 items-center justify-center text-sm text-muted ${className ?? ''}`}>
-        Not enough activity yet to chart.
+        Atividade insuficiente para o gráfico.
       </div>
     );
   }
@@ -48,7 +48,7 @@ export function BalanceChart({ points, className }: BalanceChartProps) {
       className={`h-40 w-full ${className ?? ''}`}
       preserveAspectRatio="none"
       role="img"
-      aria-label="Balance over time"
+      aria-label="Saldo ao longo do tempo"
     >
       <defs>
         <linearGradient id="balanceFill" x1="0" y1="0" x2="0" y2="1">

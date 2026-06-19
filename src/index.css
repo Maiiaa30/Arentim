@@ -1,5 +1,5 @@
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&family=DM+Mono:wght@400;500&display=swap');
-
+/* Fonts are loaded via <link rel="preconnect"> + stylesheet in index.html
+   (faster than a render-blocking @import here). */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -18,11 +18,19 @@
   body {
     @apply bg-bg font-sans text-body antialiased;
     font-weight: 300;
-    /* Layered warm gold + faint green wash on the near-black canvas. */
+  }
+
+  /* Layered warm gold + faint green wash, painted on a fixed full-viewport
+     overlay so it never repaints on scroll (smoother than background-attachment:fixed). */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
     background-image:
       radial-gradient(1100px 520px at 50% -10%, rgba(201, 162, 75, 0.13), transparent 60%),
       radial-gradient(700px 400px at 90% 8%, rgba(31, 138, 91, 0.07), transparent 60%);
-    background-attachment: fixed;
   }
 
   h1, h2, h3 {
@@ -35,6 +43,16 @@
 
   ::selection {
     background-color: rgba(201, 162, 75, 0.3);
+  }
+
+  /* Respect reduced-motion: freeze decorative game-tile animations. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+    }
   }
 }
 

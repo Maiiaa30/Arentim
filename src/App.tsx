@@ -28,7 +28,7 @@ const AdminPage = lazy(() => named(import('@/pages/AdminPage'), 'AdminPage'));
 const NotFoundPage = lazy(() => named(import('@/pages/stubs'), 'NotFoundPage'));
 
 function PageFallback() {
-  return <div className="py-24 text-center text-muted">Loading…</div>;
+  return <div className="py-24 text-center text-muted">A carregar…</div>;
 }
 
 export default function App() {
