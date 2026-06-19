@@ -59,27 +59,30 @@ Deno.serve(async (req) => {
 
       // Upsert every match in the window with a uniform row shape: upcoming ones
       // carry generated odds; finished/live ones carry their score (so the last
-      // 3 days of results show on the Resultados page).
-      const rows = matches.map((m) => {
-        const home = teamName(m.homeTeam);
-        const away = teamName(m.awayTeam);
-        const status = mapStatus(m.status);
-        const sc = score(m);
-        return {
-          external_ref: `fd:${m.id}`,
-          league: comp.name,
-          season: seasonYear(m),
-          home,
-          away,
-          kickoff: m.utcDate,
-          status,
-          minute: status === 'live' ? (m.minute ?? null) : null,
-          home_score: sc.home,
-          away_score: sc.away,
-          odds: computeOdds(home, away, strength),
-          updated_at: new Date().toISOString(),
-        };
-      });
+      // 3 days of results show on the Resultados page). Skip "TBD" fixtures
+      // (knockout slots with no teams yet) — home/away are NOT NULL.
+      const rows = matches
+        .filter((m) => m.homeTeam?.name && m.awayTeam?.name)
+        .map((m) => {
+          const home = teamName(m.homeTeam);
+          const away = teamName(m.awayTeam);
+          const status = mapStatus(m.status);
+          const sc = score(m);
+          return {
+            external_ref: `fd:${m.id}`,
+            league: comp.name,
+            season: seasonYear(m),
+            home,
+            away,
+            kickoff: m.utcDate,
+            status,
+            minute: status === 'live' ? (m.minute ?? null) : null,
+            home_score: sc.home,
+            away_score: sc.away,
+            odds: computeOdds(home, away, strength),
+            updated_at: new Date().toISOString(),
+          };
+        });
 
       if (rows.length > 0) {
         const { error } = await supabase.from('fixtures').upsert(rows, { onConflict: 'external_ref' });
@@ -89,7 +92,11 @@ Deno.serve(async (req) => {
     } catch (err) {
       // One competition failing (rate limit, no standings yet, etc.) must not
       // abort the whole sync.
-      summary[comp.name] = `error: ${String(err)}`;
+      const msg =
+        err instanceof Error ? err.message
+        : err && typeof err === 'object' && 'message' in err ? String((err as { message: unknown }).message)
+        : JSON.stringify(err);
+      summary[comp.name] = `error: ${msg}`;
     }
   }
 
