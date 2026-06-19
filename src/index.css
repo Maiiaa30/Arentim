@@ -45,6 +45,13 @@
     background-color: rgba(201, 162, 75, 0.3);
   }
 
+  /* Reel landing: scroll a 7-item strip (6 fillers + the result) to the last
+     item. Fixed offset -(6/7)*100% so it always settles on the result. */
+  @keyframes reel-land {
+    from { transform: translateY(0); }
+    to { transform: translateY(-85.7142857%); }
+  }
+
   /* Full-screen confetti rain + a one-shot gold flash for jackpots. */
   @keyframes confetti-fall {
     0% { transform: translateY(-12vh) rotate(0deg); opacity: 0; }
