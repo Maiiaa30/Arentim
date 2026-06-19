@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { usePublicProfile } from './usePublicProfile';
 import { useFriendActions } from './useFriends';
@@ -26,6 +27,18 @@ export function PlayerCard({ userId, onClose }: { userId: string; onClose: () =>
   const qc = useQueryClient();
   const [msg, setMsg] = useState<string | null>(null);
 
+  // Close on Escape; lock body scroll while open.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    document.addEventListener('keydown', onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.body.style.overflow = prev;
+    };
+  }, [onClose]);
+
   // 'none' sends a request; 'pending_in' auto-accepts the mutual invite (the RPC handles both).
   const canAct = p?.friend_status === 'none' || p?.friend_status === 'pending_in';
 
@@ -41,14 +54,18 @@ export function PlayerCard({ userId, onClose }: { userId: string; onClose: () =>
     }
   }
 
-  return (
+  // Rendered in a portal at <body>: keeps the overlay out of the lobby's
+  // continuously-animating subtree. A static scrim (no live backdrop-filter)
+  // avoids the per-frame re-blur of the moving game art behind it, which is what
+  // made the popup flicker.
+  return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 animate-fade-in"
       onClick={onClose}
       role="presentation"
     >
       <div
-        className="card w-full max-w-sm border-border-strong p-6 shadow-modal"
+        className="card w-full max-w-sm border-border-strong p-6 shadow-modal animate-fade-in"
         onClick={(e) => e.stopPropagation()}
       >
         {isLoading || !p ? (
@@ -94,6 +111,7 @@ export function PlayerCard({ userId, onClose }: { userId: string; onClose: () =>
           </>
         )}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
