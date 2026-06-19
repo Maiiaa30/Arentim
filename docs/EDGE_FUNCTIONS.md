@@ -33,6 +33,9 @@ no card. Rate limit is 10 req/min, so the function spaces its calls (~6.5s).
 ```bash
 supabase secrets set FOOTBALL_DATA_TOKEN=<your-football-data-token>
 supabase secrets set SYNC_SECRET=<a-long-random-string>
+# Optional — REAL bookmaker odds (free 500 req/mo) from https://the-odds-api.com
+# Without it, odds are generated from team form instead.
+supabase secrets set ODDS_API_KEY=<your-the-odds-api-key>
 ```
 
 (The legacy API-Football integration is still in the repo at
