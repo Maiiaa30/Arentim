@@ -16,7 +16,7 @@ function LiveRow({ fixture }: { fixture: Fixture }) {
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-negative opacity-75" />
             <span className="relative inline-flex h-2 w-2 rounded-full bg-negative" />
           </span>
-          LIVE {fixture.minute != null && `· ${fixture.minute}'`}
+          AO VIVO {fixture.minute != null && `· ${fixture.minute}'`}
         </span>
         <span className="text-xs text-muted">{fixture.league}</span>
       </div>
@@ -42,7 +42,7 @@ export function LiveFixtures() {
 
   return (
     <section className="space-y-3">
-      <h2 className="font-display text-lg font-semibold text-text">Live now</h2>
+      <h2 className="font-display text-xl font-medium text-text">Ao vivo agora</h2>
       <div className="grid gap-3 sm:grid-cols-2">
         {live.map((f) => (
           <LiveRow key={f.id} fixture={f} />

@@ -1,139 +1,196 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useProfile, useUpdateProfile } from '@/features/profile/useProfile';
 import { useChallenges } from '@/features/challenges/useChallenges';
+import { useTransactions } from '@/features/wallet/useTransactions';
 import { netResult, winRate } from '@/features/profile/stats';
-import { formatTostoes, formatAmount } from '@/lib/format';
+import { formatAmount, formatTt } from '@/lib/format';
 import { displayNameSchema } from '@/features/auth/schema';
-import { StatTile } from '@/components/StatTile';
 import { AnimatedNumber } from '@/components/AnimatedNumber';
-import { CoinIcon } from '@/components/CoinIcon';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import {
+  Eyebrow,
+  FramedPanel,
+  RingAvatar,
+  SectionHeader,
+} from '@/components/ui/primitives';
+import type { TransactionType } from '@/types/db';
 
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('pt-PT', { year: 'numeric', month: 'short', day: 'numeric' });
+const monthYear = (iso: string) =>
+  new Date(iso).toLocaleDateString('pt-PT', { year: 'numeric', month: 'short' });
+
+function relativeTime(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime();
+  const m = Math.floor(diff / 60000);
+  if (m < 1) return 'Agora mesmo';
+  if (m < 60) return `Há ${m} min`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `Há ${h} h`;
+  const d = Math.floor(h / 24);
+  return d === 1 ? 'Ontem' : `Há ${d} dias`;
+}
+
+const TX_EMBLEM: Record<TransactionType, string> = {
+  bonus: '❖', bet: '▲', win: '◉', loss: '◐', refund: '⟲', adjustment: '⚑',
+};
+const TX_LABEL: Record<TransactionType, string> = {
+  bonus: 'Bónus', bet: 'Aposta', win: 'Ganho', loss: 'Perda', refund: 'Reembolso', adjustment: 'Ajuste',
+};
+
+function StatCard({ label, value, sub, tone = 'text-text' }: { label: string; value: string; sub: string; tone?: string }) {
+  return (
+    <div className="card p-5">
+      <p className="font-sans text-[10.5px] uppercase tracking-[0.18em] text-muted-2">{label}</p>
+      <p className={`mt-1 font-display text-3xl font-medium tabular-nums ${tone}`}>{value}</p>
+      <p className="mt-1 font-sans text-xs text-muted-2">{sub}</p>
+    </div>
+  );
 }
 
 export function ProfilePage() {
   const { data: profile, isLoading, error } = useProfile();
   const { data: challenges } = useChallenges();
+  const { data: activity } = useTransactions({ limit: 8 });
   const updateProfile = useUpdateProfile();
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
 
-  if (isLoading) {
-    return <p className="py-12 text-center text-muted">Loading your profile…</p>;
-  }
-  if (error || !profile) {
-    return <p className="py-12 text-center text-negative">Could not load your profile.</p>;
-  }
+  if (isLoading) return <p className="py-12 text-center text-muted-2">A carregar o seu perfil…</p>;
+  if (error || !profile) return <p className="py-12 text-center text-negative">Não foi possível carregar o perfil.</p>;
 
   const net = netResult(profile);
-
-  function startEdit() {
-    setName(profile!.display_name);
-    setFormError(null);
-    setEditing(true);
-  }
+  const handle = profile.display_name.toLowerCase().replace(/\s+/g, '');
+  const initials = profile.display_name.slice(0, 2).toUpperCase();
 
   async function save() {
     const parsed = displayNameSchema.safeParse(name);
     if (!parsed.success) {
-      setFormError(parsed.error.issues[0]?.message ?? 'Invalid name');
+      setFormError(parsed.error.issues[0]?.message ?? 'Nome inválido');
       return;
     }
     try {
       await updateProfile.mutateAsync({ display_name: parsed.data });
       setEditing(false);
     } catch (e) {
-      setFormError(e instanceof Error ? e.message : 'Could not save');
+      setFormError(e instanceof Error ? e.message : 'Não foi possível guardar');
     }
   }
 
   return (
     <div className="animate-fade-in space-y-8">
-      <section className="card p-6">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
+      <Link to="/" className="font-sans text-sm text-muted-2 hover:text-text">
+        ← Voltar às Mesas
+      </Link>
+
+      <FramedPanel>
+        <div className="flex flex-wrap items-center gap-6">
+          <RingAvatar initials={initials} size={96} />
+          <div className="min-w-[200px] flex-1">
             {editing ? (
-              <div className="space-y-2">
-                <Input
-                  id="displayName"
-                  label="Display name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  error={formError ?? undefined}
-                />
+              <div className="max-w-xs space-y-2">
+                <Input id="displayName" label="Nome de exibição" value={name}
+                  onChange={(e) => setName(e.target.value)} error={formError ?? undefined} />
                 <div className="flex gap-2">
-                  <Button onClick={save} disabled={updateProfile.isPending}>
-                    {updateProfile.isPending ? 'Saving…' : 'Save'}
+                  <Button variant="primary" onClick={save} disabled={updateProfile.isPending}>
+                    {updateProfile.isPending ? 'A guardar…' : 'Guardar'}
                   </Button>
-                  <Button variant="ghost" onClick={() => setEditing(false)}>
-                    Cancel
-                  </Button>
+                  <Button variant="ghost" onClick={() => setEditing(false)}>Cancelar</Button>
                 </div>
               </div>
             ) : (
               <>
-                <h1 className="font-display text-2xl font-bold text-text">
+                <Eyebrow>{profile.is_admin ? 'Administrador' : 'Membro Ouro'}</Eyebrow>
+                <h1 className="mt-2 font-display text-[38px] font-medium leading-tight text-text">
                   {profile.display_name}
-                  {profile.is_admin && (
-                    <span className="ml-2 rounded-full border border-accent/40 bg-accent/10 px-2 py-0.5 text-xs font-medium text-accent">
-                      Admin
-                    </span>
-                  )}
                 </h1>
-                <p className="mt-1 text-sm text-muted">Member since {formatDate(profile.created_at)}</p>
-                <button onClick={startEdit} className="mt-2 text-sm text-gold hover:underline">
-                  Edit profile
+                <p className="mt-1 font-sans text-sm text-muted-2">
+                  @{handle} · Membro desde {monthYear(profile.created_at)}
+                </p>
+                <button onClick={() => { setName(profile.display_name); setFormError(null); setEditing(true); }}
+                  className="mt-2 font-sans text-sm text-gold hover:underline">
+                  Editar perfil
                 </button>
               </>
             )}
           </div>
-          <div className="text-right">
-            <p className="text-xs uppercase tracking-wide text-muted">Balance</p>
-            <p className="flex items-center justify-end gap-2 font-display text-3xl font-bold text-text">
-              <CoinIcon className="h-6 w-6" />
-              <AnimatedNumber value={profile.balance} />
+          <div className="border-gold/20 sm:border-l sm:pl-6">
+            <p className="font-sans text-[10.5px] uppercase tracking-[0.18em] text-muted-2">Saldo</p>
+            <p className="flex items-baseline gap-1 font-display text-3xl font-medium text-gold">
+              <AnimatedNumber value={profile.balance} /> <span className="font-mono text-base">Tt</span>
             </p>
+            <Link to="/challenges">
+              <Button variant="ghost" className="mt-3 !px-4 !py-2">Adicionar Tostões</Button>
+            </Link>
           </div>
         </div>
-      </section>
+      </FramedPanel>
 
-      <section className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-        <StatTile label="Total wagered" value={formatTostoes(profile.total_wagered)} />
-        <StatTile label="Total won" value={formatTostoes(profile.total_won)} tone="positive" />
-        <StatTile label="Total lost" value={formatTostoes(profile.total_lost)} tone="negative" />
-        <StatTile
-          label="Net"
-          value={`${net >= 0 ? '+' : '−'}${formatAmount(Math.abs(net))}`}
-          tone={net >= 0 ? 'positive' : 'negative'}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard label="Jogos" value={formatAmount(profile.games_played)} sub="no total" />
+        <StatCard label="Maior ganho" value={formatTt(profile.biggest_win)} sub="num só lance" tone="text-positive" />
+        <StatCard label="Taxa de vitória" value={`${winRate(profile)}%`} sub="ao longo do tempo" />
+        <StatCard
+          label="Resultado"
+          value={`${net >= 0 ? '+' : '−'}${formatAmount(Math.abs(net))} Tt`}
+          sub="ganhos − perdas"
+          tone={net >= 0 ? 'text-positive' : 'text-negative'}
         />
-        <StatTile label="Win rate" value={`${winRate(profile)}%`} />
-        <StatTile label="Biggest win" value={formatTostoes(profile.biggest_win)} tone="gold" />
-        <StatTile label="Games played" value={formatAmount(profile.games_played)} />
-        <StatTile label="Daily streak" value={`${profile.streak_count} 🔥`} />
-      </section>
+      </div>
 
-      <section className="card p-6">
-        <h2 className="font-display text-lg font-semibold text-text">Achievements</h2>
-        {(() => {
-          const earned = (challenges ?? []).filter((c) => c.claimed);
-          if (earned.length === 0) {
-            return <p className="mt-1 text-sm text-muted">No badges yet — complete challenges to earn them.</p>;
-          }
-          return (
-            <div className="mt-3 flex flex-wrap gap-2">
-              {earned.map((c) => (
-                <span key={c.key} className="rounded-full border border-gold/40 bg-gold/10 px-3 py-1 text-xs font-medium text-gold">
-                  🏅 {c.title}
+      <div className="flex flex-wrap gap-[30px]">
+        <div className="min-w-[300px] flex-[3_1_560px] space-y-3">
+          <SectionHeader title="Atividade Recente" />
+          <div className="card divide-y divide-border">
+            {(activity ?? []).length === 0 ? (
+              <p className="p-6 text-center text-sm text-muted-2">Ainda sem atividade.</p>
+            ) : (
+              (activity ?? []).map((t) => (
+                <div key={t.id} className="flex items-center gap-3 px-4 py-3">
+                  <span className="flex h-9 w-9 items-center justify-center rounded-full border border-gold/30 text-gold">
+                    {TX_EMBLEM[t.type]}
+                  </span>
+                  <div className="flex-1">
+                    <p className="font-sans text-sm text-body">
+                      {TX_LABEL[t.type]}{t.game ? ` · ${t.game}` : ''}
+                    </p>
+                    <p className="font-sans text-xs text-muted-2">{relativeTime(t.created_at)}</p>
+                  </div>
+                  <span className={`font-mono text-sm ${t.amount >= 0 ? 'text-positive' : 'text-negative'}`}>
+                    {t.amount >= 0 ? '+' : '−'}{formatAmount(Math.abs(t.amount))}
+                  </span>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
+        <aside className="min-w-[280px] flex-[1_1_280px] space-y-3">
+          <SectionHeader title="Distinções" />
+          <div className="space-y-2">
+            {(challenges ?? []).map((c) => (
+              <div
+                key={c.key}
+                className={`card flex items-center gap-3 p-3 ${c.claimed ? '' : 'opacity-50'}`}
+              >
+                <span
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm"
+                  style={c.claimed
+                    ? { background: 'linear-gradient(140deg,#C9A24B,#6b542a)', color: '#0a0907' }
+                    : { border: '1px solid rgba(201,162,75,0.2)', color: '#8a7f63' }}
+                >
+                  🏅
                 </span>
-              ))}
-            </div>
-          );
-        })()}
-      </section>
+                <div>
+                  <p className={`font-sans text-sm ${c.claimed ? 'text-text' : 'text-muted-2'}`}>{c.title}</p>
+                  <p className="font-sans text-xs text-muted-2">{c.description}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </aside>
+      </div>
     </div>
   );
 }
