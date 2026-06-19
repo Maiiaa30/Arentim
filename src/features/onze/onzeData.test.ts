@@ -7,7 +7,7 @@ describe('onze dataset (real Liga Portugal data)', () => {
   it('covers a span of seasons', () => {
     expect(YEARS.length).toBeGreaterThanOrEqual(10);
     expect(YEARS[0]).toBeGreaterThanOrEqual(2005);
-    expect(YEARS[YEARS.length - 1]).toBeLessThanOrEqual(2020);
+    expect(YEARS[YEARS.length - 1]).toBeLessThanOrEqual(2026);
     expect([...YEARS].sort((a, b) => a - b)).toEqual(YEARS); // sorted
   });
 

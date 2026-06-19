@@ -5,18 +5,18 @@ import { Eyebrow, RingAvatar, SectionHeader } from '@/components/ui/primitives';
 import {
   FORMATIONS,
   YOUR_TEAM,
-  type DraftSlot,
   type Formation,
   type GamePlayer,
   type Mode,
+  type Offer,
   type SeasonResult,
   type SeteResult,
-  dailySeed,
-  generateDraft,
-  pickSeason,
+  buildOffers,
+  latestIn,
   posEligible,
   posLine,
   rateXI,
+  rosterOf,
   simulateSeason,
   simulateSete,
   standingsAfter,
@@ -27,30 +27,15 @@ import { useOnzeLeaderboard, useSubmitOnzeScore, type OnzeScope } from '@/featur
 
 type Phase = 'setup' | 'draft' | 'result';
 const LINE_ORDER: Line[] = ['FW', 'MF', 'DF', 'GK'];
-const LINE_LABEL: Record<Line, string> = { GK: 'Guarda-redes', DF: 'Defesa', MF: 'Meio-campo', FW: 'Ataque' };
 
 function Face({ p, size = 40 }: { p: GamePlayer; size?: number }) {
   const [err, setErr] = useState(false);
   if (p.photo && !err) {
-    return (
-      <img
-        src={p.photo}
-        alt=""
-        width={size}
-        height={size}
-        loading="lazy"
-        onError={() => setErr(true)}
-        className="shrink-0 rounded-full bg-surface-raised object-cover"
-        style={{ width: size, height: size }}
-      />
-    );
+    return <img src={p.photo} alt="" width={size} height={size} loading="lazy" onError={() => setErr(true)} className="shrink-0 rounded-full bg-surface-raised object-cover" style={{ width: size, height: size }} />;
   }
   const initials = p.name.split(/\s+/).map((w) => w[0]).slice(0, 2).join('').toUpperCase() || p.name.slice(0, 2).toUpperCase();
   return (
-    <span
-      className="flex shrink-0 items-center justify-center rounded-full border border-gold/25 bg-surface-raised font-sans font-medium text-muted"
-      style={{ width: size, height: size, fontSize: Math.round(size * 0.32) }}
-    >
+    <span className="flex shrink-0 items-center justify-center rounded-full border border-gold/25 bg-surface-raised font-sans font-medium text-muted" style={{ width: size, height: size, fontSize: Math.round(size * 0.32) }}>
       {initials}
     </span>
   );
@@ -92,21 +77,23 @@ function Leaderboard() {
 export function OnzePage() {
   const [mode, setMode] = useState<Mode>('epoca');
   const [formation, setFormation] = useState<Formation>('4-3-3');
-  const [startY, setStartY] = useState(Math.max(MIN_YEAR, MAX_YEAR - 5));
+  const [startY, setStartY] = useState(Math.max(MIN_YEAR, MAX_YEAR - 6));
   const [endY, setEndY] = useState(MAX_YEAR);
   const [almanac, setAlmanac] = useState(false);
 
   const [phase, setPhase] = useState<Phase>('setup');
   const [seed, setSeed] = useState('');
-  const [year, setYear] = useState(MAX_YEAR);
-  const [draft, setDraft] = useState<DraftSlot[]>([]);
+  const [compYear, setCompYear] = useState(MAX_YEAR);
+  const [offers, setOffers] = useState<Offer[]>([]);
+  const [offerIdx, setOfferIdx] = useState(0);
   const [picks, setPicks] = useState<(GamePlayer | null)[]>([]);
-  const [active, setActive] = useState(0);
-  const [swaps, setSwaps] = useState(3);
+  const [slotClub, setSlotClub] = useState<(string | null)[]>([]);
+  const [used, setUsed] = useState<Set<string>>(new Set());
+  const [pending, setPending] = useState<{ player: GamePlayer; slots: number[] } | null>(null);
 
   const [sete, setSete] = useState<SeteResult | null>(null);
   const [season, setSeason] = useState<SeasonResult | null>(null);
-  const [step, setStep] = useState(0); // jornadas played
+  const [step, setStep] = useState(0);
   const [auto, setAuto] = useState(false);
 
   const submit = useSubmitOnzeScore();
@@ -117,15 +104,20 @@ export function OnzePage() {
   const live = useMemo(() => rateXI(xi), [xi]);
   const complete = picks.length === 11 && picks.every(Boolean);
 
+  const offer = offers[offerIdx];
+  const roster = useMemo(() => (offer ? rosterOf(offer) : []), [offer]);
+  const openEligible = (p: GamePlayer) => slots.map((pos, i) => ({ pos, i })).filter(({ pos, i }) => picks[i] == null && posEligible(pos, p)).map((x) => x.i);
+
   function start() {
-    const s = `onze-${Math.floor(Math.random() * 1e9)}-${dailySeed()}`;
-    const y = pickSeason(startY, endY, s);
+    const s = `onze-${Math.floor(Math.random() * 1e9)}`;
     setSeed(s);
-    setYear(y);
-    setDraft(generateDraft(s, formation, y));
+    setCompYear(latestIn(startY, endY));
+    setOffers(buildOffers(s, startY, endY));
+    setOfferIdx(0);
     setPicks(Array(11).fill(null));
-    setActive(0);
-    setSwaps(3);
+    setSlotClub(Array(11).fill(null));
+    setUsed(new Set());
+    setPending(null);
     setSete(null);
     setSeason(null);
     setStep(0);
@@ -133,25 +125,45 @@ export function OnzePage() {
     setPhase('draft');
   }
 
-  function choose(p: GamePlayer) {
-    const filled = picks[active] != null;
-    if (filled && picks[active]!.id === p.id) return;
-    if (filled && swaps <= 0) return;
-    if (filled) setSwaps((s) => s - 1);
-    const next = [...picks];
-    next[active] = p;
-    setPicks(next);
-    const e = next.findIndex((x) => x == null);
-    if (e >= 0) setActive(e);
+  function step2(dir: 1 | -1) {
+    for (let k = 1; k <= offers.length; k++) {
+      const idx = (offerIdx + dir * k + offers.length * k) % offers.length;
+      if (!used.has(offers[idx]!.club)) { setOfferIdx(idx); return; }
+    }
+  }
+
+  function place(player: GamePlayer, slotIdx: number) {
+    if (!offer) return;
+    const club = offer.club;
+    setPicks((prev) => { const n = [...prev]; n[slotIdx] = player; return n; });
+    setSlotClub((prev) => { const n = [...prev]; n[slotIdx] = club; return n; });
+    const nextUsed = new Set(used); nextUsed.add(club); setUsed(nextUsed);
+    setPending(null);
+    // advance to next unused team
+    for (let k = 1; k <= offers.length; k++) {
+      const idx = (offerIdx + k) % offers.length;
+      if (!nextUsed.has(offers[idx]!.club)) { setOfferIdx(idx); break; }
+    }
+  }
+  function pickPlayer(player: GamePlayer) {
+    const open = openEligible(player);
+    if (open.length === 0) return;
+    if (open.length === 1) place(player, open[0]!);
+    else setPending({ player, slots: open });
+  }
+  function clearSlot(i: number) {
+    const club = slotClub[i];
+    setPicks((prev) => { const n = [...prev]; n[i] = null; return n; });
+    setSlotClub((prev) => { const n = [...prev]; n[i] = null; return n; });
+    if (club) { const n = new Set(used); n.delete(club); setUsed(n); }
   }
 
   function play() {
-    if (mode === 'sete') setSete(simulateSete(xi, year, seed));
-    else { setSeason(simulateSeason(xi, year, seed)); setStep(0); }
+    if (mode === 'sete') setSete(simulateSete(xi, compYear, seed));
+    else { setSeason(simulateSeason(xi, compYear, seed)); setStep(0); }
     setPhase('result');
   }
 
-  // Auto-advance the season jornadas.
   useEffect(() => {
     if (!auto || !season) return;
     if (step >= season.jornadas.length) { setAuto(false); return; }
@@ -159,13 +171,9 @@ export function OnzePage() {
     return () => window.clearTimeout(t);
   }, [auto, step, season]);
 
-  const finalTable = useMemo(
-    () => (season ? standingsAfter(season, season.jornadas.length) : []),
-    [season],
-  );
+  const finalTable = useMemo(() => (season ? standingsAfter(season, season.jornadas.length) : []), [season]);
   const seasonOver = !!season && step >= season.jornadas.length;
 
-  // Submit score once a game is decided.
   useEffect(() => {
     if (phase !== 'result' || submitted.current === seed) return;
     if (mode === 'sete' && sete) {
@@ -191,8 +199,8 @@ export function OnzePage() {
         <Eyebrow className="mt-3">Arentim · Futebol</Eyebrow>
         <h1 className="mt-2 font-display text-[36px] font-medium leading-tight text-text">Onze de Ouro</h1>
         <p className="mt-2 max-w-prose font-sans text-sm text-muted">
-          Escolha um intervalo de épocas da Liga Portugal, sorteie um clube por posição e monte o seu onze
-          com jogadores reais. Depois vença os <span className="text-gold">7 jogos</span> ou conquiste a época inteira.
+          Escolha um intervalo de épocas da Liga Portugal. Aparece-lhe uma equipa de cada vez — escolha um
+          jogador e a posição onde joga, um por clube. Depois vença os <span className="text-gold">7 jogos</span> ou a época inteira.
         </p>
       </div>
 
@@ -204,14 +212,9 @@ export function OnzePage() {
                 <p className="mb-2 font-sans text-[10.5px] font-medium uppercase tracking-[0.18em] text-muted-2">Modo de jogo</p>
                 <div className="flex gap-2">
                   {([['sete', '7 Jogos'], ['epoca', 'Época completa']] as const).map(([m, label]) => (
-                    <button key={m} onClick={() => setMode(m)} className={`focus-ring flex-1 rounded border py-2.5 font-sans text-sm transition-colors ${mode === m ? 'border-gold bg-gold/10 text-gold' : 'border-border text-muted'}`}>
-                      {label}
-                    </button>
+                    <button key={m} onClick={() => setMode(m)} className={`focus-ring flex-1 rounded border py-2.5 font-sans text-sm transition-colors ${mode === m ? 'border-gold bg-gold/10 text-gold' : 'border-border text-muted'}`}>{label}</button>
                   ))}
                 </div>
-                <p className="mt-1.5 font-sans text-[11px] text-muted-2">
-                  {mode === 'sete' ? 'Eliminatória de 7 jogos contra os clubes da época — chegue ao 7–0.' : 'Liga completa: o seu XI entra na Liga Portugal e joga todas as jornadas.'}
-                </p>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -233,9 +236,7 @@ export function OnzePage() {
                 <p className="mb-2 font-sans text-[10.5px] font-medium uppercase tracking-[0.18em] text-muted-2">Tática</p>
                 <div className="grid grid-cols-3 gap-2">
                   {(Object.keys(FORMATIONS) as Formation[]).map((f) => (
-                    <button key={f} onClick={() => setFormation(f)} className={`focus-ring rounded border py-2.5 font-mono text-sm transition-colors ${formation === f ? 'border-gold bg-gold/10 text-gold' : 'border-border text-muted'}`}>
-                      {f}
-                    </button>
+                    <button key={f} onClick={() => setFormation(f)} className={`focus-ring rounded border py-2.5 font-mono text-sm transition-colors ${formation === f ? 'border-gold bg-gold/10 text-gold' : 'border-border text-muted'}`}>{f}</button>
                   ))}
                 </div>
               </div>
@@ -247,7 +248,7 @@ export function OnzePage() {
                 </button>
               </label>
 
-              <Button variant="primary" onClick={start} className="w-full">Sortear equipa</Button>
+              <Button variant="primary" onClick={start} className="w-full">Começar</Button>
             </div>
           )}
 
@@ -255,7 +256,7 @@ export function OnzePage() {
             <>
               <div className="felt felt-rail space-y-3 rounded-lg p-5">
                 <div className="flex items-center justify-between">
-                  <span className="font-mono text-xs text-gold-light">Época {year} · {formation}</span>
+                  <span className="font-mono text-xs text-gold-light">{formation}</span>
                   <span className="font-sans text-xs text-muted">{almanac ? 'Almanaque' : `Equipa ${live.total} · Química +${live.chemistry}`}</span>
                 </div>
                 {LINE_ORDER.map((line) => {
@@ -266,13 +267,14 @@ export function OnzePage() {
                       {idxs.map((i) => {
                         const p = picks[i];
                         return (
-                          <button key={i} type="button" onClick={() => phase === 'draft' && setActive(i)}
-                            className={`relative flex h-[72px] w-[84px] flex-col items-center justify-center gap-1 rounded border px-1 text-center transition-colors ${active === i && phase === 'draft' ? 'border-gold bg-gold/15' : 'border-gold/25 bg-bg/40'}`}>
+                          <button key={i} type="button" onClick={() => phase === 'draft' && p && clearSlot(i)} title={p ? 'Tocar para remover' : undefined}
+                            className={`relative flex h-[74px] w-[86px] flex-col items-center justify-center gap-0.5 rounded border px-1 text-center transition-colors ${p ? 'border-gold/40 bg-bg/50 hover:border-negative/60' : 'border-gold/25 bg-bg/40'}`}>
                             <span className="absolute left-1 top-1 font-mono text-[8px] font-semibold text-gold/70">{slots[i]}</span>
                             {p ? (
                               <>
-                                <Face p={p} size={28} />
+                                <Face p={p} size={26} />
                                 <span className="line-clamp-1 w-full font-sans text-[10px] leading-tight text-text">{p.name}</span>
+                                {p.year && <span className="font-mono text-[8px] text-muted-2">{p.year}</span>}
                               </>
                             ) : (
                               <span className="font-sans text-[11px] font-medium uppercase tracking-wider text-muted-2">{slots[i]}</span>
@@ -287,41 +289,52 @@ export function OnzePage() {
 
               {phase === 'draft' ? (
                 <div className="card space-y-3 p-5">
-                  <div className="flex items-center justify-between">
-                    <p className="font-sans text-[10.5px] font-medium uppercase tracking-[0.18em] text-muted-2">
-                      <span className="text-gold">{draft[active]?.position}</span> · {LINE_LABEL[posLine(draft[active]!.position)]} · {draft[active]?.club}
-                    </p>
-                    <span className="font-sans text-xs text-muted-2">Trocas: {swaps}</span>
-                  </div>
-                  <p className="font-sans text-[11px] text-muted-2">
-                    Plantel do {draft[active]?.club}. Só pode escolher quem joga a {draft[active]?.position}.
-                  </p>
-                  <div className="grid max-h-[340px] gap-2 overflow-y-auto sm:grid-cols-2">
-                    {draft[active]?.roster.map((p) => {
-                      const elig = posEligible(draft[active]!.position, p);
-                      const dupe = picks.some((x, i) => i !== active && x?.id === p.id);
-                      const usable = elig && !dupe;
-                      const chosen = picks[active]?.id === p.id;
-                      return (
-                        <button
-                          key={p.id}
-                          onClick={() => usable && choose(p)}
-                          disabled={!usable}
-                          title={dupe ? 'Já está na equipa' : !elig ? `Não joga a ${draft[active]!.position}` : undefined}
-                          className={`focus-ring flex items-center gap-2 rounded border px-3 py-2 text-left transition-colors ${
-                            chosen ? 'border-gold bg-gold/10' : usable ? 'border-border bg-surface hover:border-gold/50' : 'cursor-not-allowed border-border/40 bg-surface/40 opacity-45'
-                          }`}
-                        >
-                          <Face p={p} size={34} />
-                          <span className="min-w-0 flex-1">
-                            <span className="block truncate font-sans text-sm text-text">{p.name}</span>
-                            <span className="font-sans text-[10px] uppercase tracking-wider text-muted-2">{p.pos}{p.nat ? ` · ${p.nat}` : ''}{dupe ? ' · escolhido' : ''}</span>
-                          </span>
-                          {!almanac && <span className="shrink-0 font-mono text-sm font-semibold text-gold">{p.rating}</span>}
-                        </button>
-                      );
-                    })}
-                  </div>
+                  {pending ? (
+                    <div className="space-y-3">
+                      <p className="font-sans text-sm text-text">
+                        Onde quer colocar <span className="font-semibold text-gold">{pending.player.name}</span>?
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {pending.slots.map((i) => (
+                          <button key={i} onClick={() => place(pending.player, i)} className="focus-ring rounded border border-gold/50 bg-gold/10 px-3 py-2 font-mono text-sm text-gold">
+                            {slots[i]}
+                          </button>
+                        ))}
+                        <button onClick={() => setPending(null)} className="focus-ring rounded border border-border px-3 py-2 font-sans text-sm text-muted-2">Cancelar</button>
+                      </div>
+                    </div>
+                  ) : offer ? (
+                    <>
+                      <div className="flex items-center justify-between">
+                        <p className="font-sans text-sm font-medium text-text">
+                          {offer.club} <span className="font-mono text-gold">· {offer.year}</span>
+                        </p>
+                        <div className="flex gap-1">
+                          <button onClick={() => step2(-1)} className="focus-ring rounded border border-border px-2 py-1 font-sans text-xs text-muted-2 hover:text-text">◂</button>
+                          <button onClick={() => step2(1)} className="focus-ring rounded border border-border px-2 py-1 font-sans text-xs text-muted-2 hover:text-text">Outra equipa ▸</button>
+                        </div>
+                      </div>
+                      <p className="font-sans text-[11px] text-muted-2">Escolha um jogador — só pode tirar um de cada clube.</p>
+                      <div className="grid max-h-[340px] gap-2 overflow-y-auto sm:grid-cols-2">
+                        {roster.map((p) => {
+                          const open = openEligible(p);
+                          const usable = open.length > 0;
+                          return (
+                            <button key={p.id} onClick={() => usable && pickPlayer(p)} disabled={!usable}
+                              title={usable ? `Pode jogar: ${open.map((i) => slots[i]).join(', ')}` : 'Não encaixa em nenhuma posição livre'}
+                              className={`focus-ring flex items-center gap-2 rounded border px-3 py-2 text-left transition-colors ${usable ? 'border-border bg-surface hover:border-gold/50' : 'cursor-not-allowed border-border/40 bg-surface/40 opacity-45'}`}>
+                              <Face p={p} size={34} />
+                              <span className="min-w-0 flex-1">
+                                <span className="block truncate font-sans text-sm text-text">{p.name}</span>
+                                <span className="font-sans text-[10px] uppercase tracking-wider text-muted-2">{p.pos}{p.nat ? ` · ${p.nat}` : ''}</span>
+                              </span>
+                              {!almanac && <span className="shrink-0 font-mono text-sm font-semibold text-gold">{p.rating}</span>}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </>
+                  ) : null}
                   <Button variant="primary" onClick={play} disabled={!complete} className="w-full">
                     {complete ? (mode === 'sete' ? 'Jogar os 7 jogos' : 'Iniciar a época') : `Faltam ${picks.filter((x) => !x).length} jogadores`}
                   </Button>
@@ -333,21 +346,14 @@ export function OnzePage() {
                   <p className="font-sans text-sm text-muted">Equipa {sete.rating.total} · química +{sete.rating.chemistry} · {sete.score} pts</p>
                   <div className="flex flex-wrap justify-center gap-1.5">
                     {sete.rounds.map((r) => (
-                      <span key={r.round} title={`${r.opponent} (${r.opponentRating})${r.boss ? ' · Lendas' : ''}`} className={`flex h-7 w-7 items-center justify-center rounded text-xs font-bold ${r.win ? 'bg-positive text-bg' : 'bg-negative text-white'} ${r.boss ? 'ring-2 ring-gold' : ''}`}>
-                        {r.win ? 'V' : 'D'}
-                      </span>
+                      <span key={r.round} title={`${r.opponent} (${r.opponentRating})${r.boss ? ' · Lendas' : ''}`} className={`flex h-7 w-7 items-center justify-center rounded text-xs font-bold ${r.win ? 'bg-positive text-bg' : 'bg-negative text-white'} ${r.boss ? 'ring-2 ring-gold' : ''}`}>{r.win ? 'V' : 'D'}</span>
                     ))}
                   </div>
                   <Button variant="secondary" onClick={() => setPhase('setup')} className="w-full">Jogar outra vez</Button>
                 </div>
               ) : season ? (
                 <SeasonView
-                  season={season}
-                  step={step}
-                  auto={auto}
-                  over={seasonOver}
-                  table={tableUpTo}
-                  lastMatch={lastMatch}
+                  season={season} step={step} auto={auto} over={seasonOver} table={tableUpTo} lastMatch={lastMatch}
                   onNext={() => setStep((s) => Math.min(season.jornadas.length, s + 1))}
                   onAuto={() => setAuto((v) => !v)}
                   onSkip={() => { setAuto(false); setStep(season.jornadas.length); }}
@@ -367,26 +373,16 @@ export function OnzePage() {
 function SeasonView({
   season, step, auto, over, table, lastMatch, onNext, onAuto, onSkip, onAgain,
 }: {
-  season: SeasonResult;
-  step: number;
-  auto: boolean;
-  over: boolean;
-  table: ReturnType<typeof standingsAfter>;
-  lastMatch: ReturnType<typeof yourMatch>;
-  onNext: () => void;
-  onAuto: () => void;
-  onSkip: () => void;
-  onAgain: () => void;
+  season: SeasonResult; step: number; auto: boolean; over: boolean;
+  table: ReturnType<typeof standingsAfter>; lastMatch: ReturnType<typeof yourMatch>;
+  onNext: () => void; onAuto: () => void; onSkip: () => void; onAgain: () => void;
 }) {
   const total = season.jornadas.length;
   const myPos = over ? table.findIndex((r) => r.team === YOUR_TEAM) + 1 : 0;
-
   return (
     <div className="card space-y-4 p-5">
       <div className="flex items-center justify-between">
-        <span className="font-sans text-[10.5px] font-medium uppercase tracking-[0.18em] text-muted-2">
-          {over ? 'Época terminada' : `Jornada ${step} / ${total}`}
-        </span>
+        <span className="font-sans text-[10.5px] font-medium uppercase tracking-[0.18em] text-muted-2">{over ? 'Época terminada' : `Jornada ${step} / ${total}`}</span>
         {!over ? (
           <div className="flex gap-2">
             <Button variant="primary" onClick={onNext} className="!px-3 !py-1.5 text-xs" disabled={auto}>Seguinte ▸</Button>
@@ -399,9 +395,7 @@ function SeasonView({
       </div>
 
       {over ? (
-        <p className={`text-center font-display text-2xl font-bold ${myPos === 1 ? 'text-gold' : 'text-text'}`}>
-          {myPos === 1 ? '🏆 Campeão da Liga!' : `${myPos}.º lugar`}
-        </p>
+        <p className={`text-center font-display text-2xl font-bold ${myPos === 1 ? 'text-gold' : 'text-text'}`}>{myPos === 1 ? '🏆 Campeão da Liga!' : `${myPos}.º lugar`}</p>
       ) : lastMatch ? (
         <div key={step} className="animate-pop rounded border border-border bg-surface p-3 text-center">
           <p className="font-sans text-[9px] uppercase tracking-[0.3em] text-muted-2">O teu jogo</p>
@@ -410,24 +404,19 @@ function SeasonView({
             <span className="px-2 font-bold">{lastMatch.hs} – {lastMatch.as}</span>
             <span className={lastMatch.away === YOUR_TEAM ? 'text-gold' : ''}>{lastMatch.away}</span>
           </p>
-          {lastMatch.scorers.length > 0 && (
-            <p className="mt-1 font-sans text-[11px] text-muted-2">
-              {lastMatch.scorers.map((s) => `${s.minute}' ${s.name}`).join(' · ')}
-            </p>
-          )}
+          {lastMatch.scorers.length > 0 && <p className="mt-1 font-sans text-[11px] text-muted-2">{lastMatch.scorers.map((s) => `${s.minute}' ${s.name}`).join(' · ')}</p>}
         </div>
       ) : (
         <p className="py-2 text-center font-sans text-sm text-muted-2">Carregue em Seguinte para começar a época.</p>
       )}
 
-      {/* Standings */}
       <div className="overflow-hidden rounded border border-border">
         <div className="grid grid-cols-[24px_1fr_28px_28px_32px] gap-2 border-b border-border bg-surface px-3 py-1.5 font-sans text-[9px] uppercase tracking-wider text-muted-2">
           <span>#</span><span>Clube</span><span className="text-center">DG</span><span className="text-center">J</span><span className="text-center">Pts</span>
         </div>
         <div className="max-h-[420px] overflow-y-auto">
           {table.map((r, i) => (
-            <div key={r.team} className={`grid grid-cols-[24px_1fr_28px_28px_32px] items-center gap-2 border-b border-border/50 px-3 py-1.5 text-sm transition-colors ${r.team === YOUR_TEAM ? 'bg-gold/[0.1]' : ''}`}>
+            <div key={r.team} className={`grid grid-cols-[24px_1fr_28px_28px_32px] items-center gap-2 border-b border-border/50 px-3 py-1.5 text-sm ${r.team === YOUR_TEAM ? 'bg-gold/[0.1]' : ''}`}>
               <span className={`font-display ${i < 4 ? 'text-positive' : i >= table.length - 3 ? 'text-negative' : 'text-muted-2'}`}>{i + 1}</span>
               <span className={`truncate font-sans ${r.team === YOUR_TEAM ? 'font-semibold text-gold' : 'text-body'}`}>{r.team}</span>
               <span className="text-center font-mono text-xs text-muted-2">{r.GD > 0 ? `+${r.GD}` : r.GD}</span>
