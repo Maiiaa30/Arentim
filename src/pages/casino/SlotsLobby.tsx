@@ -1,14 +1,14 @@
 import { Link } from 'react-router-dom';
 import { useSlotMachines } from '@/features/casino/useSlotMachines';
 import { accentHex } from '@/features/casino/slotTheme';
+import { SymbolArt } from '@/features/casino/slotSymbols';
 import { Eyebrow } from '@/components/ui/primitives';
 import { formatAmount } from '@/lib/format';
 import type { SlotMachineMeta } from '@/types/db';
 
 function MachineCard({ m }: { m: SlotMachineMeta }) {
   const hex = accentHex(m.accent);
-  const jackpotGlyph = m.symbols.find((s) => s.id === m.jackpot_symbol)?.glyph ?? '✦';
-  const showcase = m.symbols.slice(0, 3).map((s) => s.glyph);
+  const showcase = m.symbols.slice(0, 3);
 
   return (
     <Link
@@ -24,20 +24,19 @@ function MachineCard({ m }: { m: SlotMachineMeta }) {
           className="pointer-events-none absolute inset-x-0 top-0 h-px"
           style={{ background: `linear-gradient(90deg, transparent, ${hex}, transparent)` }}
         />
-        {showcase.map((g, i) => (
-          <span
-            key={i}
-            className="text-[40px] drop-shadow-[0_2px_6px_rgba(0,0,0,0.6)] transition-transform duration-500 group-hover:-translate-y-0.5"
-            style={{ transitionDelay: `${i * 60}ms` }}
-          >
-            {g}
-          </span>
+        {showcase.map((s) => (
+          <SymbolArt
+            key={s.id}
+            id={s.id}
+            glyph={s.glyph}
+            className="h-12 w-12 drop-shadow-[0_2px_6px_rgba(0,0,0,0.6)] transition-transform duration-500 group-hover:-translate-y-0.5"
+          />
         ))}
         <span
           className="absolute right-3 top-3 flex items-center gap-1 rounded-full border px-2 py-0.5 font-sans text-[9px] uppercase tracking-[0.18em]"
           style={{ borderColor: `${hex}66`, color: hex, background: 'rgba(10,9,7,0.6)' }}
         >
-          {jackpotGlyph} Jackpot mistério
+          ✦ Jackpot mistério
         </span>
       </div>
 
