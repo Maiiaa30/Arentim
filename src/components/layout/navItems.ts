@@ -3,14 +3,14 @@ export interface NavItem {
   label: string;
 }
 
-/** Primary navigation. Routes are stubbed in Phase 1 and filled in later phases. */
+/** Primary navigation (Português de Portugal). */
 export const NAV_ITEMS: readonly NavItem[] = [
-  { to: '/', label: 'Home' },
+  { to: '/', label: 'Salão' },
   { to: '/casino', label: 'Casino' },
-  { to: '/sportsbook', label: 'Sportsbook' },
-  { to: '/poker', label: 'Poker' },
-  { to: '/friends', label: 'Friends' },
-  { to: '/challenges', label: 'Challenges' },
-  { to: '/wallet', label: 'Wallet' },
-  { to: '/profile', label: 'Profile' },
+  { to: '/sportsbook', label: 'Futebol' },
+  { to: '/poker', label: 'Póquer' },
+  { to: '/friends', label: 'Amigos' },
+  { to: '/challenges', label: 'Desafios' },
+  { to: '/wallet', label: 'Carteira' },
+  { to: '/profile', label: 'Perfil' },
 ] as const;

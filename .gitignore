@@ -46,3 +46,7 @@ logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# Design handoff reference — do not commit
+design_handoff_aretim/
+.claude/launch.json

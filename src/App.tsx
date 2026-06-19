@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, type ComponentType } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { RequireAuth } from '@/features/auth/RequireAuth';
@@ -7,7 +7,7 @@ import { HomePage } from '@/pages/HomePage';
 // Route-level code splitting: each screen is its own chunk, so the initial load
 // stays small and supabase-heavy pages only download when visited.
 const named = <T extends Record<string, unknown>, K extends keyof T>(p: Promise<T>, key: K) =>
-  p.then((m) => ({ default: m[key] as React.ComponentType }));
+  p.then((m) => ({ default: m[key] as ComponentType }));
 
 const LoginPage = lazy(() => named(import('@/pages/auth/LoginPage'), 'LoginPage'));
 const SignupPage = lazy(() => named(import('@/pages/auth/SignupPage'), 'SignupPage'));

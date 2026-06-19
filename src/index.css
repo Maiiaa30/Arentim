@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&family=DM+Mono:wght@400;500&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -16,26 +16,58 @@
   }
 
   body {
-    @apply bg-bg text-text font-sans antialiased;
-    font-feature-settings: 'cv11', 'ss01';
+    @apply bg-bg font-sans text-body antialiased;
+    font-weight: 300;
+    /* Layered warm gold + faint green wash on the near-black canvas. */
+    background-image:
+      radial-gradient(1100px 520px at 50% -10%, rgba(201, 162, 75, 0.13), transparent 60%),
+      radial-gradient(700px 400px at 90% 8%, rgba(31, 138, 91, 0.07), transparent 60%);
+    background-attachment: fixed;
   }
 
-  /* Tabular figures for money so digits don't jitter when balances animate. */
+  h1, h2, h3 {
+    @apply font-display text-text;
+  }
+
   .tabular-nums {
     font-variant-numeric: tabular-nums;
   }
 
   ::selection {
-    background-color: rgba(110, 86, 207, 0.35);
+    background-color: rgba(201, 162, 75, 0.3);
   }
 }
 
 @layer components {
+  /* Card: warm surface, hairline border, lifts + gilds on hover. */
   .card {
-    @apply rounded-2xl border border-border bg-surface shadow-soft;
+    @apply rounded border border-border bg-surface transition-all duration-300 ease-aretim;
+  }
+  .card-hover {
+    @apply hover:-translate-y-[5px] hover:border-gold hover:shadow-soft;
+  }
+
+  /* Eyebrow / overline — gold, uppercase, wide tracking. */
+  .eyebrow {
+    @apply font-sans text-[10.5px] font-medium uppercase tracking-[0.25em] text-gold;
   }
 
   .focus-ring {
-    @apply outline-none ring-offset-2 ring-offset-bg focus-visible:ring-2 focus-visible:ring-accent;
+    @apply outline-none ring-offset-2 ring-offset-bg focus-visible:ring-2 focus-visible:ring-gold/60;
+  }
+
+  /* Top accent rule — gold bar with a slow travelling sheen. */
+  .top-accent-rule {
+    height: 3px;
+    background-image: linear-gradient(
+      90deg,
+      transparent,
+      theme('colors.gold') 30%,
+      theme('colors.gold-light') 50%,
+      theme('colors.gold') 70%,
+      transparent
+    );
+    background-size: 200% 100%;
+    @apply animate-sheen;
   }
 }

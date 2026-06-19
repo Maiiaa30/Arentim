@@ -1,22 +1,27 @@
 /**
- * Display formatting for Tostões.
+ * Display formatting for Tostões (PT-PT).
  *
- * Amounts are whole-integer Tostões. We display them with Portuguese-style
- * thousands grouping (a dot), e.g. 1250 -> "1.250", 5000 -> "5.000".
+ * Amounts are whole-integer Tostões. Thousands are grouped with a narrow
+ * no-break space (e.g. 12500 -> "12 500"), matching the Aretim design. The
+ * compact suffix is "Tt"; prose uses the full word "Tostões".
  */
 
-/**
- * Format a raw integer amount as a grouped number string, e.g. 1250 -> "1.250".
- * Grouping is implemented explicitly (dot every three digits) so output is
- * deterministic regardless of the host's ICU locale data.
- */
+/** Narrow no-break space (U+202F) — groups digits without allowing a line break. */
+export const GROUP_SEP = ' ';
+
+/** Format a raw integer amount with thin-space grouping, e.g. 12500 -> "12 500". */
 export function formatAmount(amount: number): string {
   const n = Math.abs(Math.trunc(amount));
   const sign = amount < 0 ? '-' : '';
-  return sign + n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  return sign + n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, GROUP_SEP);
 }
 
-/** Format with the currency name, e.g. 1250 -> "1.250 Tostões". */
+/** Compact currency, e.g. 12500 -> "12 500 Tt". Used for balances, odds, stakes. */
+export function formatTt(amount: number): string {
+  return `${formatAmount(amount)} Tt`;
+}
+
+/** Prose currency with the full word, e.g. 1 -> "1 Tostão", 1250 -> "1 250 Tostões". */
 export function formatTostoes(amount: number): string {
   const value = Math.abs(Math.trunc(amount));
   const label = value === 1 ? 'Tostão' : 'Tostões';
