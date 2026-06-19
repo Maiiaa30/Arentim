@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/features/auth/AuthProvider';
 import { profileKey } from '@/features/profile/useProfile';
 import type { RouletteBet } from './roulette';
-import type { RouletteSpinResult } from '@/types/db';
+import type { Profile, RouletteSpinResult } from '@/types/db';
 
 /**
  * Places a slip of roulette bets. The server (play_roulette RPC) validates,
@@ -15,6 +15,8 @@ export function useRoulette() {
   const qc = useQueryClient();
 
   return useMutation({
+    // Routine spin — don't flash the global top loading bar on every bet.
+    meta: { silent: true },
     mutationFn: async (bets: RouletteBet[]): Promise<RouletteSpinResult> => {
       const idempotencyKey = crypto.randomUUID();
       const { data, error } = await supabase.rpc('play_roulette', {
@@ -24,8 +26,12 @@ export function useRoulette() {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: profileKey(user?.id) });
+    onSuccess: (res) => {
+      // Patch the cached balance from the authoritative result instead of
+      // refetching, so the spin doesn't trigger a loading sheen.
+      qc.setQueryData<Profile>(profileKey(user?.id), (old) =>
+        old ? { ...old, balance: res.balance } : old,
+      );
       void qc.invalidateQueries({ queryKey: ['transactions', user?.id] });
     },
   });

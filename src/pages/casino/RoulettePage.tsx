@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useProfile } from '@/features/profile/useProfile';
 import { useRoulette } from '@/features/casino/useRoulette';
@@ -19,6 +19,9 @@ import { CoinIcon } from '@/components/CoinIcon';
 import { formatAmount } from '@/lib/format';
 
 const CHIPS = [5, 10, 25, 50, 100];
+
+/** How long the wheel visibly spins before the result is unveiled. */
+const SPIN_MS = 4300;
 
 function betLabel(b: RouletteBet): string {
   if (b.kind === 'straight') return `Pleno ${b.selection}`;
@@ -57,8 +60,8 @@ function numberBadge(n: number, key: string) {
   return (
     <span
       key={key}
-      className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold text-white ${
-        c === 'red' ? 'bg-negative' : c === 'green' ? 'bg-positive' : 'bg-black/70'
+      className={`flex h-7 w-7 items-center justify-center rounded-full font-mono text-xs font-semibold text-white ring-1 ring-inset ring-gold/30 ${
+        c === 'red' ? 'bg-[#b0303a]' : c === 'green' ? 'bg-[#1f8a5b]' : 'bg-[#14110c]'
       }`}
     >
       {n}
@@ -78,7 +81,7 @@ function HotCold({ recent }: { recent: number[] }) {
   const cold = Array.from({ length: 37 }, (_, i) => i).filter((n) => !counts.has(n)).slice(0, 4);
 
   return (
-    <div className="grid w-full grid-cols-2 gap-3 border-t border-border/60 pt-3">
+    <div className="grid w-full grid-cols-2 gap-3 border-t border-gold/20 pt-3">
       <div>
         <p className="mb-1.5 font-sans text-[9px] uppercase tracking-[0.2em] text-negative">Quentes</p>
         <div className="flex gap-1">{hot.map((n, i) => numberBadge(n, `h${n}-${i}`))}</div>
@@ -111,12 +114,28 @@ export function RoulettePage() {
   const balance = profile?.balance ?? 0;
   const canSpin = bets.length > 0 && !spinning && staked <= balance;
 
+  // Per-cell stake map so the board can render chip badges on placed bets.
+  const stakeMap = useMemo(() => {
+    const m: Record<string, number> = {};
+    for (const b of bets) m[`${b.kind}:${b.selection}`] = b.stake;
+    return m;
+  }, [bets]);
+
+  // A straight-up hit (or a hefty multiple of the stake) earns the jackpot burst.
+  const jackpotWin =
+    !!result && result.payout > 0 && result.payout >= Math.max(result.stake * 6, 1);
+
   function placeBet(kind: RouletteBetKind, selection: number | null) {
     if (spinning) return;
     setError(null);
     if (staked + chip > balance) {
       setError('Tostões insuficientes para essa ficha.');
       return;
+    }
+    // Clear a settled result the moment the player starts a fresh slip.
+    if (landed) {
+      setLanded(false);
+      setResult(null);
     }
     setBets((prev) => {
       const idx = prev.findIndex((b) => b.kind === kind && b.selection === selection);
@@ -142,14 +161,16 @@ export function RoulettePage() {
     setSpinning(true);
     try {
       const res = await roulette.mutateAsync(bets);
+      // Hand the target to the wheel so it can animate toward it. The number,
+      // payout and history stay hidden until the wheel actually settles.
       setResult(res);
       setSpinToken((t) => t + 1);
-      setRecent((r) => [res.number, ...r].slice(0, 12));
       landTimer.current = window.setTimeout(() => {
         setSpinning(false);
         setLanded(true);
+        setRecent((r) => [res.number, ...r].slice(0, 12));
         setBets([]);
-      }, 4300);
+      }, SPIN_MS);
     } catch (e) {
       setSpinning(false);
       setError(e instanceof Error ? e.message : 'Não foi possível liquidar a jogada.');
@@ -158,6 +179,10 @@ export function RoulettePage() {
 
   return (
     <div className="animate-fade-in space-y-6">
+      {landed && result && result.payout > 0 && (
+        <WinCelebration key={spinToken} jackpot={jackpotWin} />
+      )}
+
       <div className="flex items-center justify-between">
         <div>
           <Link to="/casino" className="font-sans text-sm text-muted-2 hover:text-text">
@@ -168,14 +193,20 @@ export function RoulettePage() {
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
+      <div className="grid gap-6 lg:grid-cols-[340px_1fr]">
         {/* Wheel + result */}
-        <div className="felt felt-rail relative flex flex-col items-center gap-4 overflow-hidden rounded-lg p-6">
-          {landed && result && result.payout > 0 && <WinCelebration key={spinToken} />}
-          <RouletteWheel spinToken={spinToken} result={result?.number ?? null} spinning={spinning} />
+        <div className="felt felt-rail relative flex flex-col items-center gap-4 overflow-hidden rounded-lg p-5 sm:p-6">
+          <RouletteWheel
+            spinToken={spinToken}
+            result={result?.number ?? null}
+            spinning={spinning}
+            landed={landed}
+          />
 
-          <div className="h-12 text-center">
-            {landed && result && (
+          <div className="flex h-12 items-center text-center">
+            {spinning ? (
+              <p className="font-sans text-sm text-gold-light animate-floaty">A roda gira…</p>
+            ) : landed && result ? (
               <div className="animate-fade-in">
                 <p className={`font-display text-lg font-bold ${colorText[colorOf(result.number)]}`}>
                   {result.number} · {colorLabel[colorOf(result.number)]}
@@ -190,8 +221,9 @@ export function RoulettePage() {
                     : 'Sem prémio desta vez'}
                 </p>
               </div>
+            ) : (
+              <p className="font-sans text-sm text-muted">Faça as suas apostas.</p>
             )}
-            {spinning && <p className="font-sans text-sm text-muted">A rodar…</p>}
           </div>
 
           {recent.length > 0 && (
@@ -205,8 +237,10 @@ export function RoulettePage() {
 
         {/* Board + slip */}
         <div className="space-y-4">
-          <div className="felt felt-rail rounded-lg p-4">
-            <BettingBoard onPlace={placeBet} disabled={spinning} />
+          <div className="felt felt-rail overflow-x-auto rounded-lg p-3 sm:p-4">
+            <div className="min-w-[300px]">
+              <BettingBoard onPlace={placeBet} stakes={stakeMap} disabled={spinning} />
+            </div>
           </div>
 
           <div className="card p-4">
@@ -218,6 +252,7 @@ export function RoulettePage() {
                     key={c}
                     onClick={() => setChip(c)}
                     aria-label={`Ficha de ${c}`}
+                    aria-pressed={chip === c}
                     className={`focus-ring rounded-full transition-transform ${
                       chip === c ? 'scale-110 ring-2 ring-gold ring-offset-2 ring-offset-surface' : 'opacity-70 hover:opacity-100'
                     }`}

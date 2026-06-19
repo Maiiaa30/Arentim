@@ -6,6 +6,7 @@ import { usePresence } from '@/features/friends/usePresence';
 import { useLeaderboard } from '@/features/friends/useLeaderboard';
 import { PlayerCard } from '@/features/friends/PlayerCard';
 import { DailyBonusCard } from '@/features/bonus/DailyBonusCard';
+import { LandingPage } from '@/pages/LandingPage';
 import { Button } from '@/components/ui/Button';
 import { Eyebrow, FramedPanel, RingAvatar, SectionHeader } from '@/components/ui/primitives';
 import { GameArt, type GameArtKind } from '@/features/casino/GameArt';
@@ -110,6 +111,11 @@ function Circle({ onSelect }: { onSelect: (id: string) => void }) {
 export function HomePage() {
   const { user } = useAuth();
   const [selected, setSelected] = useState<string | null>(null);
+
+  // Logged-out visitors get the marketing landing page.
+  if (!user) {
+    return <LandingPage />;
+  }
 
   return (
     <div className="animate-fade-in space-y-10">

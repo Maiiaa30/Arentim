@@ -85,9 +85,9 @@ export function ProfilePage() {
       </Link>
 
       <FramedPanel>
-        <div className="flex flex-wrap items-center gap-6">
+        <div className="flex flex-wrap items-center gap-5 sm:gap-6">
           <RingAvatar initials={initials} size={96} />
-          <div className="min-w-[200px] flex-1">
+          <div className="min-w-[180px] flex-1">
             {editing ? (
               <div className="max-w-xs space-y-2">
                 <Input id="displayName" label="Nome de exibição" value={name}
@@ -102,20 +102,20 @@ export function ProfilePage() {
             ) : (
               <>
                 <Eyebrow>{profile.is_admin ? 'Administrador' : 'Membro Ouro'}</Eyebrow>
-                <h1 className="mt-2 font-display text-[38px] font-medium leading-tight text-text">
+                <h1 className="mt-2 break-words font-display text-[28px] font-medium leading-tight text-text sm:text-[38px]">
                   {profile.display_name}
                 </h1>
-                <p className="mt-1 font-sans text-sm text-muted-2">
+                <p className="mt-1 break-words font-sans text-sm text-muted-2">
                   @{handle} · Membro desde {monthYear(profile.created_at)}
                 </p>
                 <button onClick={() => { setName(profile.display_name); setFormError(null); setEditing(true); }}
-                  className="mt-2 font-sans text-sm text-gold hover:underline">
+                  className="mt-2 inline-flex min-h-[40px] items-center font-sans text-sm text-gold hover:underline">
                   Editar perfil
                 </button>
               </>
             )}
           </div>
-          <div className="border-gold/20 sm:border-l sm:pl-6">
+          <div className="w-full border-gold/20 sm:w-auto sm:border-l sm:pl-6">
             <p className="font-sans text-[10.5px] uppercase tracking-[0.18em] text-muted-2">Saldo</p>
             <p className="flex items-baseline gap-1 font-display text-3xl font-medium text-gold">
               <AnimatedNumber value={profile.balance} /> <span className="font-mono text-base">tós</span>

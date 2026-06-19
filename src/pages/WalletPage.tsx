@@ -54,7 +54,7 @@ export function WalletPage() {
     <div className="animate-fade-in space-y-8">
       <div>
         <Eyebrow>Carteira</Eyebrow>
-        <h1 className="mt-2 font-display text-[34px] font-medium leading-tight text-text">Carteira</h1>
+        <h1 className="mt-2 font-display text-[26px] font-medium leading-tight text-text sm:text-[34px]">Carteira</h1>
         <p className="mt-1 font-sans text-sm text-muted-2">
           O seu histórico de saldo e o registo completo de transações.
         </p>
@@ -75,7 +75,7 @@ export function WalletPage() {
               <button
                 key={f.value}
                 onClick={() => setFilter(f.value)}
-                className={`focus-ring rounded px-3 py-1 font-sans text-[11px] font-medium uppercase tracking-[0.12em] transition-colors ${
+                className={`focus-ring inline-flex min-h-[40px] items-center rounded px-3 py-1 font-sans text-[11px] font-medium uppercase tracking-[0.12em] transition-colors ${
                   filter === f.value ? 'bg-gold text-bg' : 'text-muted-2 hover:text-text'
                 }`}
               >

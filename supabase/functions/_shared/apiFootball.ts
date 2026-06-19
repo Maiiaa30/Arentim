@@ -11,6 +11,29 @@ export const SYNCED_LEAGUES = [
   { id: 1, name: 'World Cup' },
 ] as const;
 
+/**
+ * The season API-Football expects for the *current* campaign. European seasons
+ * span two calendar years and are keyed by the starting year — so e.g. the
+ * 2025/26 season is `2025`. Before August we're still in the campaign that
+ * started the previous year. `FOOTBALL_SEASON` overrides this when set (e.g. to
+ * pin to a season the active subscription covers).
+ *
+ * NOTE: the free API-Football plan only serves old seasons (2021–2023). Calling
+ * this with the real current season requires a paid plan; until then the request
+ * returns an empty `response` and we simply sync nothing new.
+ */
+export function currentSeason(now: Date = new Date()): number {
+  const year = now.getUTCFullYear();
+  // Months are 0-indexed: 7 === August. Seasons roll over at the start of August.
+  return now.getUTCMonth() >= 7 ? year : year - 1;
+}
+
+/** Resolve the season to sync: explicit env override, else the current season. */
+export function resolveSeason(envValue?: string | null, now: Date = new Date()): number {
+  const parsed = Number(envValue);
+  return Number.isFinite(parsed) && parsed > 1900 ? parsed : currentSeason(now);
+}
+
 interface ApiResponse<T> {
   response: T[];
   errors?: unknown;

@@ -17,7 +17,7 @@ function MachineCard({ m }: { m: SlotMachineMeta }) {
     >
       {/* Themed marquee */}
       <div
-        className="relative flex h-[132px] items-center justify-center gap-2 overflow-hidden"
+        className="relative flex h-[180px] items-center justify-center gap-3 overflow-hidden"
         style={{ background: `radial-gradient(120% 130% at 50% -20%, ${hex}40, transparent 60%), linear-gradient(180deg, #100e09, #0a0907)` }}
       >
         <span
@@ -29,25 +29,25 @@ function MachineCard({ m }: { m: SlotMachineMeta }) {
             key={s.id}
             id={s.id}
             glyph={s.glyph}
-            className="h-12 w-12 drop-shadow-[0_2px_6px_rgba(0,0,0,0.6)] transition-transform duration-500 group-hover:-translate-y-0.5"
+            className="h-[68px] w-[68px] drop-shadow-[0_2px_6px_rgba(0,0,0,0.6)] transition-transform duration-500 group-hover:-translate-y-0.5"
           />
         ))}
         <span
-          className="absolute right-3 top-3 flex items-center gap-1 rounded-full border px-2 py-0.5 font-sans text-[9px] uppercase tracking-[0.18em]"
+          className="absolute right-3 top-3 flex items-center gap-1 rounded-full border px-2.5 py-0.5 font-sans text-[9px] uppercase tracking-[0.18em]"
           style={{ borderColor: `${hex}66`, color: hex, background: 'rgba(10,9,7,0.6)' }}
         >
           ✦ Jackpot mistério
         </span>
       </div>
 
-      <div className="flex flex-1 flex-col p-4">
-        <h3 className="font-display text-[22px] font-semibold text-text group-hover:text-gold">{m.name}</h3>
-        <p className="mt-1 flex-1 font-sans text-[12.5px] leading-relaxed text-muted">{m.blurb}</p>
-        <div className="mt-3 flex items-center justify-between">
-          <span className="font-mono text-xs text-muted-2">
+      <div className="flex flex-1 flex-col p-5">
+        <h3 className="font-display text-[26px] font-semibold text-text group-hover:text-gold">{m.name}</h3>
+        <p className="mt-1.5 flex-1 font-sans text-[13.5px] leading-relaxed text-muted">{m.blurb}</p>
+        <div className="mt-4 flex items-center justify-between">
+          <span className="font-mono text-[13px] text-muted-2">
             {formatAmount(m.min_bet)} – {formatAmount(m.max_bet)} tós
           </span>
-          <span className="rounded border border-gold/40 px-3 py-1 font-sans text-[10px] uppercase tracking-[0.18em] text-gold transition-colors group-hover:bg-gold group-hover:text-bg">
+          <span className="rounded border border-gold/40 px-3.5 py-1.5 font-sans text-[10px] uppercase tracking-[0.18em] text-gold transition-colors group-hover:bg-gold group-hover:text-bg">
             Jogar
           </span>
         </div>
@@ -79,7 +79,7 @@ export function SlotsLobby() {
       )}
 
       {machines && (
-        <div className="grid grid-cols-[repeat(auto-fill,minmax(248px,1fr))] gap-[18px]">
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-5">
           {machines.map((m) => (
             <MachineCard key={m.key} m={m} />
           ))}

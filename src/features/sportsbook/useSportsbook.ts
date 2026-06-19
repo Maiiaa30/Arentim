@@ -46,6 +46,26 @@ export function useSportsbookRealtime() {
   }, [qc, user?.id]);
 }
 
+/**
+ * Every fixture we know about (live, upcoming and finished), newest activity
+ * first. Powers the FlashScore-style Resultados page. Read-only; never touches
+ * money/bet logic. Auto-refreshes as a safety net on top of Realtime.
+ */
+export function useAllFixtures() {
+  return useQuery({
+    queryKey: ['fixtures', 'all'] as const,
+    queryFn: async (): Promise<Fixture[]> => {
+      const { data, error } = await supabase
+        .from('fixtures')
+        .select('*')
+        .order('kickoff', { ascending: true });
+      if (error) throw error;
+      return data;
+    },
+    refetchInterval: 30_000,
+  });
+}
+
 /** Upcoming, open-for-betting fixtures. */
 export function useFixtures() {
   return useQuery({

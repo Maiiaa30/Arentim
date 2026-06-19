@@ -106,13 +106,13 @@ export function FriendsPage() {
       {selected && <PlayerCard userId={selected} onClose={() => setSelected(null)} />}
       <div>
         <Eyebrow>Comunidade</Eyebrow>
-        <h1 className="mt-2 font-display text-[34px] font-medium leading-tight text-text">Amigos</h1>
+        <h1 className="mt-2 font-display text-[26px] font-medium leading-tight text-text sm:text-[34px]">Amigos</h1>
       </div>
 
       <div className="flex flex-wrap gap-2">
         {tabs.map((t) => (
           <button key={t.id} onClick={() => setTab(t.id)}
-            className={`focus-ring rounded px-4 py-1.5 font-sans text-[11px] font-medium uppercase tracking-[0.12em] transition-colors ${tab === t.id ? 'bg-gold text-bg' : 'border border-border text-muted-2 hover:text-text'}`}>
+            className={`focus-ring inline-flex min-h-[40px] items-center rounded px-4 py-1.5 font-sans text-[11px] font-medium uppercase tracking-[0.12em] transition-colors ${tab === t.id ? 'bg-gold text-bg' : 'border border-border text-muted-2 hover:text-text'}`}>
             {t.label}
           </button>
         ))}
@@ -144,8 +144,8 @@ export function FriendsPage() {
           <div className="space-y-2">
             <h2 className="font-sans text-[10.5px] font-medium uppercase tracking-[0.18em] text-muted-2">Recebidos</h2>
             {incoming.length === 0 ? <p className="font-sans text-sm text-muted-2">Nenhum.</p> : incoming.map((r) => (
-              <div key={r.id} className="card flex items-center justify-between p-3">
-                <span className="font-sans text-sm text-text">{r.display_name}</span>
+              <div key={r.id} className="card flex flex-wrap items-center justify-between gap-2 p-3">
+                <span className="min-w-0 break-words font-sans text-sm text-text">{r.display_name}</span>
                 <div className="flex gap-2">
                   <Button variant="primary" className="!px-4 !py-2" onClick={() => respond.mutate({ requestId: r.id, accept: true })}>Aceitar</Button>
                   <Button variant="ghost" className="!px-4 !py-2" onClick={() => respond.mutate({ requestId: r.id, accept: false })}>Recusar</Button>
@@ -156,8 +156,8 @@ export function FriendsPage() {
           <div className="space-y-2">
             <h2 className="font-sans text-[10.5px] font-medium uppercase tracking-[0.18em] text-muted-2">Enviados</h2>
             {outgoing.length === 0 ? <p className="font-sans text-sm text-muted-2">Nenhum.</p> : outgoing.map((r) => (
-              <div key={r.id} className="card flex items-center justify-between p-3">
-                <span className="font-sans text-sm text-text">{r.display_name}</span>
+              <div key={r.id} className="card flex flex-wrap items-center justify-between gap-2 p-3">
+                <span className="min-w-0 break-words font-sans text-sm text-text">{r.display_name}</span>
                 <span className="font-sans text-xs text-muted-2">Pendente</span>
               </div>
             ))}
@@ -172,8 +172,8 @@ export function FriendsPage() {
           {findMsg && <p className="font-sans text-sm text-positive">{findMsg}</p>}
           <div className="space-y-2">
             {(results ?? []).map((u) => (
-              <div key={u.id} className="card flex items-center justify-between p-3">
-                <span className="font-sans text-sm text-text">{u.display_name}</span>
+              <div key={u.id} className="card flex flex-wrap items-center justify-between gap-2 p-3">
+                <span className="min-w-0 break-words font-sans text-sm text-text">{u.display_name}</span>
                 <Button
                   variant="primary"
                   className="!px-4 !py-2"
@@ -204,14 +204,14 @@ export function FriendsPage() {
           <div className="flex flex-wrap items-center gap-2">
             {(['global', 'friends'] as const).map((s) => (
               <button key={s} onClick={() => setScope(s)}
-                className={`focus-ring rounded px-3 py-1 font-sans text-[11px] font-medium uppercase tracking-[0.12em] ${scope === s ? 'bg-gold text-bg' : 'border border-border text-muted-2 hover:text-text'}`}>
+                className={`focus-ring inline-flex min-h-[40px] items-center rounded px-3 py-1 font-sans text-[11px] font-medium uppercase tracking-[0.12em] ${scope === s ? 'bg-gold text-bg' : 'border border-border text-muted-2 hover:text-text'}`}>
                 {scopeLabel[s]}
               </button>
             ))}
             <span className="mx-1 text-border">|</span>
             {([['net', 'Resultado'], ['biggest_win', 'Maior ganho'], ['streak', 'Sequência']] as const).map(([m, label]) => (
               <button key={m} onClick={() => setMetric(m)}
-                className={`focus-ring rounded px-3 py-1 font-sans text-[11px] font-medium uppercase tracking-[0.12em] ${metric === m ? 'bg-gold text-bg' : 'border border-border text-muted-2 hover:text-text'}`}>
+                className={`focus-ring inline-flex min-h-[40px] items-center rounded px-3 py-1 font-sans text-[11px] font-medium uppercase tracking-[0.12em] ${metric === m ? 'bg-gold text-bg' : 'border border-border text-muted-2 hover:text-text'}`}>
                 {label}
               </button>
             ))}
