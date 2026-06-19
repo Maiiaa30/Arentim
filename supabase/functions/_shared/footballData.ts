@@ -33,18 +33,21 @@ async function fdGet<T>(path: string, token: string, params: Record<string, stri
   return (await res.json()) as T;
 }
 
+type FdTeam = { name: string; shortName?: string; crest?: string };
+
 export type FdMatch = {
   id: number;
   utcDate: string;
   status: string;
   minute?: number | null;
-  homeTeam: { name: string; shortName?: string };
-  awayTeam: { name: string; shortName?: string };
+  homeTeam: FdTeam;
+  awayTeam: FdTeam;
   score?: { fullTime?: { home: number | null; away: number | null } };
   season?: { startDate?: string };
 };
 
-export const teamName = (t: { name: string; shortName?: string }) => t.shortName || t.name;
+export const teamName = (t: FdTeam) => t.shortName || t.name;
+export const teamCrest = (t: FdTeam): string | null => t.crest ?? null;
 
 /** Map a Football-Data status onto our fixtures.status check constraint. */
 export function mapStatus(s: string): 'scheduled' | 'live' | 'finished' | 'postponed' {
@@ -93,11 +96,12 @@ export async function fetchStrength(code: string, token: string): Promise<Streng
   for (const r of total) {
     const p = r.playedGames ?? 0;
     if (p <= 0) continue;
-    teams.set(teamName(r.team), {
-      atk: r.goalsFor / p / avg,
-      def: r.goalsAgainst / p / avg,
-      played: p,
-    });
+    const form: TeamForm = { atk: r.goalsFor / p / avg, def: r.goalsAgainst / p / avg, played: p };
+    // Index under every name variant so the match's team (which may use shortName)
+    // is found regardless of which the standings used.
+    for (const key of [teamName(r.team), r.team.name, r.team.shortName]) {
+      if (key) teams.set(key, form);
+    }
   }
   return { avg, teams };
 }
@@ -131,11 +135,17 @@ const NEUTRAL = {
   btts: { yes: 1.90, no: 1.90 },
 };
 
-/** Realistic odds for a fixture from team form; neutral fallback if unknown. */
+const AVG_FORM: TeamForm = { atk: 1, def: 1, played: 0 };
+
+/** Realistic odds for a fixture from team form. Uses whatever form is known;
+ *  an unknown team defaults to league-average, so odds still vary by opponent +
+ *  home advantage. Fully neutral only when neither team is in the standings. */
 export function computeOdds(home: string, away: string, s: Strength): Record<string, Record<string, number>> {
-  const h = s.teams.get(home);
-  const a = s.teams.get(away);
-  if (!h || !a || h.played < 2 || a.played < 2) return NEUTRAL;
+  const dh = s.teams.get(home);
+  const da = s.teams.get(away);
+  if (!dh && !da) return NEUTRAL;
+  const h = dh ?? AVG_FORM;
+  const a = da ?? AVG_FORM;
 
   const expH = clamp(s.avg * h.atk * a.def * HOME_ADV, 0.25, 4.2);
   const expA = clamp((s.avg * a.atk * h.def) / HOME_ADV, 0.2, 3.8);

@@ -1,18 +1,37 @@
-export interface NavItem {
+export interface NavLeaf {
   to: string;
   label: string;
 }
+export interface NavGroup {
+  label: string;
+  items: NavLeaf[];
+}
+export type NavEntry = NavLeaf | NavGroup;
 
-/** Primary navigation (Português de Portugal). */
-export const NAV_ITEMS: readonly NavItem[] = [
+export const isGroup = (e: NavEntry): e is NavGroup => 'items' in e;
+
+/**
+ * Primary navigation (PT-PT), grouped to keep the bar uncluttered. Casino and
+ * Futebol collapse into dropdowns; Carteira/Perfil live in the right-hand
+ * cluster (Caixa button + avatar), so they're intentionally not repeated here.
+ */
+export const NAV: NavEntry[] = [
   { to: '/', label: 'Salão' },
-  { to: '/casino', label: 'Casino' },
-  { to: '/casino/slots', label: 'Slots' },
-  { to: '/sportsbook', label: 'Futebol' },
-  { to: '/resultados', label: 'Resultados' },
+  {
+    label: 'Casino',
+    items: [
+      { to: '/casino', label: 'Casino' },
+      { to: '/casino/slots', label: 'Slots' },
+    ],
+  },
+  {
+    label: 'Futebol',
+    items: [
+      { to: '/sportsbook', label: 'Apostas' },
+      { to: '/resultados', label: 'Resultados' },
+    ],
+  },
   { to: '/poker', label: 'Póquer' },
   { to: '/friends', label: 'Amigos' },
   { to: '/challenges', label: 'Desafios' },
-  { to: '/wallet', label: 'Carteira' },
-  { to: '/profile', label: 'Perfil' },
-] as const;
+];

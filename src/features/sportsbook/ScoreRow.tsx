@@ -21,8 +21,19 @@ function crest(name: string): { abbr: string; color: string } {
   return { abbr: abbr || name.slice(0, 3).toUpperCase(), color: CREST_COLORS[h % CREST_COLORS.length]! };
 }
 
-function Crest({ name }: { name: string }) {
+function Crest({ name, src }: { name: string; src?: string | null }) {
   const { abbr, color } = crest(name);
+  if (src) {
+    return (
+      <img
+        src={src}
+        alt=""
+        loading="lazy"
+        className="h-7 w-7 shrink-0 object-contain"
+        aria-hidden
+      />
+    );
+  }
   return (
     <span
       className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full font-sans text-[9px] font-semibold text-white/90"
@@ -87,7 +98,7 @@ export function ScoreRow({ fixture }: { fixture: Fixture }) {
 
         <div className="min-w-0 flex-1 px-3 py-2.5">
           <div className="flex items-center gap-2">
-            <Crest name={fixture.home} />
+            <Crest name={fixture.home} src={fixture.home_crest} />
             <span
               className={`min-w-0 flex-1 truncate font-sans text-sm ${
                 winnerHome ? 'font-semibold text-text' : 'text-body'
@@ -104,7 +115,7 @@ export function ScoreRow({ fixture }: { fixture: Fixture }) {
             </span>
           </div>
           <div className="mt-1.5 flex items-center gap-2">
-            <Crest name={fixture.away} />
+            <Crest name={fixture.away} src={fixture.away_crest} />
             <span
               className={`min-w-0 flex-1 truncate font-sans text-sm ${
                 winnerAway ? 'font-semibold text-text' : 'text-body'
