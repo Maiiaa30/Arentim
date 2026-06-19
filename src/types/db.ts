@@ -223,6 +223,26 @@ export type Profile = {
   last_claim_date: string | null;
   created_at: string;
   last_online: string | null;
+  last_rescue_date: string | null;
+  suspended: boolean;
+};
+
+export type Announcement = {
+  id: number;
+  admin_id: string;
+  title: string;
+  body: string;
+  active: boolean;
+  created_at: string;
+};
+
+export type AdminAction = {
+  id: number;
+  admin_id: string;
+  target_user_id: string | null;
+  action: string;
+  detail: Record<string, unknown> | null;
+  created_at: string;
 };
 
 export type Transaction = {
@@ -269,6 +289,24 @@ export type Database = {
         Row: BetSelectionRow;
         Insert: Partial<BetSelectionRow> & { bet_id: number; fixture_id: number; market: string; selection: string; odds: number };
         Update: Partial<BetSelectionRow>;
+        Relationships: [];
+      };
+      announcements: {
+        Row: Announcement;
+        Insert: Partial<Announcement> & { admin_id: string; title: string; body: string };
+        Update: Partial<Announcement>;
+        Relationships: [];
+      };
+      admin_actions: {
+        Row: AdminAction;
+        Insert: Partial<AdminAction> & { admin_id: string; action: string };
+        Update: Partial<AdminAction>;
+        Relationships: [];
+      };
+      challenge_catalog: {
+        Row: { key: string; title: string; description: string; metric: string; target: number; reward: number; track: string; sort: number; active: boolean };
+        Insert: { key: string; title: string; description: string; metric: string; target: number; reward: number; track: string };
+        Update: Partial<{ title: string; description: string; metric: string; target: number; reward: number; track: string; active: boolean }>;
         Relationships: [];
       };
     };
@@ -361,6 +399,33 @@ export type Database = {
       claim_rescue: {
         Args: Record<string, never>;
         Returns: RescueResult;
+      };
+      admin_adjust_balance: {
+        Args: { p_user: string; p_amount: number; p_reason: string };
+        Returns: { balance: number };
+      };
+      admin_set_streak: {
+        Args: { p_user: string; p_streak: number; p_reason: string };
+        Returns: undefined;
+      };
+      admin_set_suspended: {
+        Args: { p_user: string; p_suspended: boolean; p_reason: string };
+        Returns: undefined;
+      };
+      admin_set_odds: {
+        Args: { p_fixture: number; p_odds: Record<string, Record<string, number>> };
+        Returns: undefined;
+      };
+      admin_upsert_challenge: {
+        Args: {
+          p_key: string; p_title: string; p_description: string; p_metric: string;
+          p_target: number; p_reward: number; p_track: string; p_active: boolean;
+        };
+        Returns: undefined;
+      };
+      admin_broadcast: {
+        Args: { p_title: string; p_body: string };
+        Returns: undefined;
       };
     };
     Enums: {

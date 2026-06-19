@@ -25,7 +25,9 @@ function BalanceDisplay() {
 
 export function Header() {
   const { user, signOut } = useAuth();
+  const { data: profile } = useProfile();
   const navigate = useNavigate();
+  const navItems = profile?.is_admin ? [...NAV_ITEMS, { to: '/admin', label: 'Admin' }] : NAV_ITEMS;
 
   async function onSignOut() {
     await signOut();
@@ -44,7 +46,7 @@ export function Header() {
 
           {user && (
             <nav className="hidden items-center gap-1 md:flex">
-              {NAV_ITEMS.map((item) => (
+              {navItems.map((item) => (
                 <NavLink
                   key={item.to}
                   to={item.to}
@@ -81,7 +83,7 @@ export function Header() {
 
       {user && (
         <nav className="flex items-center gap-1 overflow-x-auto border-t border-border px-2 py-2 md:hidden">
-          {NAV_ITEMS.map((item) => (
+          {navItems.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
