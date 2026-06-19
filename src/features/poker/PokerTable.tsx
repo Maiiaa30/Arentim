@@ -183,10 +183,10 @@ function PotPill({ pot }: { pot: number }) {
 /** Community cards row (with five dashed placeholders before the flop). */
 function Board({ community, dealKey }: { community: number[]; dealKey: number }) {
   return (
-    <div className="flex min-h-[64px] items-center justify-center gap-1.5 sm:gap-2">
+    <div className="flex min-h-[88px] items-center justify-center gap-1.5 sm:gap-2">
       {community.length === 0
         ? Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="h-16 w-[46px] rounded-[5px] border border-dashed border-gold/15" aria-hidden />
+            <div key={i} className="h-[84px] w-[60px] rounded-[6px] border border-dashed border-gold/15" aria-hidden />
           ))
         : community.map((c, i) => (
             <div key={`${dealKey}-${i}`} className="animate-deal" style={{ animationDelay: `${i * 80}ms` }}>

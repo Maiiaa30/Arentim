@@ -8,10 +8,10 @@ const SUIT_GLYPH = ['♠', '♥', '♦', '♣'];
  * Everything is clipped to the card bounds so pips never spill outside.
  */
 export function PokerCard({ card, small }: { card: number; small?: boolean }) {
-  const size = small ? 'h-[44px] w-[31px] rounded-[4px]' : 'h-16 w-[46px] rounded-[5px]';
-  const rankCls = small ? 'text-[11px]' : 'text-[15px]';
-  const suitCls = small ? 'text-[8px]' : 'text-[11px]';
-  const centerCls = small ? 'text-[15px]' : 'text-2xl';
+  const size = small ? 'h-[56px] w-[40px] rounded-[5px]' : 'h-[84px] w-[60px] rounded-[6px]';
+  const rankCls = small ? 'text-[14px]' : 'text-[19px]';
+  const suitCls = small ? 'text-[10px]' : 'text-[14px]';
+  const centerCls = small ? 'text-[19px]' : 'text-[30px]';
 
   // Face-down card — gilded patterned back.
   if (card < 0) {
