@@ -13,53 +13,90 @@ import type { SlotMachineMeta } from '@/types/db';
 
 const DENOMS = [5, 10, 25, 50, 100, 250];
 
-/** One reel window. Cycles random symbols while spinning, then snaps to target. */
+type ReelMode = 'idle' | 'spin' | 'land';
+
+const ITEM = 'flex h-28 items-center justify-center sm:h-32';
+const SYMBOL = 'h-[58px] w-[58px] sm:h-16 sm:w-16';
+
+/** Build the landing strip: a run of random symbols ending on the target. */
+function makeLandStrip(ids: string[], target: string): string[] {
+  const strip: string[] = [];
+  for (let i = 0; i < 6; i++) strip.push(ids[Math.floor(Math.random() * ids.length)]!);
+  strip.push(target);
+  return strip;
+}
+
+/**
+ * A real reel window: a vertical strip of symbols. 'spin' scrolls it seamlessly
+ * (three identical copies → -33.33% loops), 'land' decelerates a fresh strip
+ * onto the target so you watch the other symbols flick past and settle.
+ */
 function Reel({
   ids,
   target,
-  spinning,
+  mode,
   won,
   accent,
   glyphById,
 }: {
   ids: string[];
   target: string;
-  spinning: boolean;
+  mode: ReelMode;
   won: boolean;
   accent: string;
   glyphById: Record<string, string>;
 }) {
-  const [shown, setShown] = useState(target);
-  const timer = useRef<number | null>(null);
+  const spinStrip = [...ids, ...ids, ...ids];
+  const landStrip = useRef<string[]>([target]);
+  const [go, setGo] = useState(false);
 
   useEffect(() => {
-    if (spinning) {
-      timer.current = window.setInterval(() => {
-        setShown(ids[Math.floor(Math.random() * ids.length)]!);
-      }, 70);
-      return () => {
-        if (timer.current) window.clearInterval(timer.current);
-      };
+    if (mode === 'land') {
+      landStrip.current = makeLandStrip(ids, target);
+      setGo(false);
+      const r = requestAnimationFrame(() => requestAnimationFrame(() => setGo(true)));
+      return () => cancelAnimationFrame(r);
     }
-    setShown(target);
+    setGo(false);
     return;
-  }, [spinning, target, ids]);
+  }, [mode, target, ids]);
+
+  const tile = (id: string, key: number) => (
+    <div className={ITEM} key={key}>
+      <SymbolArt id={id} glyph={glyphById[id]} className={SYMBOL} />
+    </div>
+  );
 
   return (
     <div
-      className={`relative flex h-28 w-[78px] items-center justify-center overflow-hidden rounded border-2 bg-bg/80 transition-colors sm:h-32 sm:w-24 ${
-        won && !spinning ? 'border-gold animate-glow' : 'border-gold/25'
+      className={`relative h-28 w-[78px] overflow-hidden rounded border-2 bg-bg/80 transition-colors sm:h-32 sm:w-24 ${
+        won && mode !== 'spin' ? 'border-gold animate-glow' : 'border-gold/25'
       }`}
-      style={won && !spinning ? { boxShadow: `inset 0 0 24px ${accent}55` } : undefined}
+      style={won && mode !== 'spin' ? { boxShadow: `inset 0 0 24px ${accent}55` } : undefined}
     >
-      {/* glass shading */}
-      <span className="pointer-events-none absolute inset-0 z-10 bg-gradient-to-b from-white/[0.06] via-transparent to-black/30" />
-      <div
-        key={spinning ? 'spin' : shown}
-        className={spinning ? 'blur-[1.5px]' : 'animate-pop'}
-      >
-        <SymbolArt id={shown} glyph={glyphById[shown]} className="h-[58px] w-[58px] sm:h-16 sm:w-16" />
-      </div>
+      {/* top/bottom vignette + glass shading for depth */}
+      <span className="pointer-events-none absolute inset-0 z-10 bg-gradient-to-b from-black/45 via-transparent to-black/55" />
+      <span className="pointer-events-none absolute inset-0 z-10 bg-gradient-to-b from-white/[0.07] to-transparent" />
+
+      {mode === 'idle' ? (
+        <div className="flex h-full items-center justify-center animate-pop">
+          <SymbolArt id={target} glyph={glyphById[target]} className={SYMBOL} />
+        </div>
+      ) : mode === 'spin' ? (
+        <div className="animate-reel-roll blur-[1.5px] will-change-transform">
+          {spinStrip.map(tile)}
+        </div>
+      ) : (
+        <div
+          className="will-change-transform"
+          style={{
+            transform: `translateY(${go ? -((landStrip.current.length - 1) / landStrip.current.length) * 100 : 0}%)`,
+            transition: go ? 'transform 0.85s cubic-bezier(0.15,0.85,0.25,1)' : 'none',
+          }}
+        >
+          {landStrip.current.map(tile)}
+        </div>
+      )}
     </div>
   );
 }
@@ -89,7 +126,8 @@ function MachineScreen({ m }: { m: SlotMachineMeta }) {
   const [stake, setStake] = useState(m.min_bet);
   const initial = m.symbols.slice(0, 3).map((s) => s.id);
   const [targets, setTargets] = useState<string[]>([initial[0]!, initial[1]!, initial[2]!]);
-  const [spin, setSpin] = useState<[boolean, boolean, boolean]>([false, false, false]);
+  const [modes, setModes] = useState<[ReelMode, ReelMode, ReelMode]>(['idle', 'idle', 'idle']);
+  const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<{ payout: number; jackpot: boolean; mult: number; id: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const timers = useRef<number[]>([]);
@@ -101,29 +139,31 @@ function MachineScreen({ m }: { m: SlotMachineMeta }) {
   }, [m.min_bet, m.max_bet]);
   useEffect(() => () => timers.current.forEach((t) => window.clearTimeout(t)), []);
 
-  const anySpinning = spin.some(Boolean);
-  const won = !anySpinning && (result?.payout ?? 0) > 0;
+  const won = !busy && (result?.payout ?? 0) > 0;
 
   async function onSpin() {
-    if (anySpinning || stake > balance || stake < m.min_bet) return;
+    if (busy || stake > balance || stake < m.min_bet) return;
     setError(null);
     setResult(null);
-    setSpin([true, true, true]);
+    setBusy(true);
+    setModes(['spin', 'spin', 'spin']); // immediate scroll while the server rolls
     try {
       const res = await play.mutateAsync({ machine: m.key, stake });
       setTargets(res.reels);
       const id = ++spinId.current;
-      // Staggered reel stops for suspense, then reveal the outcome.
+      // Reels stop left→right, each decelerating onto its symbol; then reveal.
       timers.current.push(
-        window.setTimeout(() => setSpin((s) => [false, s[1], s[2]]), 620),
-        window.setTimeout(() => setSpin((s) => [false, false, s[2]]), 980),
+        window.setTimeout(() => setModes((s) => ['land', s[1], s[2]]), 250),
+        window.setTimeout(() => setModes((s) => [s[0], 'land', s[2]]), 600),
+        window.setTimeout(() => setModes((s) => [s[0], s[1], 'land']), 950),
         window.setTimeout(() => {
-          setSpin([false, false, false]);
+          setBusy(false);
           setResult({ payout: res.payout, jackpot: res.jackpot, mult: res.multiplier, id });
-        }, 1340),
+        }, 1850),
       );
     } catch (e) {
-      setSpin([false, false, false]);
+      setModes(['idle', 'idle', 'idle']);
+      setBusy(false);
       setError(e instanceof Error ? e.message : 'A rodada falhou.');
     }
   }
@@ -193,16 +233,16 @@ function MachineScreen({ m }: { m: SlotMachineMeta }) {
                   style={{ background: `linear-gradient(90deg, transparent, ${hex}, transparent)` }}
                   aria-hidden
                 />
-                <Reel ids={allIds} target={targets[0]!} spinning={spin[0]} won={won} accent={hex} glyphById={glyphById} />
-                <Reel ids={allIds} target={targets[1]!} spinning={spin[1]} won={won} accent={hex} glyphById={glyphById} />
-                <Reel ids={allIds} target={targets[2]!} spinning={spin[2]} won={won} accent={hex} glyphById={glyphById} />
+                <Reel ids={allIds} target={targets[0]!} mode={modes[0]} won={won} accent={hex} glyphById={glyphById} />
+                <Reel ids={allIds} target={targets[1]!} mode={modes[1]} won={won} accent={hex} glyphById={glyphById} />
+                <Reel ids={allIds} target={targets[2]!} mode={modes[2]} won={won} accent={hex} glyphById={glyphById} />
                 {won && result && <WinCelebration key={result.id} jackpot={result.jackpot} />}
               </div>
             </div>
 
             {/* Outcome line */}
             <div className="mt-5 flex h-9 items-center justify-center text-center">
-              {anySpinning ? (
+              {busy ? (
                 <p className="font-sans text-sm text-muted">A rodar…</p>
               ) : result?.jackpot ? (
                 <p className="animate-pop font-display text-2xl font-bold" style={{ color: hex }}>
@@ -235,7 +275,7 @@ function MachineScreen({ m }: { m: SlotMachineMeta }) {
                 <button
                   key={c}
                   type="button"
-                  disabled={anySpinning || c > balance}
+                  disabled={busy || c > balance}
                   onClick={() => setStake(c)}
                   className={`focus-ring rounded px-3 py-1.5 font-mono text-sm font-semibold transition-colors disabled:opacity-40 ${
                     stake === c ? 'bg-gold text-bg' : 'border border-border text-muted hover:text-text'
@@ -248,10 +288,10 @@ function MachineScreen({ m }: { m: SlotMachineMeta }) {
             <Button
               variant="primary"
               onClick={onSpin}
-              disabled={anySpinning || stake > balance || stake < m.min_bet}
+              disabled={busy || stake > balance || stake < m.min_bet}
               className="w-full"
             >
-              {anySpinning ? 'A rodar…' : `Girar · ${formatAmount(stake)}`}
+              {busy ? 'A rodar…' : `Girar · ${formatAmount(stake)}`}
             </Button>
             {stake > balance && <p className="font-sans text-xs text-negative">Saldo insuficiente para esta aposta.</p>}
             {error && <p className="font-sans text-sm text-negative">{error}</p>}

@@ -80,6 +80,8 @@ export default {
           '100%': { opacity: '1', transform: 'scale(1)' },
         },
         'reel-spin': { '0%': { transform: 'translateY(0)' }, '100%': { transform: 'translateY(-66.6667%)' } },
+        // Seamless reel scroll: strip is 3 identical copies, so -33.3333% = one copy.
+        'reel-roll': { '0%': { transform: 'translateY(0)' }, '100%': { transform: 'translateY(-33.3333%)' } },
         glow: {
           '0%,100%': { boxShadow: '0 0 0 0 rgba(201,162,75,0)', borderColor: 'rgba(201,162,75,0.3)' },
           '50%': { boxShadow: '0 0 24px 5px rgba(201,162,75,0.5)', borderColor: 'rgba(201,162,75,0.9)' },
@@ -109,6 +111,7 @@ export default {
         ball: 'ball 3s ease-in-out infinite',
         pop: 'pop 0.4s cubic-bezier(0.22,0.61,0.36,1)',
         'reel-spin': 'reel-spin 0.22s linear infinite',
+        'reel-roll': 'reel-roll 0.45s linear infinite',
         glow: 'glow 1.8s ease-in-out infinite',
         'jackpot-flash': 'jackpot-flash 0.7s ease-in-out infinite',
         shake: 'shake 0.5s ease-in-out',
