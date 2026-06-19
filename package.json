@@ -16,7 +16,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "db:migrate": "node scripts/migrate.mjs"
+    "db:migrate": "node scripts/migrate.mjs",
+    "check:secrets": "node scripts/check-bundle-secrets.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.4",

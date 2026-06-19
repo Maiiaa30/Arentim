@@ -23,6 +23,28 @@ updated as each build phase lands.
 
 Legend: ✅ implemented · ⏳ scheduled for a later phase.
 
+## Security gate verification (Phase 15)
+
+Active verification performed against the live project + codebase:
+
+| Risk | Control | How verified |
+| --- | --- | --- |
+| A01 IDOR/BOLA | Default-deny RLS; reads scoped to `auth.uid()` | **Live probe**: anon reads of `profiles`, `transactions`, `game_rounds`, `bets`, `poker_bot_tables`, `blackjack_hands`, `admin_actions` all return `[]` |
+| A01 RLS coverage | RLS enabled on **every** `public` table | **Live assertion migration** loops `pg_tables` and fails if any table lacks RLS — applied successfully |
+| A01 hidden info | Poker/blackjack decks + hole cards server-only | Tables have no client SELECT policy; anon probe returns `[]`; clients get sanitized views |
+| A01 SSRF | Edge fetchers use fixed allowlisted hosts | Code review: `apiFootball.ts` / `gemini.ts` build URLs from constants only, no user input |
+| A02 misconfig | Security headers, CORS, RLS on | `vercel.json` headers; Edge Functions fail-closed on a shared secret |
+| A04 / secrets | No secret in client bundle | **`check:secrets`** scans `dist/` for `sb_secret_`/`sbp_` (0 found); CI-enforced. Caught + fixed a stray `.env.local` shadowing the real key |
+| A05 injection (SQL) | Parameterized plpgsql; no dynamic SQL | Code review: no `EXECUTE`-built SQL; `format()` used only for human-readable notes |
+| A05 injection (XSS) | React auto-escaping | `grep` confirms **0** `dangerouslySetInnerHTML` / `eval` in `src/` |
+| A05 prompt injection | Gemini output is data-only | System prompt ignores instructions in fixture data; output sanitized, stored, displayed — never executed |
+| A06 double-spend | `SELECT … FOR UPDATE` row lock per mutation | Code review of every money RPC; poker chip-conservation simulated over 80+ hands |
+| A06 replay/multi-claim | Idempotency keys + status/date guards | `game_rounds.idempotency_key` unique; daily bonus `last_claim_date`; challenge claim PK; unit tests |
+| A06 bad stakes | Integer money; positive/in-range stake checks | Unit tests (`assertValidStake`) + SQL `check`s reject non-positive/oversized/float stakes |
+| A03 supply chain | `npm audit --audit-level=high` clean; lockfile pinned | CI gate green |
+
+Not exercised in automation (documented, covered by design): authenticated cross-user IDOR and concurrent double-spend require live multi-user JWT sessions; they are prevented by `auth.uid()` scoping + row locks + idempotency.
+
 ## Casino RNG & settlement (Phase 3+)
 
 Casino rounds settle inside a single atomic `SECURITY DEFINER` RPC (e.g.
