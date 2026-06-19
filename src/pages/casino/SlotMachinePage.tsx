@@ -49,19 +49,10 @@ function Reel({
   // Begin the spinning strip on the currently-shown symbol so the reel scrolls
   // away smoothly instead of snapping to a different symbol when a spin starts.
   const spinStrip = [target, ...ids, ...ids, ...ids];
-  const landStrip = useRef<string[]>([target]);
-  const [go, setGo] = useState(false);
-
-  useEffect(() => {
-    if (mode === 'land') {
-      landStrip.current = makeLandStrip(ids, target);
-      setGo(false);
-      const r = requestAnimationFrame(() => requestAnimationFrame(() => setGo(true)));
-      return () => cancelAnimationFrame(r);
-    }
-    setGo(false);
-    return;
-  }, [mode, target, ids]);
+  // Landing strip is 6 fillers + the result; the reel-land keyframe scrolls to
+  // the last item. Rebuilt only when we (re)enter land with a new target, so a
+  // fresh mount always animates from the top — never flashing the result first.
+  const landStrip = useMemo(() => makeLandStrip(ids, target), [ids, target]);
 
   const tile = (id: string, key: number) => (
     <div className={ITEM} key={key}>
@@ -90,13 +81,11 @@ function Reel({
         </div>
       ) : (
         <div
+          key={target}
           className="will-change-transform"
-          style={{
-            transform: `translateY(${go ? -((landStrip.current.length - 1) / landStrip.current.length) * 100 : 0}%)`,
-            transition: go ? 'transform 0.85s cubic-bezier(0.15,0.85,0.25,1)' : 'none',
-          }}
+          style={{ animation: 'reel-land 0.85s cubic-bezier(0.15,0.85,0.25,1) forwards' }}
         >
-          {landStrip.current.map(tile)}
+          {landStrip.map(tile)}
         </div>
       )}
     </div>
