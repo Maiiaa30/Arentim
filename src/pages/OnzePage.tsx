@@ -110,10 +110,14 @@ export function OnzePage() {
 
   function start() {
     const s = `onze-${Math.floor(Math.random() * 1e9)}`;
+    const deck = buildOffers(s, startY, endY);
+    const empty: (GamePlayer | null)[] = Array(11).fill(null);
+    let first = deck.findIndex((o) => rosterOf(o).some((p) => slots.some((pos, i) => empty[i] == null && posEligible(pos, p))));
+    if (first < 0) first = 0;
     setSeed(s);
     setCompYear(latestIn(startY, endY));
-    setOffers(buildOffers(s, startY, endY));
-    setOfferIdx(0);
+    setOffers(deck);
+    setOfferIdx(first);
     setPicks(Array(11).fill(null));
     setSlotClub(Array(11).fill(null));
     setUsed(new Set());
@@ -125,31 +129,42 @@ export function OnzePage() {
     setPhase('draft');
   }
 
-  function step2(dir: 1 | -1) {
-    setArmed(null);
-    for (let k = 1; k <= offers.length; k++) {
-      const idx = (offerIdx + dir * k + offers.length * k) % offers.length;
-      if (!used.has(offers[idx]!.club)) { setOfferIdx(idx); return; }
+  // A team is only offered if it has a player who fits an OPEN position — so you
+  // can always pick from the team you're shown.
+  function teamUsable(o: Offer, ps: (GamePlayer | null)[]): boolean {
+    return rosterOf(o).some((p) => slots.some((pos, i) => ps[i] == null && posEligible(pos, p)));
+  }
+  function findNextTeam(from: number, ps: (GamePlayer | null)[], us: Set<string>): number {
+    for (let k = 0; k < offers.length; k++) {
+      const idx = (from + k) % offers.length;
+      const o = offers[idx]!;
+      if (!us.has(o.club) && teamUsable(o, ps)) return idx;
     }
+    return -1; // none left (XI full, or nothing can fill the open slots)
   }
 
   function place(player: GamePlayer, slotIdx: number) {
     if (!offer) return;
     const club = offer.club;
-    setPicks((prev) => { const n = [...prev]; n[slotIdx] = player; return n; });
-    setSlotClub((prev) => { const n = [...prev]; n[slotIdx] = club; return n; });
-    const nextUsed = new Set(used); nextUsed.add(club); setUsed(nextUsed);
+    const newPicks = [...picks]; newPicks[slotIdx] = player;
+    const newSlot = [...slotClub]; newSlot[slotIdx] = club;
+    const newUsed = new Set(used); newUsed.add(club);
+    setPicks(newPicks);
+    setSlotClub(newSlot);
+    setUsed(newUsed);
     setArmed(null);
-    for (let k = 1; k <= offers.length; k++) {
-      const idx = (offerIdx + k) % offers.length;
-      if (!nextUsed.has(offers[idx]!.club)) { setOfferIdx(idx); break; }
-    }
+    setOfferIdx(findNextTeam(offerIdx + 1, newPicks, newUsed));
   }
   function clearSlot(i: number) {
     const club = slotClub[i];
-    setPicks((prev) => { const n = [...prev]; n[i] = null; return n; });
-    setSlotClub((prev) => { const n = [...prev]; n[i] = null; return n; });
-    if (club) { const n = new Set(used); n.delete(club); setUsed(n); }
+    const newPicks = [...picks]; newPicks[i] = null;
+    const newSlot = [...slotClub]; newSlot[i] = null;
+    const newUsed = new Set(used); if (club) newUsed.delete(club);
+    setPicks(newPicks);
+    setSlotClub(newSlot);
+    setUsed(newUsed);
+    // If we'd finished (no team showing), bring up a team for the freed slot.
+    if (offerIdx < 0) setOfferIdx(findNextTeam(0, newPicks, newUsed));
   }
 
   function play() {
@@ -300,12 +315,9 @@ export function OnzePage() {
                     <>
                       <div className="flex items-center justify-between gap-2">
                         <p className="min-w-0 truncate font-sans text-sm font-medium text-text">
-                          {offer.club} <span className="font-mono text-gold">· {offer.year}</span>
+                          A tua equipa: {offer.club} <span className="font-mono text-gold">· {offer.year}</span>
                         </p>
-                        <div className="flex shrink-0 gap-1">
-                          <button onClick={() => step2(-1)} aria-label="Equipa anterior" className="focus-ring rounded border border-border px-2.5 py-1 font-sans text-xs text-muted-2 hover:text-text">◂</button>
-                          <button onClick={() => step2(1)} className="focus-ring rounded border border-border px-2.5 py-1 font-sans text-xs text-muted-2 hover:text-text">Outra ▸</button>
-                        </div>
+                        <span className="shrink-0 font-sans text-[10px] uppercase tracking-wider text-muted-2">{xi.length}/11</span>
                       </div>
 
                       {armed ? (
