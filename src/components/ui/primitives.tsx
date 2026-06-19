@@ -1,4 +1,5 @@
 import type { HTMLAttributes, ReactNode } from 'react';
+import { useIsFetching, useIsMutating } from '@tanstack/react-query';
 
 /**
  * Aretim reusable style primitives (design handoff). Assemble pages from these:
@@ -6,9 +7,19 @@ import type { HTMLAttributes, ReactNode } from 'react';
  * section headers + ghost buttons. Dark canvas, gold accents, PT-PT copy.
  */
 
-/** 1. Top accent rule — 3px gilded bar with a slow travelling sheen. */
+/**
+ * 1. Top accent rule — a static 3px gilded bar that only shows the travelling
+ * sheen while data is being fetched/mutated (acts as a global loading bar).
+ */
 export function TopAccentRule() {
-  return <div className="top-accent-rule" role="presentation" />;
+  const loading = useIsFetching() + useIsMutating() > 0;
+  return (
+    <div
+      className={`top-accent-rule ${loading ? 'is-loading' : ''}`}
+      role="presentation"
+      aria-busy={loading}
+    />
+  );
 }
 
 /** 6. Eyebrow — gold uppercase overline above big Playfair headings. */

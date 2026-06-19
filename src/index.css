@@ -74,7 +74,8 @@
     @apply outline-none ring-offset-2 ring-offset-bg focus-visible:ring-2 focus-visible:ring-gold/60;
   }
 
-  /* Top accent rule — gold bar with a slow travelling sheen. */
+  /* Top accent rule — a static gilded bar. The travelling sheen is added only
+     while the app is loading/fetching (see TopAccentRule). */
   .top-accent-rule {
     height: 3px;
     background-image: linear-gradient(
@@ -86,6 +87,9 @@
       transparent
     );
     background-size: 200% 100%;
+    background-position: 50% 0;
+  }
+  .top-accent-rule.is-loading {
     @apply animate-sheen;
   }
 }

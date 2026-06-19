@@ -88,6 +88,23 @@ export type PlaceBetResult = {
 
 export type UserSearchResult = { id: string; display_name: string; avatar_url: string | null };
 
+export type FriendStatus = 'self' | 'friends' | 'pending_out' | 'pending_in' | 'none';
+
+export type PublicProfile = {
+  id: string;
+  display_name: string;
+  avatar_url: string | null;
+  games_played: number;
+  games_won: number;
+  biggest_win: number;
+  total_won: number;
+  total_lost: number;
+  streak_count: number;
+  created_at: string;
+  last_online: string | null;
+  friend_status: FriendStatus;
+};
+
 export type FriendRow = {
   id: string;
   display_name: string;
@@ -403,6 +420,14 @@ export type Database = {
       list_my_poker_tables: {
         Args: Record<string, never>;
         Returns: MyPokerTable[];
+      };
+      username_available: {
+        Args: { p_name: string };
+        Returns: boolean;
+      };
+      public_profile: {
+        Args: { p_user: string };
+        Returns: PublicProfile | null;
       };
       list_challenges: {
         Args: Record<string, never>;
