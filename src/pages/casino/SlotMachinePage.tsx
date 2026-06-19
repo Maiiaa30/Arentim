@@ -46,9 +46,14 @@ function Reel({
   accent: string;
   glyphById: Record<string, string>;
 }) {
-  // Begin the spinning strip on the currently-shown symbol so the reel scrolls
-  // away smoothly instead of snapping to a different symbol when a spin starts.
-  const spinStrip = [target, ...ids, ...ids, ...ids];
+  // Begin the spinning strip on the symbol shown WHEN the spin starts (the
+  // previous result), captured once so the incoming result can't leak into the
+  // strip mid-spin — that leak was flashing the result before the reel landed.
+  const prevMode = useRef<ReelMode>(mode);
+  const spinHead = useRef(target);
+  if (mode === 'spin' && prevMode.current !== 'spin') spinHead.current = target;
+  prevMode.current = mode;
+  const spinStrip = [spinHead.current, ...ids, ...ids, ...ids];
   // Landing strip is 6 fillers + the result; the reel-land keyframe scrolls to
   // the last item. Rebuilt only when we (re)enter land with a new target, so a
   // fresh mount always animates from the top — never flashing the result first.
