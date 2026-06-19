@@ -96,9 +96,19 @@ function parseCSV(text) {
 
 function linesFor(posStr) {
   const out = [];
-  for (const p of posStr.split('/')) {
+  for (const p of posStr.split(/[/,]/)) {
     const l = LINE[p.trim().toUpperCase()];
     if (l && !out.includes(l)) out.push(l);
+  }
+  return out;
+}
+
+function buildClubs(clubs) {
+  const out = {};
+  for (const [club, players] of Object.entries(clubs)) {
+    if (players.length < 11) continue;
+    players.sort((a, b) => b.r - a.r);
+    out[club] = { rating: Math.round(players.slice(0, 11).reduce((s, p) => s + p.r, 0) / 11), players };
   }
   return out;
 }
@@ -136,20 +146,49 @@ for (const year of YEARS) {
     });
   }
 
-  // Per-club strength = average of the best 11 ratings; keep clubs with a full XI.
-  const out = {};
-  for (const [club, players] of Object.entries(clubs)) {
-    if (players.length < 11) continue;
-    players.sort((a, b) => b.r - a.r);
-    const top11 = players.slice(0, 11);
-    out[club] = { rating: Math.round(top11.reduce((s, p) => s + p.r, 0) / 11), players };
+  byYear[year] = buildClubs(clubs);
+  console.log(`${year}: ${Object.keys(byYear[year]).length} clubs, ${Object.values(byYear[year]).reduce((s, c) => s + c.players.length, 0)} players`);
+}
+
+// Recent season (FC26 / 2025–26) from the sofifa-style EAFC26 dataset — uses a
+// clean league_name === 'Primeira Liga' filter (no club-keyword guessing).
+try {
+  const res = await fetch('https://raw.githubusercontent.com/ismailoksuz/EAFC26-DataHub/HEAD/data/players.csv');
+  if (res.ok) {
+    const rows = parseCSV(await res.text());
+    const h = rows[0];
+    const ix = (k) => h.indexOf(k);
+    const jName = ix('short_name'), jRating = ix('overall'), jClub = ix('club_name'),
+      jPos = ix('player_positions'), jLeague = ix('league_name'), jNat = ix('nationality_name');
+    const clubs = {};
+    for (let r = 1; r < rows.length; r++) {
+      const row = rows[r];
+      if (!row || row.length < h.length) continue;
+      if ((row[jLeague] || '').trim() !== 'Primeira Liga') continue;
+      const club = canonClub(row[jClub] || '');
+      if (!club) continue;
+      const rating = parseInt(row[jRating], 10);
+      const posStr = (row[jPos] || '').replace(/,\s*/g, '/'); // normalise to slash form
+      const lines = linesFor(posStr);
+      if (!Number.isFinite(rating) || lines.length === 0) continue;
+      clubsSeen.add(club);
+      (clubs[club] ??= []).push({ n: row[jName], r: rating, p: posStr, l: lines, ph: null, nat: row[jNat] || null });
+    }
+    byYear[2026] = buildClubs(clubs);
+    console.log(`2026: ${Object.keys(byYear[2026]).length} clubs, ${Object.values(byYear[2026]).reduce((s, c) => s + c.players.length, 0)} players`);
+  } else {
+    console.log('! 2026:', res.status);
   }
-  byYear[year] = out;
-  console.log(`${year}: ${Object.keys(out).length} clubs, ${Object.values(out).reduce((s, c) => s + c.players.length, 0)} players`);
+} catch (e) {
+  console.log('! 2026:', String(e));
 }
 
 mkdirSync(dirname(OUT), { recursive: true });
-const data = { years: YEARS.filter((y) => byYear[y] && Object.keys(byYear[y]).length >= 8), byYear };
+const years = Object.keys(byYear)
+  .map(Number)
+  .filter((y) => byYear[y] && Object.keys(byYear[y]).length >= 8)
+  .sort((a, b) => a - b);
+const data = { years, byYear };
 writeFileSync(OUT, JSON.stringify(data));
 console.log(`\nWrote ${OUT} (${(JSON.stringify(data).length / 1024).toFixed(0)} KB)`);
 console.log(`Distinct clubs: ${[...clubsSeen].sort().join(', ')}`);

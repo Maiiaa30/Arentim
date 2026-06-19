@@ -9,7 +9,7 @@
  *  - 'epoca' (season): your XI joins the league for a full double round-robin
  *            with scorers + a live table.
  */
-import { type Line, type RawPlayer, type Season, clubNames, getSeason, yearsInRange } from './onzeData';
+import { MAX_YEAR, type Line, type RawPlayer, type Season, clubNames, getSeason, yearsInRange } from './onzeData';
 
 export type Mode = 'sete' | 'epoca';
 export type Position =
@@ -65,6 +65,7 @@ export interface GamePlayer {
   pos: string; // original string for display
   photo: string | null;
   nat: string | null;
+  year?: number; // the season this card is from (set when drafted from an offer)
 }
 
 /** Can this player fill the given slot position? */
@@ -123,37 +124,36 @@ export function pickSeason(startYear: number, endYear: number, seed: string): nu
   return years[randInt(rand, years.length)] ?? years[0]!;
 }
 
-export interface DraftSlot {
-  position: Position;
-  line: Line;
-  club: string;
-  roster: GamePlayer[]; // the whole squad — eligible first, then by rating
+/** A team you can draft from: a club at a specific season. */
+export interface Offer { club: string; year: number; }
+
+/** A shuffled deck of clubs (each at a random season within the range), one per
+ *  club. You draw teams, pick a player and place them — one player per club. */
+export function buildOffers(seed: string, startY: number, endY: number): Offer[] {
+  const years = yearsInRange(startY, endY);
+  const rand = rng(hashSeed(seed + '-offers'));
+  const clubYears = new Map<string, number[]>();
+  for (const y of years) for (const c of clubNames(y)) {
+    if (!clubYears.has(c)) clubYears.set(c, []);
+    clubYears.get(c)!.push(y);
+  }
+  const offers: Offer[] = [];
+  for (const [club, ys] of clubYears) offers.push({ club, year: ys[randInt(rand, ys.length)]! });
+  return shuffle(offers, rand);
 }
 
-/** One random club per slot (distinct, with an eligible player); show full squad. */
-export function generateDraft(seed: string, formation: Formation, year: number): DraftSlot[] {
-  const season: Season = getSeason(year);
-  const allClubs = clubNames(year);
-  const rand = rng(hashSeed(seed + '-draft'));
-  const used = new Set<string>();
+/** The full squad of an offer's club/season, best-rated first. */
+export function rosterOf(o: Offer): GamePlayer[] {
+  const season: Season = getSeason(o.year);
+  return (season[o.club]?.players ?? [])
+    .map((p) => ({ ...toGame(o.club, p), year: o.year }))
+    .sort((a, b) => b.rating - a.rating);
+}
 
-  return FORMATIONS[formation].map((position) => {
-    const eligibleClubs = allClubs.filter((c) =>
-      season[c]!.players.some((p) => posEligible(position, toGame(c, p))),
-    );
-    const fresh = eligibleClubs.filter((c) => !used.has(c));
-    const pool = fresh.length > 0 ? fresh : eligibleClubs.length > 0 ? eligibleClubs : allClubs;
-    const club = pool[randInt(rand, pool.length)]!;
-    used.add(club);
-    const roster = season[club]!.players
-      .map((p) => toGame(club, p))
-      .sort((a, b) => {
-        const ea = posEligible(position, a) ? 1 : 0;
-        const eb = posEligible(position, b) ? 1 : 0;
-        return eb - ea || b.rating - a.rating;
-      });
-    return { position, line: posLine(position), club, roster };
-  });
+/** The latest available season in a range — used as the competition the XI plays in. */
+export function latestIn(startY: number, endY: number): number {
+  const ys = yearsInRange(startY, endY);
+  return ys[ys.length - 1] ?? MAX_YEAR;
 }
 
 export interface Rating { base: number; chemistry: number; total: number; }
