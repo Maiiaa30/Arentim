@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/features/auth/AuthProvider';
 import { profileKey } from '@/features/profile/useProfile';
+import { invokePoker } from './invoke';
 import type { MyPokerTable } from '@/types/db';
 import type { PokerView } from './types';
 
@@ -12,12 +13,8 @@ interface TableResponse {
   code?: string;
 }
 
-async function call(body: Record<string, unknown>): Promise<TableResponse> {
-  const { data, error } = await supabase.functions.invoke('poker-table', { body });
-  if (error) throw error;
-  if (data?.error) throw new Error(data.error);
-  return data as TableResponse;
-}
+const call = (body: Record<string, unknown>): Promise<TableResponse> =>
+  invokePoker<TableResponse>('poker-table', body);
 
 /** Tables the user is currently seated at. */
 export function useMyPokerTables() {
