@@ -20,6 +20,7 @@ const SlotMachinePage = lazy(() => named(import('@/pages/casino/SlotMachinePage'
 const CoinflipPage = lazy(() => named(import('@/pages/casino/CoinflipPage'), 'CoinflipPage'));
 const BlackjackPage = lazy(() => named(import('@/pages/casino/BlackjackPage'), 'BlackjackPage'));
 const SportsbookPage = lazy(() => named(import('@/pages/SportsbookPage'), 'SportsbookPage'));
+const ScoresPage = lazy(() => named(import('@/pages/ScoresPage'), 'ScoresPage'));
 const PokerPage = lazy(() => named(import('@/pages/PokerPage'), 'PokerPage'));
 const PokerHome = lazy(() => named(import('@/pages/poker/PokerHome'), 'PokerHome'));
 const PrivatePokerPage = lazy(() => named(import('@/pages/poker/PrivatePokerPage'), 'PrivatePokerPage'));
@@ -51,6 +52,7 @@ export default function App() {
             <Route path="casino/coinflip" element={<CoinflipPage />} />
             <Route path="casino/blackjack" element={<BlackjackPage />} />
             <Route path="sportsbook" element={<SportsbookPage />} />
+            <Route path="resultados" element={<ScoresPage />} />
             <Route path="poker" element={<PokerHome />} />
             <Route path="poker/bots" element={<PokerPage />} />
             <Route path="poker/private" element={<PrivatePokerPage />} />

@@ -2,56 +2,19 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useProfile } from '@/features/profile/useProfile';
 import { usePoker, usePokerState } from '@/features/poker/usePoker';
-import { PokerCard } from '@/features/poker/PokerCard';
-import type { PokerView, PokerPlayerView } from '@/features/poker/types';
+import { PokerTable, ResultBanner } from '@/features/poker/PokerTable';
+import { PokerActionBar } from '@/features/poker/PokerActionBar';
+import type { PokerView } from '@/features/poker/types';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Eyebrow } from '@/components/ui/primitives';
-import { CoinIcon } from '@/components/CoinIcon';
 import { formatAmount } from '@/lib/format';
-
-const STATUS_LABEL: Record<string, string> = {
-  active: 'ativo',
-  folded: 'desistiu',
-  allin: 'all-in',
-  out: 'fora',
-  waiting: 'à espera',
-};
 
 const DIFFICULTY_LABEL: Record<'easy' | 'medium' | 'hard', string> = {
   easy: 'Fácil',
   medium: 'Médio',
   hard: 'Difícil',
 };
-
-function Seat({ p, isTurn, isYou }: { p: PokerPlayerView; isTurn: boolean; isYou: boolean }) {
-  return (
-    <div
-      className={`rounded border p-3 transition-colors ${
-        isTurn ? 'border-gold bg-gold/10' : 'border-border bg-surface'
-      } ${p.status === 'folded' ? 'opacity-50' : ''}`}
-    >
-      <div className="flex items-center justify-between gap-2">
-        <span className="font-sans text-sm font-medium text-text">
-          {p.name}
-          {isYou && <span className="text-muted"> (você)</span>}
-        </span>
-        <span className="flex items-center gap-1 font-mono text-xs text-muted">
-          <CoinIcon className="h-3 w-3" /> {formatAmount(p.stack)}
-        </span>
-      </div>
-      <div className="mt-2 flex gap-1">
-        {p.hole.length === 0
-          ? <span className="text-xs text-muted">—</span>
-          : p.hole.map((c, i) => <PokerCard key={i} card={c} small />)}
-      </div>
-      <div className="mt-1 flex items-center justify-between text-[11px]">
-        <span className="text-muted">{STATUS_LABEL[p.status] ?? p.status}</span>
-        {p.committed > 0 && <span className="font-mono tabular-nums text-gold">{formatAmount(p.committed)}</span>}
-      </div>
-    </div>
-  );
-}
 
 export function PokerPage() {
   const { data: profile } = useProfile();
@@ -123,7 +86,7 @@ export function PokerPage() {
             <div className="flex gap-2">
               {[1, 2, 3, 4, 5].map((n) => (
                 <button key={n} onClick={() => setBotCount(n)}
-                  className={`focus-ring flex-1 rounded border py-2 font-mono text-sm transition-colors ${botCount === n ? 'border-gold bg-gold/10 text-gold' : 'border-border text-muted'}`}>
+                  className={`focus-ring min-h-[44px] flex-1 rounded border py-2 font-mono text-sm transition-colors ${botCount === n ? 'border-gold bg-gold/10 text-gold' : 'border-border text-muted'}`}>
                   {n}
                 </button>
               ))}
@@ -134,7 +97,7 @@ export function PokerPage() {
             <div className="flex gap-2">
               {(['easy', 'medium', 'hard'] as const).map((d) => (
                 <button key={d} onClick={() => setDifficulty(d)}
-                  className={`focus-ring flex-1 rounded border py-2 font-sans text-sm transition-colors ${difficulty === d ? 'border-gold bg-gold/10 text-gold' : 'border-border text-muted'}`}>
+                  className={`focus-ring min-h-[44px] flex-1 rounded border py-2 font-sans text-sm transition-colors ${difficulty === d ? 'border-gold bg-gold/10 text-gold' : 'border-border text-muted'}`}>
                   {DIFFICULTY_LABEL[d]}
                 </button>
               ))}
@@ -150,80 +113,37 @@ export function PokerPage() {
   }
 
   // ---- Table ----
-  const bots = view.players.filter((p) => p.id !== 'you');
   const minRaiseTo = view.currentBet + view.minRaise;
+  const maxRaiseTo = (you?.stack ?? 0) + (you?.committed ?? 0);
+  const effRaiseTo = Math.max(raiseTo, minRaiseTo);
+  const canRaise = (you?.stack ?? 0) > owe;
 
   return (
     <div className="animate-fade-in space-y-5">
-      <div className="flex items-center justify-between">
-        <h1 className="font-display text-[32px] font-medium text-text">Póquer</h1>
+      <div className="flex items-center justify-between gap-3">
+        <h1 className="font-display text-[28px] font-medium text-text sm:text-[32px]">Póquer</h1>
         <Button variant="secondary" onClick={onLeave} disabled={busy}>Sair da mesa</Button>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {bots.map((p) => (
-          <Seat key={p.id} p={p} isTurn={view.toActId === p.id} isYou={false} />
-        ))}
-      </div>
-
-      {/* Board + pot */}
-      <div className="card flex flex-col items-center gap-3 p-6">
-        <span className="flex items-center gap-1 font-sans text-sm text-muted">
-          Pote <CoinIcon className="h-3.5 w-3.5" />
-          <span className="font-mono font-semibold text-text">{formatAmount(view.pot)}</span>
-        </span>
-        <div className="flex gap-2">
-          {view.community.length === 0
-            ? <span className="font-sans text-sm text-muted">Pré-flop</span>
-            : view.community.map((c, i) => <PokerCard key={i} card={c} />)}
-        </div>
-        {view.result && (
-          <p className="text-center font-sans text-sm font-semibold text-positive">
-            {view.result.winners.map((w) => {
-              const name = view.players.find((p) => p.id === w.id)?.name ?? w.id;
-              return `${name} ganha ${formatAmount(w.amount)}`;
-            }).join(' · ')}
-          </p>
-        )}
-      </div>
-
-      {/* You */}
-      {you && (
-        <div className="mx-auto max-w-md">
-          <Seat p={you} isTurn={!!myTurn} isYou />
-        </div>
-      )}
+      <PokerTable view={view} youId="you" myTurn={!!myTurn} resultBanner={<ResultBanner view={view} />} />
 
       {/* Actions */}
       <div className="card space-y-3 p-4">
         {myTurn ? (
-          <>
-            <div className="flex flex-wrap justify-center gap-2">
-              <Button variant="danger" onClick={() => run(() => act.mutateAsync({ action: 'fold', raiseTo: 0 }))} disabled={busy}>
-                Desistir
-              </Button>
-              {owe === 0 ? (
-                <Button variant="secondary" onClick={() => run(() => act.mutateAsync({ action: 'check', raiseTo: 0 }))} disabled={busy}>
-                  Passar
-                </Button>
-              ) : (
-                <Button variant="primary" onClick={() => run(() => act.mutateAsync({ action: 'call', raiseTo: 0 }))} disabled={busy}>
-                  Pagar {formatAmount(Math.min(owe, you?.stack ?? 0))}
-                </Button>
-              )}
-              <Button
-                variant="primary"
-                onClick={() => run(() => act.mutateAsync({ action: 'raise', raiseTo: Math.max(raiseTo, minRaiseTo) }))}
-                disabled={busy || (you?.stack ?? 0) <= owe}
-              >
-                Subir para {formatAmount(Math.max(raiseTo, minRaiseTo))}
-              </Button>
-            </div>
-            <Input
-              id="raise" type="range" min={minRaiseTo} max={(you?.stack ?? 0) + (you?.committed ?? 0)}
-              value={Math.max(raiseTo, minRaiseTo)} onChange={(e) => setRaiseTo(Number(e.target.value))}
-            />
-          </>
+          <PokerActionBar
+            owe={owe}
+            callAmount={Math.min(owe, you?.stack ?? 0)}
+            raiseTo={effRaiseTo}
+            minRaiseTo={minRaiseTo}
+            maxRaiseTo={maxRaiseTo}
+            canRaise={canRaise}
+            busy={busy}
+            onFold={() => run(() => act.mutateAsync({ action: 'fold', raiseTo: 0 }))}
+            onCheck={() => run(() => act.mutateAsync({ action: 'check', raiseTo: 0 }))}
+            onCall={() => run(() => act.mutateAsync({ action: 'call', raiseTo: 0 }))}
+            onRaise={() => run(() => act.mutateAsync({ action: 'raise', raiseTo: effRaiseTo }))}
+            onRaiseChange={setRaiseTo}
+          />
         ) : view.handOver ? (
           <div className="flex justify-center gap-2">
             {(you?.stack ?? 0) > 0 ? (

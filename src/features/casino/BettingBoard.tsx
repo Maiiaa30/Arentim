@@ -2,6 +2,8 @@ import { colorOf, type RouletteBetKind } from './roulette';
 
 interface BettingBoardProps {
   onPlace: (kind: RouletteBetKind, selection: number | null) => void;
+  /** Current stake per cell key, e.g. { 'straight:17': 25, 'red:null': 10 }. */
+  stakes?: Record<string, number>;
   disabled?: boolean;
 }
 
@@ -10,16 +12,29 @@ const MID = [2, 5, 8, 11, 14, 17, 20, 23, 26, 29, 32, 35];
 const BOT = [1, 4, 7, 10, 13, 16, 19, 22, 25, 28, 31, 34];
 
 const numberBg: Record<string, string> = {
-  red: 'bg-negative/80 hover:bg-negative',
-  black: 'bg-black/60 hover:bg-black/80',
-  green: 'bg-positive/80 hover:bg-positive',
+  red: 'bg-[#b0303a] hover:bg-[#c63a45]',
+  black: 'bg-[#14110c] hover:bg-[#211b12]',
+  green: 'bg-[#1f8a5b] hover:bg-[#239c66]',
 };
 
-export function BettingBoard({ onPlace, disabled }: BettingBoardProps) {
+const key = (kind: RouletteBetKind, selection: number | null) => `${kind}:${selection}`;
+
+export function BettingBoard({ onPlace, stakes = {}, disabled }: BettingBoardProps) {
+  // A little gold chip badge shown on any cell that currently carries a stake.
+  const stakeDot = (kind: RouletteBetKind, selection: number | null) => {
+    const v = stakes[key(kind, selection)];
+    if (!v) return null;
+    return (
+      <span className="pointer-events-none absolute -right-1 -top-1 z-10 flex min-w-[18px] items-center justify-center rounded-full border border-gold-light bg-gold px-1 font-mono text-[9px] font-bold leading-none text-bg shadow-[0_1px_3px_rgba(0,0,0,0.5)]">
+        {v}
+      </span>
+    );
+  };
+
   const cell =
-    'focus-ring flex items-center justify-center rounded-md text-sm font-semibold text-white transition-colors disabled:opacity-50';
+    'focus-ring relative flex items-center justify-center rounded-[3px] font-mono text-sm font-bold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.12),inset_0_0_0_1px_rgba(201,162,75,0.25)] transition-colors disabled:opacity-50';
   const outside =
-    'focus-ring rounded-md border border-border bg-surface px-2 py-2 text-xs font-medium text-text transition-colors hover:border-gold/60 disabled:opacity-50';
+    'focus-ring relative flex items-center justify-center rounded-[3px] border border-gold/25 bg-[#0c241b]/80 px-2 text-[11px] font-semibold uppercase tracking-wide text-body shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] transition-colors hover:border-gold/60 hover:text-text disabled:opacity-50';
 
   const numberCell = (n: number) => (
     <button
@@ -27,80 +42,84 @@ export function BettingBoard({ onPlace, disabled }: BettingBoardProps) {
       type="button"
       disabled={disabled}
       onClick={() => onPlace('straight', n)}
-      className={`${cell} h-9 ${numberBg[colorOf(n)]}`}
+      className={`${cell} h-10 ${numberBg[colorOf(n)]}`}
       aria-label={`Apostar no ${n}`}
     >
+      {stakeDot('straight', n)}
       {n}
     </button>
   );
 
   return (
-    <div className="space-y-2">
-      <div className="flex gap-2">
-        {/* Zero */}
-        <button
-          type="button"
-          disabled={disabled}
-          onClick={() => onPlace('straight', 0)}
-          className={`${cell} w-10 shrink-0 ${numberBg.green}`}
-          aria-label="Apostar no 0"
-        >
-          0
-        </button>
+    <div className="rounded-md bg-[#0c241b] p-2 shadow-[inset_0_0_0_1px_rgba(201,162,75,0.3),inset_0_0_24px_rgba(0,0,0,0.4)]">
+      <div className="space-y-1.5">
+        <div className="flex gap-1.5">
+          {/* Zero */}
+          <button
+            type="button"
+            disabled={disabled}
+            onClick={() => onPlace('straight', 0)}
+            className={`${cell} min-h-[40px] w-10 shrink-0 ${numberBg.green}`}
+            aria-label="Apostar no 0"
+          >
+            {stakeDot('straight', 0)}
+            0
+          </button>
 
-        <div className="flex-1 space-y-1">
-          <div className="grid grid-cols-12 gap-1">{TOP.map(numberCell)}</div>
-          <div className="grid grid-cols-12 gap-1">{MID.map(numberCell)}</div>
-          <div className="grid grid-cols-12 gap-1">{BOT.map(numberCell)}</div>
+          <div className="min-w-0 flex-1 space-y-1.5">
+            <div className="grid grid-cols-12 gap-1">{TOP.map(numberCell)}</div>
+            <div className="grid grid-cols-12 gap-1">{MID.map(numberCell)}</div>
+            <div className="grid grid-cols-12 gap-1">{BOT.map(numberCell)}</div>
+          </div>
+
+          {/* Columns */}
+          <div className="flex w-9 shrink-0 flex-col gap-1">
+            <button type="button" disabled={disabled} onClick={() => onPlace('col3', null)} className={`${outside} flex-1`} aria-label="Coluna 3 (2:1)">
+              {stakeDot('col3', null)}2:1
+            </button>
+            <button type="button" disabled={disabled} onClick={() => onPlace('col2', null)} className={`${outside} flex-1`} aria-label="Coluna 2 (2:1)">
+              {stakeDot('col2', null)}2:1
+            </button>
+            <button type="button" disabled={disabled} onClick={() => onPlace('col1', null)} className={`${outside} flex-1`} aria-label="Coluna 1 (2:1)">
+              {stakeDot('col1', null)}2:1
+            </button>
+          </div>
         </div>
 
-        {/* Columns */}
-        <div className="flex w-10 shrink-0 flex-col gap-1">
-          <button type="button" disabled={disabled} onClick={() => onPlace('col3', null)} className={`${outside} flex-1`}>
-            2:1
+        {/* Dozens */}
+        <div className="ml-[46px] grid grid-cols-3 gap-1">
+          <button type="button" disabled={disabled} onClick={() => onPlace('dozen1', null)} className={`${outside} min-h-[40px]`}>
+            {stakeDot('dozen1', null)}1.ª dúzia
           </button>
-          <button type="button" disabled={disabled} onClick={() => onPlace('col2', null)} className={`${outside} flex-1`}>
-            2:1
+          <button type="button" disabled={disabled} onClick={() => onPlace('dozen2', null)} className={`${outside} min-h-[40px]`}>
+            {stakeDot('dozen2', null)}2.ª dúzia
           </button>
-          <button type="button" disabled={disabled} onClick={() => onPlace('col1', null)} className={`${outside} flex-1`}>
-            2:1
+          <button type="button" disabled={disabled} onClick={() => onPlace('dozen3', null)} className={`${outside} min-h-[40px]`}>
+            {stakeDot('dozen3', null)}3.ª dúzia
           </button>
         </div>
-      </div>
 
-      {/* Dozens */}
-      <div className="ml-12 grid grid-cols-3 gap-1">
-        <button type="button" disabled={disabled} onClick={() => onPlace('dozen1', null)} className={outside}>
-          1.ª dúzia
-        </button>
-        <button type="button" disabled={disabled} onClick={() => onPlace('dozen2', null)} className={outside}>
-          2.ª dúzia
-        </button>
-        <button type="button" disabled={disabled} onClick={() => onPlace('dozen3', null)} className={outside}>
-          3.ª dúzia
-        </button>
-      </div>
-
-      {/* Even-money bets */}
-      <div className="ml-12 grid grid-cols-6 gap-1">
-        <button type="button" disabled={disabled} onClick={() => onPlace('low', null)} className={outside}>
-          1–18
-        </button>
-        <button type="button" disabled={disabled} onClick={() => onPlace('even', null)} className={outside}>
-          Par
-        </button>
-        <button type="button" disabled={disabled} onClick={() => onPlace('red', null)} className={`${outside} !border-negative/50 !text-negative`}>
-          Vermelho
-        </button>
-        <button type="button" disabled={disabled} onClick={() => onPlace('black', null)} className={outside}>
-          Preto
-        </button>
-        <button type="button" disabled={disabled} onClick={() => onPlace('odd', null)} className={outside}>
-          Ímpar
-        </button>
-        <button type="button" disabled={disabled} onClick={() => onPlace('high', null)} className={outside}>
-          19–36
-        </button>
+        {/* Even-money bets */}
+        <div className="ml-[46px] grid grid-cols-3 gap-1 sm:grid-cols-6">
+          <button type="button" disabled={disabled} onClick={() => onPlace('low', null)} className={`${outside} min-h-[40px]`}>
+            {stakeDot('low', null)}1–18
+          </button>
+          <button type="button" disabled={disabled} onClick={() => onPlace('even', null)} className={`${outside} min-h-[40px]`}>
+            {stakeDot('even', null)}Par
+          </button>
+          <button type="button" disabled={disabled} onClick={() => onPlace('red', null)} className={`${outside} min-h-[40px] !border-[#b0303a]/60 !text-[#e36c72] hover:!border-[#b0303a]`}>
+            {stakeDot('red', null)}Vermelho
+          </button>
+          <button type="button" disabled={disabled} onClick={() => onPlace('black', null)} className={`${outside} min-h-[40px]`}>
+            {stakeDot('black', null)}Preto
+          </button>
+          <button type="button" disabled={disabled} onClick={() => onPlace('odd', null)} className={`${outside} min-h-[40px]`}>
+            {stakeDot('odd', null)}Ímpar
+          </button>
+          <button type="button" disabled={disabled} onClick={() => onPlace('high', null)} className={`${outside} min-h-[40px]`}>
+            {stakeDot('high', null)}19–36
+          </button>
+        </div>
       </div>
     </div>
   );

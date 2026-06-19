@@ -9,6 +9,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { to: '/casino', label: 'Casino' },
   { to: '/casino/slots', label: 'Slots' },
   { to: '/sportsbook', label: 'Futebol' },
+  { to: '/resultados', label: 'Resultados' },
   { to: '/poker', label: 'Póquer' },
   { to: '/friends', label: 'Amigos' },
   { to: '/challenges', label: 'Desafios' },

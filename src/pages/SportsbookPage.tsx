@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { Eyebrow } from '@/components/ui/primitives';
 import { useFixtures, useSportsbookRealtime } from '@/features/sportsbook/useSportsbook';
 import { FixtureCard } from '@/features/sportsbook/FixtureCard';
 import { FeaturedMatch } from '@/features/sportsbook/FeaturedMatch';
@@ -31,15 +32,33 @@ export function SportsbookPage() {
         ← Voltar às Mesas
       </Link>
 
-      <div className="flex flex-wrap items-center gap-3">
-        <h1 className="font-display text-[32px] font-medium text-text">Futebol</h1>
-        <span className="flex items-center gap-1.5 rounded-full border border-border px-2.5 py-1 font-sans text-[10px] uppercase tracking-[0.18em] text-muted-2">
-          <span className="h-1.5 w-1.5 animate-livedot rounded-full bg-negative" /> Ao vivo e brevemente
-        </span>
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <Eyebrow>Aretim · Casa de Apostas</Eyebrow>
+          <div className="mt-1 flex flex-wrap items-center gap-3">
+            <h1 className="font-display text-[32px] font-medium leading-none text-text">Futebol</h1>
+            <span className="flex items-center gap-1.5 rounded-full border border-border px-2.5 py-1 font-sans text-[10px] uppercase tracking-[0.18em] text-muted-2">
+              <span className="h-1.5 w-1.5 animate-livedot rounded-full bg-negative" /> Ao vivo e brevemente
+            </span>
+          </div>
+          <p className="mt-2 font-sans text-sm text-muted">
+            1 · X · 2 — toque numa cotação para criar o seu boletim
+          </p>
+        </div>
+        <Link
+          to="/resultados"
+          className="focus-ring group inline-flex min-h-[40px] items-center gap-2 rounded-full border border-gold/40 bg-gold/[0.06] px-4 py-2 font-sans text-xs font-medium uppercase tracking-[0.14em] text-gold transition-colors hover:bg-gold/[0.12]"
+        >
+          <span className="relative flex h-2 w-2">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-negative opacity-75" />
+            <span className="relative inline-flex h-2 w-2 rounded-full bg-negative" />
+          </span>
+          Resultados ao vivo
+          <span aria-hidden className="transition-transform group-hover:translate-x-0.5">
+            →
+          </span>
+        </Link>
       </div>
-      <p className="font-sans text-sm text-muted">
-        1 · X · 2 — toque numa cotação para criar o seu boletim
-      </p>
       <div className="h-px bg-gradient-to-r from-border to-transparent" />
 
       <div className="flex gap-2">

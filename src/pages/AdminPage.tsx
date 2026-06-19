@@ -44,17 +44,21 @@ function PlayerActions({ player }: { player: Profile }) {
       <Input id="reason" label="Motivo (obrigatório)" value={reason} onChange={(e) => setReason(e.target.value)} />
 
       <div className="flex items-end gap-2">
-        <Input id="amount" type="number" label="Ajustar saldo (±)" value={amount}
-          onChange={(e) => setAmount(Math.floor(Number(e.target.value) || 0))} />
-        <Button variant="primary" onClick={async () => { if (!guardReason()) return; await adjustBalance.mutateAsync({ user: player.id, amount, reason }); setMsg('Saldo ajustado.'); }}>
+        <div className="min-w-0 flex-1">
+          <Input id="amount" type="number" label="Ajustar saldo (±)" value={amount}
+            onChange={(e) => setAmount(Math.floor(Number(e.target.value) || 0))} />
+        </div>
+        <Button variant="primary" className="shrink-0 !px-4 !py-2.5" onClick={async () => { if (!guardReason()) return; await adjustBalance.mutateAsync({ user: player.id, amount, reason }); setMsg('Saldo ajustado.'); }}>
           Aplicar
         </Button>
       </div>
 
       <div className="flex items-end gap-2">
-        <Input id="streak" type="number" label="Definir sequência" value={streak}
-          onChange={(e) => setStreakVal(Math.max(0, Math.floor(Number(e.target.value) || 0)))} />
-        <Button variant="secondary" onClick={async () => { if (!guardReason()) return; await setStreak.mutateAsync({ user: player.id, streak, reason }); setMsg('Sequência definida.'); }}>
+        <div className="min-w-0 flex-1">
+          <Input id="streak" type="number" label="Definir sequência" value={streak}
+            onChange={(e) => setStreakVal(Math.max(0, Math.floor(Number(e.target.value) || 0)))} />
+        </div>
+        <Button variant="secondary" className="shrink-0 !px-4 !py-2.5" onClick={async () => { if (!guardReason()) return; await setStreak.mutateAsync({ user: player.id, streak, reason }); setMsg('Sequência definida.'); }}>
           Definir
         </Button>
       </div>
@@ -95,12 +99,12 @@ export function AdminPage() {
     <div className="animate-fade-in space-y-5">
       <div>
         <Eyebrow>Administração</Eyebrow>
-        <h1 className="mt-2 font-display text-[38px] font-medium leading-tight text-text">Admin</h1>
+        <h1 className="mt-2 font-display text-[28px] font-medium leading-tight text-text sm:text-[38px]">Admin</h1>
       </div>
       <div className="flex flex-wrap gap-2">
         {tabs.map((t) => (
           <button key={t} onClick={() => setTab(t)}
-            className={`focus-ring rounded-full px-3 py-1.5 font-sans text-sm font-medium ${tab === t ? 'bg-gold text-bg' : 'border border-border text-muted-2 hover:text-text'}`}>
+            className={`focus-ring inline-flex min-h-[40px] items-center rounded-full px-4 py-1.5 font-sans text-sm font-medium ${tab === t ? 'bg-gold text-bg' : 'border border-border text-muted-2 hover:text-text'}`}>
             {TAB_LABEL[t]}
           </button>
         ))}
@@ -153,10 +157,10 @@ export function AdminPage() {
       {tab === 'logs' && (
         <div className="space-y-1">
           {(actions ?? []).map((a) => (
-            <div key={a.id} className="rounded bg-surface px-3 py-2 text-xs">
+            <div key={a.id} className="break-words rounded bg-surface px-3 py-2 text-xs">
               <span className="font-medium text-text">{a.action}</span>
               <span className="text-muted-2"> · {new Date(a.created_at).toLocaleString('pt-PT')}</span>
-              {a.detail && <span className="font-mono text-muted-2"> · {JSON.stringify(a.detail)}</span>}
+              {a.detail && <span className="break-all font-mono text-muted-2"> · {JSON.stringify(a.detail)}</span>}
             </div>
           ))}
         </div>

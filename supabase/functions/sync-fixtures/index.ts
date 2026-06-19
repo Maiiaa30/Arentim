@@ -14,13 +14,16 @@ import {
   apiFootballGet,
   parseFixtures,
   parseOdds,
+  resolveSeason,
 } from '../_shared/apiFootball.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const API_KEY = Deno.env.get('API_FOOTBALL_KEY') ?? '';
 const SYNC_SECRET = Deno.env.get('SYNC_SECRET') ?? '';
-const SEASON = Number(Deno.env.get('FOOTBALL_SEASON') ?? new Date().getUTCFullYear());
+// Defaults to the *current* season (Aug-rollover aware); FOOTBALL_SEASON pins it
+// to whatever season the active API-Football subscription covers.
+const SEASON = resolveSeason(Deno.env.get('FOOTBALL_SEASON'));
 
 function ymd(date: Date): string {
   return date.toISOString().slice(0, 10);
@@ -88,7 +91,7 @@ Deno.serve(async (req) => {
     });
   }
 
-  return new Response(JSON.stringify({ ok: true, synced: summary }), {
+  return new Response(JSON.stringify({ ok: true, season: SEASON, window: { from, to }, synced: summary }), {
     headers: { 'content-type': 'application/json' },
   });
 });
