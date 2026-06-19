@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { useProfile } from '@/features/profile/useProfile';
 import { useSlotMachines, usePlaySlot } from '@/features/casino/useSlotMachines';
 import { accentHex } from '@/features/casino/slotTheme';
+import { SymbolArt } from '@/features/casino/slotSymbols';
 import { WinCelebration } from '@/features/casino/WinCelebration';
 import { Button } from '@/components/ui/Button';
 import { Eyebrow } from '@/components/ui/primitives';
@@ -12,19 +13,21 @@ import type { SlotMachineMeta } from '@/types/db';
 
 const DENOMS = [5, 10, 25, 50, 100, 250];
 
-/** One reel window. Cycles random glyphs while spinning, then snaps to target. */
+/** One reel window. Cycles random symbols while spinning, then snaps to target. */
 function Reel({
-  glyphs,
+  ids,
   target,
   spinning,
   won,
   accent,
+  glyphById,
 }: {
-  glyphs: string[];
+  ids: string[];
   target: string;
   spinning: boolean;
   won: boolean;
   accent: string;
+  glyphById: Record<string, string>;
 }) {
   const [shown, setShown] = useState(target);
   const timer = useRef<number | null>(null);
@@ -32,7 +35,7 @@ function Reel({
   useEffect(() => {
     if (spinning) {
       timer.current = window.setInterval(() => {
-        setShown(glyphs[Math.floor(Math.random() * glyphs.length)]!);
+        setShown(ids[Math.floor(Math.random() * ids.length)]!);
       }, 70);
       return () => {
         if (timer.current) window.clearInterval(timer.current);
@@ -40,7 +43,7 @@ function Reel({
     }
     setShown(target);
     return;
-  }, [spinning, target, glyphs]);
+  }, [spinning, target, ids]);
 
   return (
     <div
@@ -50,13 +53,13 @@ function Reel({
       style={won && !spinning ? { boxShadow: `inset 0 0 24px ${accent}55` } : undefined}
     >
       {/* glass shading */}
-      <span className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/[0.06] via-transparent to-black/30" />
-      <span
+      <span className="pointer-events-none absolute inset-0 z-10 bg-gradient-to-b from-white/[0.06] via-transparent to-black/30" />
+      <div
         key={spinning ? 'spin' : shown}
-        className={`text-5xl sm:text-[56px] ${spinning ? 'blur-[1.5px]' : 'animate-pop'}`}
+        className={spinning ? 'blur-[1.5px]' : 'animate-pop'}
       >
-        {shown}
-      </span>
+        <SymbolArt id={shown} glyph={glyphById[shown]} className="h-[58px] w-[58px] sm:h-16 sm:w-16" />
+      </div>
     </div>
   );
 }
@@ -70,7 +73,7 @@ function MachineScreen({ m }: { m: SlotMachineMeta }) {
     () => Object.fromEntries(m.symbols.map((s) => [s.id, s.glyph])),
     [m.symbols],
   );
-  const allGlyphs = useMemo(() => m.symbols.map((s) => s.glyph), [m.symbols]);
+  const allIds = useMemo(() => m.symbols.map((s) => s.id), [m.symbols]);
   const jackpotGlyph = glyphById[m.jackpot_symbol] ?? '✦';
   const maxVisible = useMemo(
     () => Math.max(0, ...m.paytable.filter((r) => r.mult != null).map((r) => r.mult as number)),
@@ -84,7 +87,7 @@ function MachineScreen({ m }: { m: SlotMachineMeta }) {
 
   const balance = profile?.balance ?? 0;
   const [stake, setStake] = useState(m.min_bet);
-  const initial = m.symbols.slice(0, 3).map((s) => s.glyph);
+  const initial = m.symbols.slice(0, 3).map((s) => s.id);
   const [targets, setTargets] = useState<string[]>([initial[0]!, initial[1]!, initial[2]!]);
   const [spin, setSpin] = useState<[boolean, boolean, boolean]>([false, false, false]);
   const [result, setResult] = useState<{ payout: number; jackpot: boolean; mult: number; id: number } | null>(null);
@@ -108,8 +111,7 @@ function MachineScreen({ m }: { m: SlotMachineMeta }) {
     setSpin([true, true, true]);
     try {
       const res = await play.mutateAsync({ machine: m.key, stake });
-      const glyphs = res.reels.map((id) => glyphById[id] ?? '❔');
-      setTargets(glyphs);
+      setTargets(res.reels);
       const id = ++spinId.current;
       // Staggered reel stops for suspense, then reveal the outcome.
       timers.current.push(
@@ -168,7 +170,7 @@ function MachineScreen({ m }: { m: SlotMachineMeta }) {
               }`}
               style={{ borderColor: `${hex}66`, background: `linear-gradient(180deg, ${hex}22, transparent)` }}
             >
-              <span className="animate-glow rounded-full text-2xl" aria-hidden>{jackpotGlyph}</span>
+              <SymbolArt id={m.jackpot_symbol} glyph={jackpotGlyph} className="h-9 w-9 drop-shadow-[0_0_8px_rgba(201,162,75,0.6)]" />
               <div className="text-center">
                 <p className="font-sans text-[9px] uppercase tracking-[0.3em] text-muted-2">Jackpot Mistério</p>
                 <p className="font-display text-xl font-bold" style={{ color: hex }}>
@@ -191,9 +193,9 @@ function MachineScreen({ m }: { m: SlotMachineMeta }) {
                   style={{ background: `linear-gradient(90deg, transparent, ${hex}, transparent)` }}
                   aria-hidden
                 />
-                <Reel glyphs={allGlyphs} target={targets[0]!} spinning={spin[0]} won={won} accent={hex} />
-                <Reel glyphs={allGlyphs} target={targets[1]!} spinning={spin[1]} won={won} accent={hex} />
-                <Reel glyphs={allGlyphs} target={targets[2]!} spinning={spin[2]} won={won} accent={hex} />
+                <Reel ids={allIds} target={targets[0]!} spinning={spin[0]} won={won} accent={hex} glyphById={glyphById} />
+                <Reel ids={allIds} target={targets[1]!} spinning={spin[1]} won={won} accent={hex} glyphById={glyphById} />
+                <Reel ids={allIds} target={targets[2]!} spinning={spin[2]} won={won} accent={hex} glyphById={glyphById} />
                 {won && result && <WinCelebration key={result.id} jackpot={result.jackpot} />}
               </div>
             </div>
@@ -269,7 +271,11 @@ function MachineScreen({ m }: { m: SlotMachineMeta }) {
                       isJackpot ? 'bg-gold/[0.08]' : ''
                     }`}
                   >
-                    <span className="text-lg">{row.glyph}{row.glyph}{row.glyph}</span>
+                    <span className="flex items-center gap-0.5">
+                      <SymbolArt id={row.id} glyph={row.glyph} className="h-6 w-6" />
+                      <SymbolArt id={row.id} glyph={row.glyph} className="h-6 w-6" />
+                      <SymbolArt id={row.id} glyph={row.glyph} className="h-6 w-6" />
+                    </span>
                     {isJackpot ? (
                       <span className="font-display text-sm font-bold" style={{ color: hex }}>JACKPOT ?</span>
                     ) : (
