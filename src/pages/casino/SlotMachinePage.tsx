@@ -4,6 +4,7 @@ import { useProfile } from '@/features/profile/useProfile';
 import { useSlotMachines, usePlaySlot } from '@/features/casino/useSlotMachines';
 import { accentHex } from '@/features/casino/slotTheme';
 import { SymbolArt } from '@/features/casino/slotSymbols';
+import { SlotBackdrop } from '@/features/casino/SlotBackdrop';
 import { WinCelebration } from '@/features/casino/WinCelebration';
 import { Button } from '@/components/ui/Button';
 import { Eyebrow } from '@/components/ui/primitives';
@@ -189,6 +190,8 @@ function MachineScreen({ m }: { m: SlotMachineMeta }) {
               background: `radial-gradient(135% 90% at 50% -10%, ${hex}38, transparent 55%), linear-gradient(180deg, #171309, #0a0907 75%)`,
             }}
           >
+            <SlotBackdrop machineKey={m.key} />
+            <div className="relative z-10">
             {/* Marquee */}
             <div className="mb-4 text-center">
               <p className="font-sans text-[8.5px] uppercase tracking-[0.4em] text-muted-2">Arentim Slots</p>
@@ -257,6 +260,7 @@ function MachineScreen({ m }: { m: SlotMachineMeta }) {
               ) : (
                 <p className="font-sans text-sm text-muted-2">Faça a sua aposta e gire.</p>
               )}
+            </div>
             </div>
           </div>
         </div>
