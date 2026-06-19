@@ -1,6 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import {
   createTable,
+  createMultiTable,
+  addPlayer,
+  applyActionFor,
   startHand,
   applyAction,
   viewFor,
@@ -56,6 +59,41 @@ describe('chip conservation', () => {
       expect(stacks(s)).toBe(START);
       expect(s.players.every((p) => p.stack >= 0)).toBe(true);
     }
+  });
+});
+
+describe('multiplayer table', () => {
+  it('seats two humans + a bot and conserves chips across hands', () => {
+    for (let seed = 1; seed <= 25; seed++) {
+      const rand = lcg(seed * 13 + 1);
+      let s = createMultiTable();
+      addPlayer(s, { id: 'alice', name: 'Alice', isBot: false, difficulty: 'medium', stack: 1000 });
+      addPlayer(s, { id: 'bob', name: 'Bob', isBot: false, difficulty: 'medium', stack: 1000 });
+      addPlayer(s, { id: 'bot1', name: 'Bot', isBot: true, difficulty: 'medium', stack: 1000 });
+      const START = 3000;
+      s = startHand(s, rand);
+      let guard = 0;
+      while (!s.handOver && guard++ < 80) {
+        if (s.toAct < 0) break;
+        const actorId = s.players[s.toAct]!.id; // current human to act (bots auto-play)
+        s = applyActionFor(s, actorId, 'call', 0, rand);
+      }
+      expect(s.handOver).toBe(true);
+      expect(s.players.reduce((t, p) => t + p.stack, 0)).toBe(START);
+      expect(s.players.every((p) => p.stack >= 0)).toBe(true);
+    }
+  });
+
+  it('rejects an action from a player when it is not their turn', () => {
+    const rand = lcg(3);
+    let s = createMultiTable();
+    addPlayer(s, { id: 'alice', name: 'Alice', isBot: false, difficulty: 'medium', stack: 1000 });
+    addPlayer(s, { id: 'bob', name: 'Bob', isBot: false, difficulty: 'medium', stack: 1000 });
+    s = startHand(s, rand);
+    const notTurn = s.players[(s.toAct + 1) % s.players.length]!.id;
+    const before = JSON.stringify(s);
+    s = applyActionFor(s, notTurn, 'fold', 0, rand);
+    expect(JSON.stringify(s)).toBe(before); // no-op
   });
 });
 

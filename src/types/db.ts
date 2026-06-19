@@ -102,6 +102,14 @@ export type FriendRequest = {
   created_at: string;
 };
 
+export type MyPokerTable = {
+  table_id: number;
+  code: string;
+  status: string;
+  player_count: number;
+  is_host: boolean;
+};
+
 export type LeaderboardRow = {
   id: string;
   display_name: string;
@@ -312,6 +320,10 @@ export type Database = {
       leaderboard: {
         Args: { p_scope: string; p_metric: string };
         Returns: LeaderboardRow[];
+      };
+      list_my_poker_tables: {
+        Args: Record<string, never>;
+        Returns: MyPokerTable[];
       };
     };
     Enums: {
