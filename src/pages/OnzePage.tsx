@@ -35,7 +35,7 @@ function Face({ p, size = 40 }: { p: GamePlayer; size?: number }) {
   }
   const initials = p.name.split(/\s+/).map((w) => w[0]).slice(0, 2).join('').toUpperCase() || p.name.slice(0, 2).toUpperCase();
   return (
-    <span className="flex shrink-0 items-center justify-center rounded-full border border-gold/25 bg-surface-raised font-sans font-medium text-muted" style={{ width: size, height: size, fontSize: Math.round(size * 0.32) }}>
+    <span className="flex shrink-0 items-center justify-center rounded-full border border-gold/25 bg-surface-raised font-sans font-medium text-muted" style={{ width: size, height: size, fontSize: Math.round(size * 0.34) }}>
       {initials}
     </span>
   );
@@ -47,7 +47,7 @@ function Leaderboard() {
   return (
     <div className="space-y-3">
       <SectionHeader
-        title="Classificação de hoje"
+        title="Classificação"
         right={
           <span className="flex gap-1">
             {(['global', 'friends'] as const).map((s) => (
@@ -89,7 +89,7 @@ export function OnzePage() {
   const [picks, setPicks] = useState<(GamePlayer | null)[]>([]);
   const [slotClub, setSlotClub] = useState<(string | null)[]>([]);
   const [used, setUsed] = useState<Set<string>>(new Set());
-  const [pending, setPending] = useState<{ player: GamePlayer; slots: number[] } | null>(null);
+  const [armed, setArmed] = useState<GamePlayer | null>(null);
 
   const [sete, setSete] = useState<SeteResult | null>(null);
   const [season, setSeason] = useState<SeasonResult | null>(null);
@@ -106,7 +106,7 @@ export function OnzePage() {
 
   const offer = offers[offerIdx];
   const roster = useMemo(() => (offer ? rosterOf(offer) : []), [offer]);
-  const openEligible = (p: GamePlayer) => slots.map((pos, i) => ({ pos, i })).filter(({ pos, i }) => picks[i] == null && posEligible(pos, p)).map((x) => x.i);
+  const openEligible = (p: GamePlayer) => slots.reduce<number[]>((acc, pos, i) => (picks[i] == null && posEligible(pos, p) ? [...acc, i] : acc), []);
 
   function start() {
     const s = `onze-${Math.floor(Math.random() * 1e9)}`;
@@ -117,7 +117,7 @@ export function OnzePage() {
     setPicks(Array(11).fill(null));
     setSlotClub(Array(11).fill(null));
     setUsed(new Set());
-    setPending(null);
+    setArmed(null);
     setSete(null);
     setSeason(null);
     setStep(0);
@@ -126,6 +126,7 @@ export function OnzePage() {
   }
 
   function step2(dir: 1 | -1) {
+    setArmed(null);
     for (let k = 1; k <= offers.length; k++) {
       const idx = (offerIdx + dir * k + offers.length * k) % offers.length;
       if (!used.has(offers[idx]!.club)) { setOfferIdx(idx); return; }
@@ -138,18 +139,11 @@ export function OnzePage() {
     setPicks((prev) => { const n = [...prev]; n[slotIdx] = player; return n; });
     setSlotClub((prev) => { const n = [...prev]; n[slotIdx] = club; return n; });
     const nextUsed = new Set(used); nextUsed.add(club); setUsed(nextUsed);
-    setPending(null);
-    // advance to next unused team
+    setArmed(null);
     for (let k = 1; k <= offers.length; k++) {
       const idx = (offerIdx + k) % offers.length;
       if (!nextUsed.has(offers[idx]!.club)) { setOfferIdx(idx); break; }
     }
-  }
-  function pickPlayer(player: GamePlayer) {
-    const open = openEligible(player);
-    if (open.length === 0) return;
-    if (open.length === 1) place(player, open[0]!);
-    else setPending({ player, slots: open });
   }
   function clearSlot(i: number) {
     const club = slotClub[i];
@@ -199,8 +193,8 @@ export function OnzePage() {
         <Eyebrow className="mt-3">Arentim · Futebol</Eyebrow>
         <h1 className="mt-2 font-display text-[36px] font-medium leading-tight text-text">Onze de Ouro</h1>
         <p className="mt-2 max-w-prose font-sans text-sm text-muted">
-          Escolha um intervalo de épocas da Liga Portugal. Aparece-lhe uma equipa de cada vez — escolha um
-          jogador e a posição onde joga, um por clube. Depois vença os <span className="text-gold">7 jogos</span> ou a época inteira.
+          Aparece-lhe uma equipa de cada vez. Escolha um jogador e depois toque na posição do campo onde
+          ele joga — um jogador por clube.
         </p>
       </div>
 
@@ -216,7 +210,6 @@ export function OnzePage() {
                   ))}
                 </div>
               </div>
-
               <div className="grid grid-cols-2 gap-3">
                 <label className="block">
                   <span className="mb-1.5 block font-sans text-[10.5px] font-medium uppercase tracking-[0.18em] text-muted-2">De</span>
@@ -231,7 +224,6 @@ export function OnzePage() {
                   </select>
                 </label>
               </div>
-
               <div>
                 <p className="mb-2 font-sans text-[10.5px] font-medium uppercase tracking-[0.18em] text-muted-2">Tática</p>
                 <div className="grid grid-cols-3 gap-2">
@@ -240,21 +232,20 @@ export function OnzePage() {
                   ))}
                 </div>
               </div>
-
               <label className="flex items-center justify-between">
                 <span className="font-sans text-sm text-text">Modo Almanaque <span className="text-muted-2">· esconde as notas</span></span>
                 <button type="button" role="switch" aria-checked={almanac} onClick={() => setAlmanac((v) => !v)} className={`focus-ring relative h-6 w-11 shrink-0 rounded-full transition-colors ${almanac ? 'bg-gold' : 'bg-border'}`}>
                   <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-bg transition-transform ${almanac ? 'left-[22px]' : 'left-0.5'}`} />
                 </button>
               </label>
-
               <Button variant="primary" onClick={start} className="w-full">Começar</Button>
             </div>
           )}
 
           {phase !== 'setup' && (
             <>
-              <div className="felt felt-rail space-y-3 rounded-lg p-5">
+              {/* Pitch */}
+              <div className="felt felt-rail mx-auto w-full max-w-xl space-y-4 rounded-lg p-4 sm:p-6">
                 <div className="flex items-center justify-between">
                   <span className="font-mono text-xs text-gold-light">{formation}</span>
                   <span className="font-sans text-xs text-muted">{almanac ? 'Almanaque' : `Equipa ${live.total} · Química +${live.chemistry}`}</span>
@@ -263,21 +254,37 @@ export function OnzePage() {
                   const idxs = slots.map((pos, i) => (posLine(pos) === line ? i : -1)).filter((i) => i >= 0);
                   if (idxs.length === 0) return null;
                   return (
-                    <div key={line} className="flex flex-wrap justify-center gap-2">
+                    <div key={line} className="flex flex-wrap justify-center gap-2 sm:gap-3">
                       {idxs.map((i) => {
                         const p = picks[i];
+                        const canPlace = phase === 'draft' && !!armed && !p && posEligible(slots[i]!, armed);
+                        const dim = phase === 'draft' && !!armed && !p && !posEligible(slots[i]!, armed);
                         return (
-                          <button key={i} type="button" onClick={() => phase === 'draft' && p && clearSlot(i)} title={p ? 'Tocar para remover' : undefined}
-                            className={`relative flex h-[74px] w-[86px] flex-col items-center justify-center gap-0.5 rounded border px-1 text-center transition-colors ${p ? 'border-gold/40 bg-bg/50 hover:border-negative/60' : 'border-gold/25 bg-bg/40'}`}>
-                            <span className="absolute left-1 top-1 font-mono text-[8px] font-semibold text-gold/70">{slots[i]}</span>
+                          <button
+                            key={i}
+                            type="button"
+                            onClick={() => {
+                              if (phase !== 'draft') return;
+                              if (armed) { if (canPlace) place(armed, i); }
+                              else if (p) clearSlot(i);
+                            }}
+                            title={canPlace ? 'Colocar aqui' : p ? 'Tocar para remover' : slots[i]}
+                            className={`relative flex h-[78px] w-[88px] flex-col items-center justify-center gap-0.5 rounded-md border-2 px-1 text-center transition-all ${
+                              canPlace ? 'animate-glow cursor-pointer border-gold bg-gold/20'
+                              : dim ? 'border-border/20 bg-bg/20 opacity-35'
+                              : p ? 'border-gold/40 bg-bg/55 hover:border-negative/60'
+                              : 'border-gold/25 bg-bg/40'
+                            }`}
+                          >
+                            <span className="absolute left-1.5 top-1 font-mono text-[8px] font-semibold text-gold/70">{slots[i]}</span>
                             {p ? (
                               <>
-                                <Face p={p} size={26} />
-                                <span className="line-clamp-1 w-full font-sans text-[10px] leading-tight text-text">{p.name}</span>
+                                <Face p={p} size={28} />
+                                <span className="line-clamp-1 w-full px-0.5 font-sans text-[10px] leading-tight text-text">{p.name}</span>
                                 {p.year && <span className="font-mono text-[8px] text-muted-2">{p.year}</span>}
                               </>
                             ) : (
-                              <span className="font-sans text-[11px] font-medium uppercase tracking-wider text-muted-2">{slots[i]}</span>
+                              <span className="font-display text-base font-medium text-muted-2">{slots[i]}</span>
                             )}
                           </button>
                         );
@@ -288,41 +295,42 @@ export function OnzePage() {
               </div>
 
               {phase === 'draft' ? (
-                <div className="card space-y-3 p-5">
-                  {pending ? (
-                    <div className="space-y-3">
-                      <p className="font-sans text-sm text-text">
-                        Onde quer colocar <span className="font-semibold text-gold">{pending.player.name}</span>?
-                      </p>
-                      <div className="flex flex-wrap gap-2">
-                        {pending.slots.map((i) => (
-                          <button key={i} onClick={() => place(pending.player, i)} className="focus-ring rounded border border-gold/50 bg-gold/10 px-3 py-2 font-mono text-sm text-gold">
-                            {slots[i]}
-                          </button>
-                        ))}
-                        <button onClick={() => setPending(null)} className="focus-ring rounded border border-border px-3 py-2 font-sans text-sm text-muted-2">Cancelar</button>
-                      </div>
-                    </div>
-                  ) : offer ? (
+                <div className="mx-auto w-full max-w-xl card space-y-3 p-4 sm:p-5">
+                  {offer && (
                     <>
-                      <div className="flex items-center justify-between">
-                        <p className="font-sans text-sm font-medium text-text">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="min-w-0 truncate font-sans text-sm font-medium text-text">
                           {offer.club} <span className="font-mono text-gold">· {offer.year}</span>
                         </p>
-                        <div className="flex gap-1">
-                          <button onClick={() => step2(-1)} className="focus-ring rounded border border-border px-2 py-1 font-sans text-xs text-muted-2 hover:text-text">◂</button>
-                          <button onClick={() => step2(1)} className="focus-ring rounded border border-border px-2 py-1 font-sans text-xs text-muted-2 hover:text-text">Outra equipa ▸</button>
+                        <div className="flex shrink-0 gap-1">
+                          <button onClick={() => step2(-1)} aria-label="Equipa anterior" className="focus-ring rounded border border-border px-2.5 py-1 font-sans text-xs text-muted-2 hover:text-text">◂</button>
+                          <button onClick={() => step2(1)} className="focus-ring rounded border border-border px-2.5 py-1 font-sans text-xs text-muted-2 hover:text-text">Outra ▸</button>
                         </div>
                       </div>
-                      <p className="font-sans text-[11px] text-muted-2">Escolha um jogador — só pode tirar um de cada clube.</p>
+
+                      {armed ? (
+                        <div className="flex items-center justify-between gap-2 rounded border border-gold/40 bg-gold/10 px-3 py-2">
+                          <span className="min-w-0 truncate font-sans text-xs text-gold">Toque na posição realçada para <span className="font-semibold">{armed.name}</span>.</span>
+                          <button onClick={() => setArmed(null)} className="focus-ring shrink-0 font-sans text-[11px] text-muted-2 hover:text-text">cancelar</button>
+                        </div>
+                      ) : (
+                        <p className="font-sans text-[11px] text-muted-2">Escolha um jogador — só pode tirar um de cada clube.</p>
+                      )}
+
                       <div className="grid max-h-[340px] gap-2 overflow-y-auto sm:grid-cols-2">
                         {roster.map((p) => {
-                          const open = openEligible(p);
-                          const usable = open.length > 0;
+                          const usable = openEligible(p).length > 0;
+                          const isArmed = armed?.id === p.id;
                           return (
-                            <button key={p.id} onClick={() => usable && pickPlayer(p)} disabled={!usable}
-                              title={usable ? `Pode jogar: ${open.map((i) => slots[i]).join(', ')}` : 'Não encaixa em nenhuma posição livre'}
-                              className={`focus-ring flex items-center gap-2 rounded border px-3 py-2 text-left transition-colors ${usable ? 'border-border bg-surface hover:border-gold/50' : 'cursor-not-allowed border-border/40 bg-surface/40 opacity-45'}`}>
+                            <button
+                              key={p.id}
+                              onClick={() => usable && setArmed((cur) => (cur?.id === p.id ? null : p))}
+                              disabled={!usable}
+                              title={usable ? `Pode jogar: ${openEligible(p).map((i) => slots[i]).join(', ')}` : 'Não encaixa em nenhuma posição livre'}
+                              className={`focus-ring flex items-center gap-2 rounded border px-3 py-2 text-left transition-colors ${
+                                isArmed ? 'border-gold bg-gold/15' : usable ? 'border-border bg-surface hover:border-gold/50' : 'cursor-not-allowed border-border/40 bg-surface/40 opacity-45'
+                              }`}
+                            >
                               <Face p={p} size={34} />
                               <span className="min-w-0 flex-1">
                                 <span className="block truncate font-sans text-sm text-text">{p.name}</span>
@@ -334,13 +342,13 @@ export function OnzePage() {
                         })}
                       </div>
                     </>
-                  ) : null}
+                  )}
                   <Button variant="primary" onClick={play} disabled={!complete} className="w-full">
                     {complete ? (mode === 'sete' ? 'Jogar os 7 jogos' : 'Iniciar a época') : `Faltam ${picks.filter((x) => !x).length} jogadores`}
                   </Button>
                 </div>
               ) : mode === 'sete' && sete ? (
-                <div className="card space-y-4 p-6 text-center">
+                <div className="mx-auto w-full max-w-xl card space-y-4 p-6 text-center">
                   <p className="font-sans text-[10px] uppercase tracking-[0.3em] text-muted-2">Resultado</p>
                   <p className={`font-display text-3xl font-bold ${sete.champion ? 'text-gold' : 'text-text'}`}>{sete.champion ? '✦ 7–0 · CAMPEÃO ✦' : sete.record}</p>
                   <p className="font-sans text-sm text-muted">Equipa {sete.rating.total} · química +{sete.rating.chemistry} · {sete.score} pts</p>
@@ -352,13 +360,15 @@ export function OnzePage() {
                   <Button variant="secondary" onClick={() => setPhase('setup')} className="w-full">Jogar outra vez</Button>
                 </div>
               ) : season ? (
-                <SeasonView
-                  season={season} step={step} auto={auto} over={seasonOver} table={tableUpTo} lastMatch={lastMatch}
-                  onNext={() => setStep((s) => Math.min(season.jornadas.length, s + 1))}
-                  onAuto={() => setAuto((v) => !v)}
-                  onSkip={() => { setAuto(false); setStep(season.jornadas.length); }}
-                  onAgain={() => setPhase('setup')}
-                />
+                <div className="mx-auto w-full max-w-xl">
+                  <SeasonView
+                    season={season} step={step} auto={auto} over={seasonOver} table={tableUpTo} lastMatch={lastMatch}
+                    onNext={() => setStep((s) => Math.min(season.jornadas.length, s + 1))}
+                    onAuto={() => setAuto((v) => !v)}
+                    onSkip={() => { setAuto(false); setStep(season.jornadas.length); }}
+                    onAgain={() => setPhase('setup')}
+                  />
+                </div>
               ) : null}
             </>
           )}
@@ -380,8 +390,8 @@ function SeasonView({
   const total = season.jornadas.length;
   const myPos = over ? table.findIndex((r) => r.team === YOUR_TEAM) + 1 : 0;
   return (
-    <div className="card space-y-4 p-5">
-      <div className="flex items-center justify-between">
+    <div className="card space-y-4 p-4 sm:p-5">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <span className="font-sans text-[10.5px] font-medium uppercase tracking-[0.18em] text-muted-2">{over ? 'Época terminada' : `Jornada ${step} / ${total}`}</span>
         {!over ? (
           <div className="flex gap-2">
@@ -393,7 +403,6 @@ function SeasonView({
           <Button variant="secondary" onClick={onAgain} className="!px-3 !py-1.5 text-xs">Jogar outra vez</Button>
         )}
       </div>
-
       {over ? (
         <p className={`text-center font-display text-2xl font-bold ${myPos === 1 ? 'text-gold' : 'text-text'}`}>{myPos === 1 ? '🏆 Campeão da Liga!' : `${myPos}.º lugar`}</p>
       ) : lastMatch ? (
@@ -409,7 +418,6 @@ function SeasonView({
       ) : (
         <p className="py-2 text-center font-sans text-sm text-muted-2">Carregue em Seguinte para começar a época.</p>
       )}
-
       <div className="overflow-hidden rounded border border-border">
         <div className="grid grid-cols-[24px_1fr_28px_28px_32px] gap-2 border-b border-border bg-surface px-3 py-1.5 font-sans text-[9px] uppercase tracking-wider text-muted-2">
           <span>#</span><span>Clube</span><span className="text-center">DG</span><span className="text-center">J</span><span className="text-center">Pts</span>
