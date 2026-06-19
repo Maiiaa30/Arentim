@@ -27,8 +27,7 @@ balance is an in-app currency called **Tostões**. The interface is in
 
 ## Design
 
-Dark, gold, warm — the **Aretim** look (a dark casino built on HMG Watches'
-type/gold foundations).
+Dark, gold, warm — the **Aretim** look.
 
 - **Palette:** near-black warm canvas `#0a0907`, gold accent `#C9A24B`, soft warm
   shadows, a gilded top-accent rule.
@@ -40,7 +39,7 @@ type/gold foundations).
   FramedPanel, Monogram) plus a restyled ghost/solid-gold `Button` and `Input`.
   Build any new page from these and it matches the rest of the app.
 - Currency renders as thin-space groups + `Tt` (e.g. `12 500 Tt`); prose uses the
-  full word *Tostões*. Helpers in [`src/lib/format.ts`](src/lib/format.ts).
+  full word _Tostões_. Helpers in [`src/lib/format.ts`](src/lib/format.ts).
 
 ## Stack
 
@@ -104,19 +103,19 @@ applied, Edge Functions deployed). To exercise it yourself:
      an announcement (appears as a banner), tune challenges.
 
 > **Live football data:** API-Football's free plan only covers seasons
-> 2022–2024, so there are no *current* upcoming fixtures — the sportsbook runs on
+> 2022–2024, so there are no _current_ upcoming fixtures — the sportsbook runs on
 > a few **seeded** Primeira Liga fixtures until the plan is upgraded. The betting,
 > bet slip and settlement all work on those.
 
 ## Scripts
 
-| Script | Purpose |
-| --- | --- |
-| `npm run dev` / `build` / `preview` | Vite dev / production build / serve build |
-| `npm run lint` / `typecheck` / `format` | ESLint / TypeScript / Prettier |
-| `npm test` / `test:e2e` | Vitest unit/integration / Playwright e2e |
-| `npm run db:migrate` | Apply pending SQL migrations |
-| `npm run check:secrets` | Fail if a secret leaked into the built bundle |
+| Script                                  | Purpose                                       |
+| --------------------------------------- | --------------------------------------------- |
+| `npm run dev` / `build` / `preview`     | Vite dev / production build / serve build     |
+| `npm run lint` / `typecheck` / `format` | ESLint / TypeScript / Prettier                |
+| `npm test` / `test:e2e`                 | Vitest unit/integration / Playwright e2e      |
+| `npm run db:migrate`                    | Apply pending SQL migrations                  |
+| `npm run check:secrets`                 | Fail if a secret leaked into the built bundle |
 
 ## Quality gate
 
