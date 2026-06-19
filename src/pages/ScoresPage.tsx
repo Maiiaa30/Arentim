@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Eyebrow, SectionHeader } from '@/components/ui/primitives';
 import { useAllFixtures, useSportsbookRealtime } from '@/features/sportsbook/useSportsbook';
 import { ScoreRow } from '@/features/sportsbook/ScoreRow';
+import { MatchDetail } from '@/features/sportsbook/MatchDetail';
 import type { Fixture } from '@/types/db';
 
 /**
@@ -56,11 +57,13 @@ function Section({
   count,
   live,
   groups,
+  onSelect,
 }: {
   title: string;
   count: number;
   live?: boolean;
   groups: [string, Fixture[]][];
+  onSelect: (f: Fixture) => void;
 }) {
   if (count === 0) return null;
   return (
@@ -85,7 +88,7 @@ function Section({
             <p className="font-sans text-[10.5px] font-medium uppercase tracking-[0.18em] text-gold">{key}</p>
             <div className="grid gap-2 sm:grid-cols-2">
               {fixtures.map((f) => (
-                <ScoreRow key={f.id} fixture={f} />
+                <ScoreRow key={f.id} fixture={f} onSelect={() => onSelect(f)} />
               ))}
             </div>
           </div>
@@ -98,6 +101,7 @@ function Section({
 export function ScoresPage() {
   const { data: fixtures, isLoading } = useAllFixtures();
   const [filter, setFilter] = useState<Filter>('todos');
+  const [selected, setSelected] = useState<Fixture | null>(null);
   useSportsbookRealtime();
 
   const { liveList, upcomingList, finishedList } = useMemo(() => {
@@ -123,6 +127,7 @@ export function ScoresPage() {
 
   return (
     <div className="animate-fade-in space-y-6">
+      {selected && <MatchDetail fixture={selected} onClose={() => setSelected(null)} />}
       <Link to="/sportsbook" className="font-sans text-sm text-muted-2 hover:text-text">
         ← Voltar ao Futebol
       </Link>
@@ -165,13 +170,14 @@ export function ScoresPage() {
       ) : (
         <div className="space-y-8">
           {showLive && (
-            <Section title="Ao vivo" count={liveList.length} live groups={groupByLeagueDay(liveList)} />
+            <Section title="Ao vivo" count={liveList.length} live groups={groupByLeagueDay(liveList)} onSelect={setSelected} />
           )}
           {showUpcoming && (
             <Section
               title="Próximos"
               count={upcomingList.length}
               groups={groupByLeagueDay(upcomingList)}
+              onSelect={setSelected}
             />
           )}
           {showFinished && (
@@ -179,6 +185,7 @@ export function ScoresPage() {
               title="Últimos 3 dias"
               count={finishedList.length}
               groups={groupByLeagueDay(finishedList)}
+              onSelect={setSelected}
             />
           )}
 

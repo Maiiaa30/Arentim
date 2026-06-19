@@ -21,6 +21,20 @@ export type RouletteBetResult = {
   return: number;
 };
 
+/** A team's standings snapshot, cached on a fixture for the match-detail popup. */
+export type TeamStat = {
+  position: number | null;
+  played: number;
+  won: number;
+  draw: number;
+  lost: number;
+  points: number;
+  gf: number;
+  ga: number;
+  form: string | null;
+};
+export type FixtureStats = { home?: TeamStat | null; away?: TeamStat | null };
+
 export type Fixture = {
   id: number;
   external_ref: string | null;
@@ -36,6 +50,7 @@ export type Fixture = {
   home_crest: string | null;
   away_crest: string | null;
   odds: Record<string, Record<string, number>>;
+  stats: FixtureStats;
   events: { type?: string; minute?: number | null; team?: string | null; player?: string | null }[];
   preview: string | null;
   created_at: string;
