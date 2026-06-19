@@ -16,7 +16,7 @@ import { Eyebrow } from '@/components/ui/primitives';
 import { CoinIcon } from '@/components/CoinIcon';
 import { formatAmount } from '@/lib/format';
 
-const CHIPS = [10, 25, 50, 100, 500];
+const CHIPS = [5, 10, 25, 50, 100];
 
 function betLabel(b: RouletteBet): string {
   if (b.kind === 'straight') return `Pleno ${b.selection}`;

@@ -53,7 +53,7 @@ export function PrivatePokerPage() {
   const [tableId, setTableId] = useState<number | null>(null);
   const [code, setCode] = useState('');
   const [joinCode, setJoinCode] = useState('');
-  const [buyIn, setBuyIn] = useState(1000);
+  const [buyIn, setBuyIn] = useState(200);
   const [raiseTo, setRaiseTo] = useState(0);
   const [error, setError] = useState<string | null>(null);
 

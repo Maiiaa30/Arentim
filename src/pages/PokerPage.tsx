@@ -59,7 +59,7 @@ export function PokerPage() {
   const { sit, act, deal, leave } = usePoker();
 
   const [view, setView] = useState<PokerView | null>(null);
-  const [buyIn, setBuyIn] = useState(1000);
+  const [buyIn, setBuyIn] = useState(200);
   const [botCount, setBotCount] = useState(2);
   const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
   const [raiseTo, setRaiseTo] = useState(0);

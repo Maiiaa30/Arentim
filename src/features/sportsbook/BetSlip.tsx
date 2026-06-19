@@ -7,13 +7,13 @@ import { Button } from '@/components/ui/Button';
 import { CoinIcon } from '@/components/CoinIcon';
 import { formatAmount, formatTos } from '@/lib/format';
 
-const CHIPS = [-50, 50, 250];
+const CHIPS = [-10, 10, 50];
 
 export function BetSlip() {
   const { items, toggle, clear } = useBetSlip();
   const { data: profile } = useProfile();
   const placeBet = usePlaceBet();
-  const [stake, setStake] = useState(50);
+  const [stake, setStake] = useState(25);
   const [msg, setMsg] = useState<{ text: string; tone: 'win' | 'loss' | 'info' } | null>(null);
 
   const balance = profile?.balance ?? 0;

@@ -45,7 +45,7 @@ function GameCard({ g }: { g: GameTile }) {
         <h3 className="font-display text-[22px] font-semibold text-text group-hover:text-gold">{g.name}</h3>
         <p className="mt-1 flex-1 font-sans text-[12.5px] text-muted">{g.desc}</p>
         <div className="mt-3 flex items-center justify-between">
-          <span className="font-mono text-xs text-muted-2">50 – 5 000 tós</span>
+          <span className="font-mono text-xs text-muted-2">5 – 500 tós</span>
           <span className="rounded border border-gold/40 px-3 py-1 font-sans text-[10px] uppercase tracking-[0.18em] text-gold transition-colors group-hover:bg-gold group-hover:text-bg">
             {g.cta ?? 'Entrar'}
           </span>
@@ -123,7 +123,7 @@ export function HomePage() {
             A sorte está <span className="italic text-gold">lançada.</span>
           </h1>
           <p className="mt-4 font-sans text-[15px] leading-relaxed text-muted">
-            Uma casa de jogos só para amigos. Cada conta começa com 5 000 Tostões. É tudo a brincar.
+            Uma casa de jogos só para amigos. Cada conta começa com 500 Tostões. É tudo a brincar.
           </p>
           <div className="mt-7 flex flex-wrap gap-3">
             <Link to="/casino/coinflip">

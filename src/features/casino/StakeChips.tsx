@@ -1,7 +1,7 @@
 import { CoinIcon } from '@/components/CoinIcon';
 import { formatTos } from '@/lib/format';
 
-const CHIPS = [10, 25, 50, 100, 500];
+const CHIPS = [5, 10, 25, 50, 100];
 
 interface StakeChipsProps {
   stake: number;
