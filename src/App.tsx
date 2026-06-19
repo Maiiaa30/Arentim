@@ -13,6 +13,8 @@ import { CoinflipPage } from '@/pages/casino/CoinflipPage';
 import { BlackjackPage } from '@/pages/casino/BlackjackPage';
 import { SportsbookPage } from '@/pages/SportsbookPage';
 import { PokerPage } from '@/pages/PokerPage';
+import { PokerHome } from '@/pages/poker/PokerHome';
+import { PrivatePokerPage } from '@/pages/poker/PrivatePokerPage';
 import { FriendsPage } from '@/pages/FriendsPage';
 import { NotFoundPage } from '@/pages/stubs';
 
@@ -33,7 +35,9 @@ export default function App() {
           <Route path="casino/coinflip" element={<CoinflipPage />} />
           <Route path="casino/blackjack" element={<BlackjackPage />} />
           <Route path="sportsbook" element={<SportsbookPage />} />
-          <Route path="poker" element={<PokerPage />} />
+          <Route path="poker" element={<PokerHome />} />
+          <Route path="poker/bots" element={<PokerPage />} />
+          <Route path="poker/private" element={<PrivatePokerPage />} />
           <Route path="friends" element={<FriendsPage />} />
           <Route path="wallet" element={<WalletPage />} />
           <Route path="profile" element={<ProfilePage />} />

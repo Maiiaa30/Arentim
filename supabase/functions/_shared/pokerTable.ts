@@ -96,6 +96,43 @@ export function createTable(
   };
 }
 
+/** An empty multiplayer table; seats are added with addPlayer before the first hand. */
+export function createMultiTable(smallBlind = 10, bigBlind = 20): TableState {
+  return {
+    players: [],
+    button: 0,
+    deck: [],
+    community: [],
+    street: 'idle',
+    pot: 0,
+    currentBet: 0,
+    minRaise: bigBlind,
+    toAct: -1,
+    smallBlind,
+    bigBlind,
+    handOver: true,
+    result: null,
+    log: [],
+  };
+}
+
+/** Seat a player. Only valid between hands (handOver). Returns false if full/dup. */
+export function addPlayer(
+  s: TableState,
+  seat: { id: string; name: string; isBot: boolean; difficulty: BotDifficulty; stack: number },
+): boolean {
+  if (!s.handOver || s.players.length >= 9) return false;
+  if (s.players.some((p) => p.id === seat.id)) return false;
+  s.players.push(blankPlayer(seat.id, seat.name, seat.isBot, seat.difficulty, seat.stack));
+  return true;
+}
+
+/** Remove a player between hands (e.g. a friend leaves). */
+export function removePlayer(s: TableState, id: string): void {
+  if (!s.handOver) return;
+  s.players = s.players.filter((p) => p.id !== id);
+}
+
 function blankPlayer(
   id: string,
   name: string,
@@ -192,16 +229,31 @@ function advanceStreet(s: TableState, rand: Rand): TableState {
   return runBots(s, rand);
 }
 
-/** Apply the human's action, then auto-play bots and advance as needed. */
+/** Apply the single-player human's action (seat id 'you'), then progress. */
 export function applyAction(
   s: TableState,
   action: PokerAction,
   raiseTo: number,
   rand: Rand,
 ): TableState {
+  return applyActionFor(s, s.toAct >= 0 ? s.players[s.toAct]!.id : '', action, raiseTo, rand);
+}
+
+/**
+ * Apply a specific seated player's action — used by multiplayer tables where any
+ * of several humans may be to act. Ignored unless it is exactly that player's
+ * turn and they are not a bot.
+ */
+export function applyActionFor(
+  s: TableState,
+  playerId: string,
+  action: PokerAction,
+  raiseTo: number,
+  rand: Rand,
+): TableState {
   if (s.handOver || s.toAct < 0) return s;
   const p = s.players[s.toAct]!;
-  if (p.isBot) return s; // not the human's turn
+  if (p.isBot || p.id !== playerId) return s; // not this player's turn
   applyFor(s, p, action, raiseTo);
   return progress(s, rand);
 }
