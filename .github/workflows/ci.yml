@@ -33,6 +33,7 @@ jobs:
       - run: npm audit --audit-level=high
       - run: npm test
       - run: npm run build
+      - run: npm run check:secrets
 
   # Runs in parallel with `verify` (no `needs:`) and caches the browser so it is
   # not re-downloaded each run. Only Chromium is installed (the only project).
