@@ -118,10 +118,24 @@ export function PrivatePokerPage() {
   const me = view.players.find((p) => p.id === user?.id);
   const myTurn = view.toActId === user?.id && !view.handOver;
   const owe = view.currentBet - (me?.committed ?? 0);
-  const minRaiseTo = view.currentBet + view.minRaise;
-  const maxRaiseTo = (me?.stack ?? 0) + (me?.committed ?? 0);
-  const effRaiseTo = Math.max(raiseTo, minRaiseTo);
-  const canRaise = (me?.stack ?? 0) > owe;
+  const allInTo = (me?.stack ?? 0) + (me?.committed ?? 0);
+  const minRaiseTo = Math.min(view.currentBet + view.minRaise, allInTo);
+  const maxRaiseTo = allInTo;
+  const effRaiseTo = Math.max(minRaiseTo, Math.min(raiseTo || minRaiseTo, maxRaiseTo));
+  const canRaise = allInTo > view.currentBet && !!myTurn;
+  const quickBets = canRaise
+    ? (() => {
+        const clamp = (n: number) => Math.max(minRaiseTo, Math.min(n, maxRaiseTo));
+        const raw = [
+          { label: 'Mín', to: minRaiseTo },
+          { label: '½ Pote', to: clamp(view.currentBet + Math.round(view.pot * 0.5)) },
+          { label: 'Pote', to: clamp(view.currentBet + view.pot) },
+          { label: 'All-in', to: maxRaiseTo },
+        ];
+        const seen = new Set<number>();
+        return raw.filter((q) => (seen.has(q.to) ? false : (seen.add(q.to), true)));
+      })()
+    : [];
   const inLobby = view.street === 'idle';
 
   return (
@@ -158,6 +172,7 @@ export function PrivatePokerPage() {
             maxRaiseTo={maxRaiseTo}
             canRaise={canRaise}
             busy={busy}
+            quickBets={quickBets}
             onFold={() => wrap(() => act.mutateAsync({ tableId, action: 'fold', raiseTo: 0 }))}
             onCheck={() => wrap(() => act.mutateAsync({ tableId, action: 'check', raiseTo: 0 }))}
             onCall={() => wrap(() => act.mutateAsync({ tableId, action: 'call', raiseTo: 0 }))}

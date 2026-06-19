@@ -50,3 +50,6 @@ yarn-error.log*
 # Design handoff reference — do not commit
 design_handoff_aretim/
 .claude/launch.json
+
+# Internal process notes — do not commit
+process/

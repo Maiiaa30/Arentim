@@ -4,6 +4,10 @@ import { profileKey } from '@/features/profile/useProfile';
 import { invokePoker } from './invoke';
 import type { PokerView } from './types';
 
+/** A move result: the final view, plus an optional trail of intermediate
+ *  snapshots (one per bot action) the page replays with a delay. */
+export type PokerResult = { view: PokerView; trail?: PokerView[] };
+
 type SitArgs = { buyIn: number; botCount: number; difficulty: 'easy' | 'medium' | 'hard' };
 type Op =
   | { op: 'sit'; buyIn: number; botCount: number; difficulty: string }
@@ -34,19 +38,24 @@ export function usePoker() {
 
   const sit = useMutation({
     mutationFn: (a: SitArgs) =>
-      call<{ view: PokerView }>({ op: 'sit', buyIn: a.buyIn, botCount: a.botCount, difficulty: a.difficulty }),
+      call<PokerResult>({ op: 'sit', buyIn: a.buyIn, botCount: a.botCount, difficulty: a.difficulty }),
     onSuccess: refreshBalance,
   });
   const act = useMutation({
     mutationFn: (a: { action: string; raiseTo: number }) =>
-      call<{ view: PokerView }>({ op: 'act', action: a.action, raiseTo: a.raiseTo }),
+      call<PokerResult>({ op: 'act', action: a.action, raiseTo: a.raiseTo }),
   });
   const deal = useMutation({
-    mutationFn: () => call<{ view: PokerView }>({ op: 'deal' }),
+    mutationFn: () => call<PokerResult>({ op: 'deal' }),
   });
   const leave = useMutation({
     mutationFn: () => call<{ left: boolean; cashOut: number }>({ op: 'leave' }),
-    onSuccess: refreshBalance,
+    onSuccess: () => {
+      refreshBalance();
+      // Clear the resumable-table cache so a later remount doesn't resurrect the
+      // table we just left.
+      qc.setQueryData(['poker', 'state', user?.id], { view: null });
+    },
   });
 
   return { sit, act, deal, leave };

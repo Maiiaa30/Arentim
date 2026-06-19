@@ -86,7 +86,8 @@ Deno.serve(async (req) => {
       const botList = Array.from({ length: botCount }, (_, i) => ({ name: `Bot ${i + 1}`, difficulty }));
       let state = createTable(seatName, buyIn, botList);
       state.players[0]!.id = 'you';
-      state = startHand(state, rand);
+      const sitTrail: unknown[] = [];
+      state = startHand(state, rand, (st) => sitTrail.push(viewFor(st, 'you')));
 
       const { data: row, error } = await db
         .from('poker_bot_tables')
@@ -94,7 +95,7 @@ Deno.serve(async (req) => {
         .select('id')
         .single();
       if (error) return json({ error: 'could not create table' }, 500);
-      return json({ view: viewFor(state, 'you'), table_id: row.id });
+      return json({ view: viewFor(state, 'you'), table_id: row.id, trail: sitTrail });
     }
 
     case 'act': {
@@ -102,18 +103,20 @@ Deno.serve(async (req) => {
       if (!t) return json({ error: 'no active table' }, 404);
       const action = String(body.action) as PokerAction;
       if (!['fold', 'check', 'call', 'raise'].includes(action)) return json({ error: 'bad action' }, 400);
-      const state = applyAction(t.state, action, Math.floor(Number(body.raiseTo) || 0), rand);
+      const trail: unknown[] = [];
+      const state = applyAction(t.state, action, Math.floor(Number(body.raiseTo) || 0), rand, (st) => trail.push(viewFor(st, 'you')));
       await save(t.id, state);
-      return json({ view: viewFor(state, 'you') });
+      return json({ view: viewFor(state, 'you'), trail });
     }
 
     case 'deal': {
       const t = await loadActive();
       if (!t) return json({ error: 'no active table' }, 404);
       if (!t.state.handOver) return json({ error: 'hand in progress' }, 409);
-      const state = startHand(t.state, rand);
+      const dealTrail: unknown[] = [];
+      const state = startHand(t.state, rand, (st) => dealTrail.push(viewFor(st, 'you')));
       await save(t.id, state);
-      return json({ view: viewFor(state, 'you') });
+      return json({ view: viewFor(state, 'you'), trail: dealTrail });
     }
 
     case 'leave': {

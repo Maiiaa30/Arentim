@@ -3,6 +3,7 @@ import { Routes, Route } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { RequireAuth } from '@/features/auth/RequireAuth';
 import { HomePage } from '@/pages/HomePage';
+import { CasinoPreview } from '@/pages/dev/CasinoPreview';
 
 // Route-level code splitting: each screen is its own chunk, so the initial load
 // stays small and supabase-heavy pages only download when visited.
@@ -64,6 +65,9 @@ export default function App() {
             <Route path="profile" element={<ProfilePage />} />
             <Route path="admin" element={<AdminPage />} />
           </Route>
+
+          {/* DEV-only visual harness (stripped from production builds). */}
+          {import.meta.env.DEV && <Route path="__preview" element={<CasinoPreview />} />}
 
           <Route path="*" element={<NotFoundPage />} />
         </Route>

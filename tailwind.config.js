@@ -79,6 +79,11 @@ export default {
           '60%': { transform: 'scale(1.06)' },
           '100%': { opacity: '1', transform: 'scale(1)' },
         },
+        // A card dealt onto the table — slides down from the dealer with a flick.
+        deal: {
+          '0%': { opacity: '0', transform: 'translateY(-26px) rotate(-8deg) scale(0.92)' },
+          '100%': { opacity: '1', transform: 'translateY(0) rotate(0) scale(1)' },
+        },
         'reel-spin': { '0%': { transform: 'translateY(0)' }, '100%': { transform: 'translateY(-66.6667%)' } },
         // Seamless reel scroll: strip is 3 identical copies, so -33.3333% = one copy.
         'reel-roll': { '0%': { transform: 'translateY(0)' }, '100%': { transform: 'translateY(-33.3333%)' } },
@@ -110,6 +115,7 @@ export default {
         floaty: 'floaty 3.4s ease-in-out infinite',
         ball: 'ball 3s ease-in-out infinite',
         pop: 'pop 0.4s cubic-bezier(0.22,0.61,0.36,1)',
+        deal: 'deal 0.32s cubic-bezier(0.22,0.61,0.36,1) both',
         'reel-spin': 'reel-spin 0.22s linear infinite',
         'reel-roll': 'reel-roll 0.45s linear infinite',
         glow: 'glow 1.8s ease-in-out infinite',
