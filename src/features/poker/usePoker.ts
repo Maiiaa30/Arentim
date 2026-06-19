@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/features/auth/AuthProvider';
 import { profileKey } from '@/features/profile/useProfile';
+import { invokePoker } from './invoke';
 import type { PokerView } from './types';
 
 type SitArgs = { buyIn: number; botCount: number; difficulty: 'easy' | 'medium' | 'hard' };
@@ -12,12 +12,7 @@ type Op =
   | { op: 'leave' }
   | { op: 'state' };
 
-async function call<T>(body: Op): Promise<T> {
-  const { data, error } = await supabase.functions.invoke('poker-bots', { body });
-  if (error) throw error;
-  if (data?.error) throw new Error(data.error);
-  return data as T;
-}
+const call = <T>(body: Op): Promise<T> => invokePoker<T>('poker-bots', body);
 
 /** Resume an in-progress table (if any) on load. */
 export function usePokerState() {
