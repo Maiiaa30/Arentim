@@ -1,27 +1,56 @@
 /**
  * Onze de Ouro — pure game logic over the real Liga Portugal dataset.
  *
- * Two modes:
- *  - 'sete'  (7-game): a 7-round knockout vs that season's clubs, ending on the
- *            strongest club. Beat all seven → 7-0.
- *  - 'epoca' (season): your XI joins that season's league; a full double
- *            round-robin (2·(N-1) jornadas) is simulated with scorers + a live
- *            table. Score = league points; finishing top is the dream.
- *
- * Draft: each slot is assigned a random club; you pick one of that club's players
- * who can play the slot's line. A seed (the day, or random for practice) makes
- * the draw + simulation deterministic and shareable.
+ * Draft: each slot is a SPECIFIC position (GK/LB/CB/RB/CM/LW/ST…) assigned a
+ * random club; the club's whole squad is shown and you pick a player who can
+ * play that exact position (positions "stick" — an RB can't fill an LB) — one
+ * player per club. Then play one of two modes:
+ *  - 'sete'  (7-game): a 7-round knockout vs that season's clubs (7-0 = title).
+ *  - 'epoca' (season): your XI joins the league for a full double round-robin
+ *            with scorers + a live table.
  */
 import { type Line, type RawPlayer, type Season, clubNames, getSeason, yearsInRange } from './onzeData';
 
 export type Mode = 'sete' | 'epoca';
-export type Formation = '4-3-3' | '4-4-2' | '3-4-3';
+export type Position =
+  | 'GK' | 'LB' | 'CB' | 'RB' | 'LWB' | 'RWB'
+  | 'CDM' | 'CM' | 'CAM' | 'LM' | 'RM' | 'LW' | 'RW' | 'ST';
+export type Formation = '4-3-3' | '4-4-2' | '4-2-3-1' | '3-4-3' | '3-5-2' | '5-3-2';
 
-export const FORMATIONS: Record<Formation, Line[]> = {
-  '4-3-3': ['GK', 'DF', 'DF', 'DF', 'DF', 'MF', 'MF', 'MF', 'FW', 'FW', 'FW'],
-  '4-4-2': ['GK', 'DF', 'DF', 'DF', 'DF', 'MF', 'MF', 'MF', 'MF', 'FW', 'FW'],
-  '3-4-3': ['GK', 'DF', 'DF', 'DF', 'MF', 'MF', 'MF', 'MF', 'FW', 'FW', 'FW'],
+export const FORMATIONS: Record<Formation, Position[]> = {
+  '4-3-3': ['GK', 'LB', 'CB', 'CB', 'RB', 'CM', 'CM', 'CM', 'LW', 'ST', 'RW'],
+  '4-4-2': ['GK', 'LB', 'CB', 'CB', 'RB', 'LM', 'CM', 'CM', 'RM', 'ST', 'ST'],
+  '4-2-3-1': ['GK', 'LB', 'CB', 'CB', 'RB', 'CDM', 'CDM', 'CAM', 'LM', 'RM', 'ST'],
+  '3-4-3': ['GK', 'CB', 'CB', 'CB', 'LM', 'CM', 'CM', 'RM', 'LW', 'ST', 'RW'],
+  '3-5-2': ['GK', 'CB', 'CB', 'CB', 'LM', 'CM', 'CM', 'CM', 'RM', 'ST', 'ST'],
+  '5-3-2': ['GK', 'LWB', 'CB', 'CB', 'CB', 'RWB', 'CM', 'CM', 'CM', 'ST', 'ST'],
 };
+
+/** Which player positions can fill a given slot position (left/right kept apart). */
+const COMPAT: Record<Position, string[]> = {
+  GK: ['GK'],
+  CB: ['CB', 'SW'],
+  RB: ['RB', 'RWB'],
+  LB: ['LB', 'LWB'],
+  RWB: ['RWB', 'RB'],
+  LWB: ['LWB', 'LB'],
+  CDM: ['CDM', 'CM', 'DM'],
+  CM: ['CM', 'CDM', 'CAM'],
+  CAM: ['CAM', 'CM', 'CF'],
+  RM: ['RM', 'RW'],
+  LM: ['LM', 'LW'],
+  RW: ['RW', 'RM', 'RF'],
+  LW: ['LW', 'LM', 'LF'],
+  ST: ['ST', 'CF', 'SS'],
+};
+
+const POS_LINE: Record<string, Line> = {
+  GK: 'GK',
+  CB: 'DF', RB: 'DF', LB: 'DF', RWB: 'DF', LWB: 'DF', SW: 'DF',
+  CDM: 'MF', DM: 'MF', CM: 'MF', CAM: 'MF', AM: 'MF', RM: 'MF', LM: 'MF',
+  RW: 'FW', LW: 'FW', ST: 'FW', CF: 'FW', SS: 'FW', RF: 'FW', LF: 'FW',
+};
+export const posLine = (pos: string): Line => POS_LINE[pos] ?? 'MF';
 
 export const ROUNDS = 7;
 export const YOUR_TEAM = 'O teu XI';
@@ -31,10 +60,17 @@ export interface GamePlayer {
   name: string;
   rating: number;
   club: string;
+  positions: string[]; // specific positions, e.g. ['RM','CM']
   lines: Line[];
-  pos: string;
+  pos: string; // original string for display
   photo: string | null;
   nat: string | null;
+}
+
+/** Can this player fill the given slot position? */
+export function posEligible(slot: Position, p: GamePlayer): boolean {
+  const accept = COMPAT[slot];
+  return p.positions.some((pp) => accept.includes(pp));
 }
 
 // ---- Seeded RNG ------------------------------------------------------------
@@ -66,18 +102,21 @@ function shuffle<T>(arr: T[], rand: () => number): T[] {
   return a;
 }
 
+const parsePositions = (p: string): string[] =>
+  p.split('/').map((x) => x.trim().toUpperCase()).filter(Boolean);
+
 const toGame = (club: string, p: RawPlayer): GamePlayer => ({
   id: `${club}:${p.n}`,
   name: p.n,
   rating: p.r,
   club,
+  positions: parsePositions(p.p),
   lines: p.l,
   pos: p.p,
   photo: p.ph,
   nat: p.nat,
 });
 
-/** Pick a season within the chosen year range (random per seed). */
 export function pickSeason(startYear: number, endYear: number, seed: string): number {
   const years = yearsInRange(startYear, endYear);
   const rand = rng(hashSeed(seed + '-year'));
@@ -85,40 +124,39 @@ export function pickSeason(startYear: number, endYear: number, seed: string): nu
 }
 
 export interface DraftSlot {
+  position: Position;
   line: Line;
   club: string;
-  pack: GamePlayer[]; // that club's players who can fill the line, best first
+  roster: GamePlayer[]; // the whole squad — eligible first, then by rating
 }
 
-/** One random club per slot (distinct where possible); pack = its players for the line. */
+/** One random club per slot (distinct, with an eligible player); show full squad. */
 export function generateDraft(seed: string, formation: Formation, year: number): DraftSlot[] {
   const season: Season = getSeason(year);
-  const clubs = clubNames(year);
+  const allClubs = clubNames(year);
   const rand = rng(hashSeed(seed + '-draft'));
   const used = new Set<string>();
 
-  const clubsWithLine = (line: Line) =>
-    clubs.filter((c) => season[c]!.players.some((p) => p.l.includes(line)));
-
-  return FORMATIONS[formation].map((line) => {
-    const eligible = clubsWithLine(line);
-    const fresh = eligible.filter((c) => !used.has(c));
-    const pool = fresh.length > 0 ? fresh : eligible;
+  return FORMATIONS[formation].map((position) => {
+    const eligibleClubs = allClubs.filter((c) =>
+      season[c]!.players.some((p) => posEligible(position, toGame(c, p))),
+    );
+    const fresh = eligibleClubs.filter((c) => !used.has(c));
+    const pool = fresh.length > 0 ? fresh : eligibleClubs.length > 0 ? eligibleClubs : allClubs;
     const club = pool[randInt(rand, pool.length)]!;
     used.add(club);
-    const pack = season[club]!.players
-      .filter((p) => p.l.includes(line))
-      .sort((a, b) => b.r - a.r)
-      .map((p) => toGame(club, p));
-    return { line, club, pack };
+    const roster = season[club]!.players
+      .map((p) => toGame(club, p))
+      .sort((a, b) => {
+        const ea = posEligible(position, a) ? 1 : 0;
+        const eb = posEligible(position, b) ? 1 : 0;
+        return eb - ea || b.rating - a.rating;
+      });
+    return { position, line: posLine(position), club, roster };
   });
 }
 
-export interface Rating {
-  base: number;
-  chemistry: number;
-  total: number;
-}
+export interface Rating { base: number; chemistry: number; total: number; }
 export function rateXI(xi: GamePlayer[]): Rating {
   if (xi.length === 0) return { base: 0, chemistry: 0, total: 0 };
   const base = xi.reduce((s, p) => s + p.rating, 0) / xi.length;
@@ -140,16 +178,13 @@ export interface SeteResult { kind: 'sete'; rating: Rating; rounds: RoundResult[
 export function simulateSete(xi: GamePlayer[], year: number, seed: string): SeteResult {
   const rating = rateXI(xi);
   const season = getSeason(year);
-  const ranked = clubNames(year)
-    .map((c) => ({ club: c, r: season[c]!.rating }))
-    .sort((a, b) => a.r - b.r);
-  // 7 opponents of rising strength, ending on the strongest club.
+  const ranked = clubNames(year).map((c) => ({ club: c, r: season[c]!.rating })).sort((a, b) => a.r - b.r);
   const picks: { club: string; r: number }[] = [];
   for (let i = 0; i < ROUNDS; i++) {
     const idx = Math.round((i / (ROUNDS - 1)) * (ranked.length - 1));
     picks.push(ranked[Math.min(ranked.length - 1, Math.max(0, idx))]!);
   }
-  picks[ROUNDS - 1] = ranked[ranked.length - 1]!; // boss = best club
+  picks[ROUNDS - 1] = ranked[ranked.length - 1]!;
 
   const rand = rng(hashSeed(seed + '-sete'));
   const rounds: RoundResult[] = [];
@@ -166,11 +201,7 @@ export function simulateSete(xi: GamePlayer[], year: number, seed: string): Sete
   }
   const champion = wins === ROUNDS;
   return {
-    kind: 'sete',
-    rating,
-    rounds,
-    wins,
-    champion,
+    kind: 'sete', rating, rounds, wins, champion,
     score: wins * 1000 + Math.round(rating.total) + (champion ? 750 : 0),
     record: champion ? '7–0 · Campeão' : `${wins} ${wins === 1 ? 'vitória' : 'vitórias'}`,
   };
@@ -179,14 +210,7 @@ export function simulateSete(xi: GamePlayer[], year: number, seed: string): Sete
 // ---- Season (double round-robin) -------------------------------------------
 export interface Match { home: string; away: string; hs: number; as: number; scorers: { team: string; name: string; minute: number }[]; }
 export interface TableRow { team: string; rating: number; P: number; W: number; D: number; L: number; GF: number; GA: number; GD: number; PTS: number; }
-export interface SeasonResult {
-  kind: 'epoca';
-  rating: Rating;
-  year: number;
-  teams: { team: string; rating: number }[];
-  jornadas: Match[][]; // matches per round
-  // Filled as the user steps; helpers below compute standings up to a round.
-}
+export interface SeasonResult { kind: 'epoca'; rating: Rating; year: number; teams: { team: string; rating: number }[]; jornadas: Match[][]; }
 
 const poisson = (lambda: number, rand: () => number): number => {
   const L = Math.exp(-lambda);
@@ -195,12 +219,10 @@ const poisson = (lambda: number, rand: () => number): number => {
   return k - 1;
 };
 
-/** Circle-method double round-robin schedule. */
 function schedule(teams: string[], rand: () => number): [string, string][][] {
   const ts = shuffle(teams, rand);
   if (ts.length % 2 === 1) ts.push('__bye__');
-  const n = ts.length;
-  const half = n / 2;
+  const n = ts.length, half = n / 2;
   const firstLeg: [string, string][][] = [];
   let order = [...ts];
   for (let r = 0; r < n - 1; r++) {
@@ -210,9 +232,8 @@ function schedule(teams: string[], rand: () => number): [string, string][][] {
       if (a !== '__bye__' && b !== '__bye__') round.push(r % 2 === 0 ? [a, b] : [b, a]);
     }
     firstLeg.push(round);
-    order = [order[0]!, ...order.slice(2), order[1]!]; // rotate, fix first
+    order = [order[0]!, ...order.slice(2), order[1]!];
   }
-  // Second leg = home/away swapped.
   const secondLeg = firstLeg.map((round) => round.map(([h, a]) => [a, h] as [string, string]));
   return [...firstLeg, ...secondLeg];
 }
@@ -222,7 +243,6 @@ function rosterFor(team: string, xi: GamePlayer[], season: Season): { name: stri
   if (team === YOUR_TEAM) return xi.map((p) => ({ name: p.name, w: weight[p.lines[0] ?? 'MF'] }));
   return (season[team]?.players ?? []).map((p) => ({ name: p.n, w: weight[p.l[0] ?? 'MF'] }));
 }
-
 function pickScorer(roster: { name: string; w: number }[], rand: () => number): string {
   const total = roster.reduce((s, r) => s + r.w, 0) || 1;
   let x = rand() * total;
@@ -254,11 +274,9 @@ export function simulateSeason(xi: GamePlayer[], year: number, seed: string): Se
       return { home, away, hs, as, scorers };
     }),
   );
-
   return { kind: 'epoca', rating, year, teams, jornadas };
 }
 
-/** Standings after the first `upTo` jornadas (0 = before kickoff). */
 export function standingsAfter(res: SeasonResult, upTo: number): TableRow[] {
   const rows = new Map<string, TableRow>();
   for (const t of res.teams) rows.set(t.team, { team: t.team, rating: t.rating, P: 0, W: 0, D: 0, L: 0, GF: 0, GA: 0, GD: 0, PTS: 0 });
@@ -275,6 +293,5 @@ export function standingsAfter(res: SeasonResult, upTo: number): TableRow[] {
   return [...rows.values()].sort((x, y) => y.PTS - x.PTS || y.GD - x.GD || y.GF - x.GF || x.team.localeCompare(y.team));
 }
 
-/** Your match in a given jornada (or null on a bye round). */
 export const yourMatch = (res: SeasonResult, j: number): Match | null =>
   res.jornadas[j]?.find((m) => m.home === YOUR_TEAM || m.away === YOUR_TEAM) ?? null;

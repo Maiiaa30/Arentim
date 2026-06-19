@@ -14,6 +14,8 @@ import {
   dailySeed,
   generateDraft,
   pickSeason,
+  posEligible,
+  posLine,
   rateXI,
   simulateSeason,
   simulateSete,
@@ -28,10 +30,28 @@ const LINE_ORDER: Line[] = ['FW', 'MF', 'DF', 'GK'];
 const LINE_LABEL: Record<Line, string> = { GK: 'Guarda-redes', DF: 'Defesa', MF: 'Meio-campo', FW: 'Ataque' };
 
 function Face({ p, size = 40 }: { p: GamePlayer; size?: number }) {
-  if (p.photo) return <img src={p.photo} alt="" width={size} height={size} loading="lazy" className="rounded-full bg-surface-raised object-cover" style={{ width: size, height: size }} />;
+  const [err, setErr] = useState(false);
+  if (p.photo && !err) {
+    return (
+      <img
+        src={p.photo}
+        alt=""
+        width={size}
+        height={size}
+        loading="lazy"
+        onError={() => setErr(true)}
+        className="shrink-0 rounded-full bg-surface-raised object-cover"
+        style={{ width: size, height: size }}
+      />
+    );
+  }
+  const initials = p.name.split(/\s+/).map((w) => w[0]).slice(0, 2).join('').toUpperCase() || p.name.slice(0, 2).toUpperCase();
   return (
-    <span className="flex items-center justify-center rounded-full bg-surface-raised font-sans text-[10px] text-muted" style={{ width: size, height: size }}>
-      {p.name.slice(0, 2).toUpperCase()}
+    <span
+      className="flex shrink-0 items-center justify-center rounded-full border border-gold/25 bg-surface-raised font-sans font-medium text-muted"
+      style={{ width: size, height: size, fontSize: Math.round(size * 0.32) }}
+    >
+      {initials}
     </span>
   );
 }
@@ -92,7 +112,7 @@ export function OnzePage() {
   const submit = useSubmitOnzeScore();
   const submitted = useRef<string | null>(null);
 
-  const lines = FORMATIONS[formation];
+  const slots = FORMATIONS[formation];
   const xi = useMemo(() => picks.filter((p): p is GamePlayer => p != null), [picks]);
   const live = useMemo(() => rateXI(xi), [xi]);
   const complete = picks.length === 11 && picks.every(Boolean);
@@ -210,10 +230,10 @@ export function OnzePage() {
               </div>
 
               <div>
-                <p className="mb-2 font-sans text-[10.5px] font-medium uppercase tracking-[0.18em] text-muted-2">Formação</p>
-                <div className="flex gap-2">
+                <p className="mb-2 font-sans text-[10.5px] font-medium uppercase tracking-[0.18em] text-muted-2">Tática</p>
+                <div className="grid grid-cols-3 gap-2">
                   {(Object.keys(FORMATIONS) as Formation[]).map((f) => (
-                    <button key={f} onClick={() => setFormation(f)} className={`focus-ring flex-1 rounded border py-2.5 font-mono text-sm transition-colors ${formation === f ? 'border-gold bg-gold/10 text-gold' : 'border-border text-muted'}`}>
+                    <button key={f} onClick={() => setFormation(f)} className={`focus-ring rounded border py-2.5 font-mono text-sm transition-colors ${formation === f ? 'border-gold bg-gold/10 text-gold' : 'border-border text-muted'}`}>
                       {f}
                     </button>
                   ))}
@@ -239,7 +259,7 @@ export function OnzePage() {
                   <span className="font-sans text-xs text-muted">{almanac ? 'Almanaque' : `Equipa ${live.total} · Química +${live.chemistry}`}</span>
                 </div>
                 {LINE_ORDER.map((line) => {
-                  const idxs = lines.map((l, i) => (l === line ? i : -1)).filter((i) => i >= 0);
+                  const idxs = slots.map((pos, i) => (posLine(pos) === line ? i : -1)).filter((i) => i >= 0);
                   if (idxs.length === 0) return null;
                   return (
                     <div key={line} className="flex flex-wrap justify-center gap-2">
@@ -247,14 +267,15 @@ export function OnzePage() {
                         const p = picks[i];
                         return (
                           <button key={i} type="button" onClick={() => phase === 'draft' && setActive(i)}
-                            className={`flex h-[72px] w-[84px] flex-col items-center justify-center gap-1 rounded border px-1 text-center transition-colors ${active === i && phase === 'draft' ? 'border-gold bg-gold/15' : 'border-gold/25 bg-bg/40'}`}>
+                            className={`relative flex h-[72px] w-[84px] flex-col items-center justify-center gap-1 rounded border px-1 text-center transition-colors ${active === i && phase === 'draft' ? 'border-gold bg-gold/15' : 'border-gold/25 bg-bg/40'}`}>
+                            <span className="absolute left-1 top-1 font-mono text-[8px] font-semibold text-gold/70">{slots[i]}</span>
                             {p ? (
                               <>
                                 <Face p={p} size={28} />
                                 <span className="line-clamp-1 w-full font-sans text-[10px] leading-tight text-text">{p.name}</span>
                               </>
                             ) : (
-                              <span className="font-sans text-[10px] uppercase tracking-wider text-muted-2">{LINE_LABEL[line]}</span>
+                              <span className="font-sans text-[11px] font-medium uppercase tracking-wider text-muted-2">{slots[i]}</span>
                             )}
                           </button>
                         );
@@ -268,21 +289,38 @@ export function OnzePage() {
                 <div className="card space-y-3 p-5">
                   <div className="flex items-center justify-between">
                     <p className="font-sans text-[10.5px] font-medium uppercase tracking-[0.18em] text-muted-2">
-                      {LINE_LABEL[lines[active]!]} · <span className="text-gold">{draft[active]?.club}</span>
+                      <span className="text-gold">{draft[active]?.position}</span> · {LINE_LABEL[posLine(draft[active]!.position)]} · {draft[active]?.club}
                     </p>
                     <span className="font-sans text-xs text-muted-2">Trocas: {swaps}</span>
                   </div>
-                  <div className="grid max-h-[320px] gap-2 overflow-y-auto sm:grid-cols-2">
-                    {draft[active]?.pack.map((p) => (
-                      <button key={p.id} onClick={() => choose(p)} className={`focus-ring flex items-center gap-2 rounded border px-3 py-2 text-left transition-colors ${picks[active]?.id === p.id ? 'border-gold bg-gold/10' : 'border-border bg-surface hover:border-gold/50'}`}>
-                        <Face p={p} size={34} />
-                        <span className="min-w-0 flex-1">
-                          <span className="block truncate font-sans text-sm text-text">{p.name}</span>
-                          <span className="font-sans text-[10px] uppercase tracking-wider text-muted-2">{p.pos} · {p.nat ?? ''}</span>
-                        </span>
-                        {!almanac && <span className="shrink-0 font-mono text-sm font-semibold text-gold">{p.rating}</span>}
-                      </button>
-                    ))}
+                  <p className="font-sans text-[11px] text-muted-2">
+                    Plantel do {draft[active]?.club}. Só pode escolher quem joga a {draft[active]?.position}.
+                  </p>
+                  <div className="grid max-h-[340px] gap-2 overflow-y-auto sm:grid-cols-2">
+                    {draft[active]?.roster.map((p) => {
+                      const elig = posEligible(draft[active]!.position, p);
+                      const dupe = picks.some((x, i) => i !== active && x?.id === p.id);
+                      const usable = elig && !dupe;
+                      const chosen = picks[active]?.id === p.id;
+                      return (
+                        <button
+                          key={p.id}
+                          onClick={() => usable && choose(p)}
+                          disabled={!usable}
+                          title={dupe ? 'Já está na equipa' : !elig ? `Não joga a ${draft[active]!.position}` : undefined}
+                          className={`focus-ring flex items-center gap-2 rounded border px-3 py-2 text-left transition-colors ${
+                            chosen ? 'border-gold bg-gold/10' : usable ? 'border-border bg-surface hover:border-gold/50' : 'cursor-not-allowed border-border/40 bg-surface/40 opacity-45'
+                          }`}
+                        >
+                          <Face p={p} size={34} />
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate font-sans text-sm text-text">{p.name}</span>
+                            <span className="font-sans text-[10px] uppercase tracking-wider text-muted-2">{p.pos}{p.nat ? ` · ${p.nat}` : ''}{dupe ? ' · escolhido' : ''}</span>
+                          </span>
+                          {!almanac && <span className="shrink-0 font-mono text-sm font-semibold text-gold">{p.rating}</span>}
+                        </button>
+                      );
+                    })}
                   </div>
                   <Button variant="primary" onClick={play} disabled={!complete} className="w-full">
                     {complete ? (mode === 'sete' ? 'Jogar os 7 jogos' : 'Iniciar a época') : `Faltam ${picks.filter((x) => !x).length} jogadores`}
