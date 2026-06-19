@@ -1,3 +1,4 @@
+import type { KeyboardEvent } from 'react';
 import type { Fixture } from '@/types/db';
 
 /**
@@ -61,7 +62,7 @@ function goalLine(fixture: Fixture): string | null {
     .join(' · ');
 }
 
-export function ScoreRow({ fixture }: { fixture: Fixture }) {
+export function ScoreRow({ fixture, onSelect }: { fixture: Fixture; onSelect?: () => void }) {
   const live = fixture.status === 'live';
   const finished = fixture.status === 'finished';
   const postponed = fixture.status === 'postponed';
@@ -90,7 +91,24 @@ export function ScoreRow({ fixture }: { fixture: Fixture }) {
   );
 
   return (
-    <div className={`card p-0 ${live ? 'border-negative/30' : ''}`}>
+    <div
+      className={`card p-0 ${live ? 'border-negative/30' : ''} ${
+        onSelect ? 'card-hover focus-ring cursor-pointer' : ''
+      }`}
+      {...(onSelect
+        ? {
+            role: 'button' as const,
+            tabIndex: 0,
+            onClick: onSelect,
+            onKeyDown: (e: KeyboardEvent) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                onSelect();
+              }
+            },
+          }
+        : {})}
+    >
       <div className="flex items-stretch">
         <div className="flex w-[58px] shrink-0 flex-col items-center justify-center gap-0.5 border-r border-border px-1.5 py-3 text-center">
           {statusCell}

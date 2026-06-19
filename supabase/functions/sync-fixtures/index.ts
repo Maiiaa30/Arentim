@@ -82,6 +82,7 @@ Deno.serve(async (req) => {
             away_score: sc.away,
             home_crest: teamCrest(m.homeTeam),
             away_crest: teamCrest(m.awayTeam),
+            stats: { home: strength.stand.get(home) ?? null, away: strength.stand.get(away) ?? null },
             odds: computeOdds(home, away, strength),
             updated_at: new Date().toISOString(),
           };

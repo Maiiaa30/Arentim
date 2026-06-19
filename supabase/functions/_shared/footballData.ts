@@ -77,13 +77,38 @@ export const seasonYear = (m: FdMatch): number | null => {
   return y ? Number(y) : null;
 };
 
-// ---- Standings → team strength ---------------------------------------------
+// ---- Standings → team strength + public stats snapshot ---------------------
 type TeamForm = { atk: number; def: number; played: number };
-export type Strength = { avg: number; teams: Map<string, TeamForm> };
 
-/** Build attack/defence multipliers per team from a competition's TOTAL table. */
+/** Public per-team standings snapshot stored on the fixture (for the popup). */
+export type TeamStat = {
+  position: number | null;
+  played: number;
+  won: number;
+  draw: number;
+  lost: number;
+  points: number;
+  gf: number;
+  ga: number;
+  form: string | null;
+};
+
+export type Strength = { avg: number; teams: Map<string, TeamForm>; stand: Map<string, TeamStat> };
+
+/** Build attack/defence multipliers + a stats snapshot per team from the standings. */
 export async function fetchStrength(code: string, token: string): Promise<Strength> {
-  type Row = { team: { name: string; shortName?: string }; playedGames: number; goalsFor: number; goalsAgainst: number };
+  type Row = {
+    team: { name: string; shortName?: string };
+    position?: number;
+    playedGames: number;
+    won?: number;
+    draw?: number;
+    lost?: number;
+    points?: number;
+    goalsFor: number;
+    goalsAgainst: number;
+    form?: string | null;
+  };
   type Resp = { standings: { type: string; table: Row[] }[] };
   const data = await fdGet<Resp>(`/competitions/${code}/standings`, token);
   // Leagues have one TOTAL table; group tournaments (World Cup, UCL groups) have
@@ -93,17 +118,29 @@ export async function fetchStrength(code: string, token: string): Promise<Streng
   for (const r of total) { sumGF += r.goalsFor ?? 0; sumPlayed += r.playedGames ?? 0; }
   const avg = sumPlayed > 0 ? sumGF / sumPlayed : 1.35; // goals/team/game
   const teams = new Map<string, TeamForm>();
+  const stand = new Map<string, TeamStat>();
   for (const r of total) {
     const p = r.playedGames ?? 0;
     if (p <= 0) continue;
     const form: TeamForm = { atk: r.goalsFor / p / avg, def: r.goalsAgainst / p / avg, played: p };
+    const stat: TeamStat = {
+      position: r.position ?? null,
+      played: p,
+      won: r.won ?? 0,
+      draw: r.draw ?? 0,
+      lost: r.lost ?? 0,
+      points: r.points ?? 0,
+      gf: r.goalsFor ?? 0,
+      ga: r.goalsAgainst ?? 0,
+      form: r.form ?? null,
+    };
     // Index under every name variant so the match's team (which may use shortName)
     // is found regardless of which the standings used.
     for (const key of [teamName(r.team), r.team.name, r.team.shortName]) {
-      if (key) teams.set(key, form);
+      if (key) { teams.set(key, form); stand.set(key, stat); }
     }
   }
-  return { avg, teams };
+  return { avg, teams, stand };
 }
 
 export async function fetchMatches(code: string, token: string, from: string, to: string): Promise<FdMatch[]> {
@@ -124,10 +161,13 @@ const HOME_ADV = 1.15;
 const MARGIN = 0.07; // ~7% overround
 const MAXG = 8;
 
+const MIN_ODD = 1.08;
+const MAX_ODD = 8.0; // cap longshots so we never show "crazy" 11+ prices
+
 const factorial = (n: number): number => (n <= 1 ? 1 : n * factorial(n - 1));
 const pois = (k: number, l: number) => (Math.exp(-l) * Math.pow(l, k)) / factorial(k);
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
-const toOdd = (p: number) => Math.max(1.05, Math.round((1 / (Math.max(p, 0.02) * (1 + MARGIN))) * 100) / 100);
+const toOdd = (p: number) => clamp(Math.round((1 / (Math.max(p, 0.02) * (1 + MARGIN))) * 100) / 100, MIN_ODD, MAX_ODD);
 
 const NEUTRAL = {
   '1x2': { home: 2.50, draw: 3.20, away: 2.70 },
@@ -147,8 +187,9 @@ export function computeOdds(home: string, away: string, s: Strength): Record<str
   const h = dh ?? AVG_FORM;
   const a = da ?? AVG_FORM;
 
-  const expH = clamp(s.avg * h.atk * a.def * HOME_ADV, 0.25, 4.2);
-  const expA = clamp((s.avg * a.atk * h.def) / HOME_ADV, 0.2, 3.8);
+  // Tighter clamps keep prices in a sane casino range (no extreme skew).
+  const expH = clamp(s.avg * h.atk * a.def * HOME_ADV, 0.4, 3.0);
+  const expA = clamp((s.avg * a.atk * h.def) / HOME_ADV, 0.35, 2.6);
 
   const ph: number[] = [], pa: number[] = [];
   for (let k = 0; k <= MAXG; k++) { ph[k] = pois(k, expH); pa[k] = pois(k, expA); }
