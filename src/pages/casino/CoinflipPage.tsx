@@ -5,7 +5,10 @@ import { useCoinflip } from '@/features/casino/useQuickGames';
 import { StakeChips } from '@/features/casino/StakeChips';
 import type { CoinSide } from '@/features/casino/coinflip';
 import { Button } from '@/components/ui/Button';
+import { Eyebrow } from '@/components/ui/primitives';
 import { formatAmount } from '@/lib/format';
+
+const SIDE_LABEL: Record<CoinSide, string> = { heads: 'Cara', tails: 'Coroa' };
 
 export function CoinflipPage() {
   const { data: profile } = useProfile();
@@ -34,16 +37,17 @@ export function CoinflipPage() {
       }, 700);
     } catch (e) {
       setFlipping(false);
-      setError(e instanceof Error ? e.message : 'Flip failed.');
+      setError(e instanceof Error ? e.message : 'O lançamento falhou.');
     }
   }
 
   return (
     <div className="animate-fade-in space-y-6">
       <div>
-        <Link to="/casino" className="text-sm text-muted hover:text-text">← Casino</Link>
-        <h1 className="font-display text-2xl font-bold text-text">Coin flip</h1>
-        <p className="mt-1 text-sm text-muted">Double or nothing — call it right and double your stake.</p>
+        <Link to="/" className="font-sans text-sm text-muted-2 hover:text-text">← Voltar às Mesas</Link>
+        <Eyebrow className="mt-3">O Salão</Eyebrow>
+        <h1 className="mt-2 font-display text-[38px] font-medium leading-tight text-text">Moeda</h1>
+        <p className="mt-2 font-sans text-sm text-muted">Dobro ou nada — acerte na chamada e dobre a aposta.</p>
       </div>
 
       <div className="card mx-auto max-w-md space-y-6 p-6 text-center">
@@ -52,17 +56,19 @@ export function CoinflipPage() {
             flipping ? 'animate-spin' : ''
           }`}
         >
-          {flipping ? '?' : outcome === null ? '🪙' : outcome === 'heads' ? 'H' : 'T'}
+          {flipping ? '?' : outcome === null ? '🪙' : outcome === 'heads' ? 'C' : 'K'}
         </div>
 
         <div className="h-7">
           {won !== null &&
             (won ? (
               <p className="font-display text-lg font-bold text-positive">
-                {outcome} — won {formatAmount(stake * 2)} Tostões!
+                {outcome && SIDE_LABEL[outcome]} — ganhou {formatAmount(stake * 2)} Tostões!
               </p>
             ) : (
-              <p className="text-sm text-muted">{outcome} — better luck next flip.</p>
+              <p className="font-sans text-sm text-muted">
+                {outcome && SIDE_LABEL[outcome]} — mais sorte para a próxima.
+              </p>
             ))}
         </div>
 
@@ -72,21 +78,21 @@ export function CoinflipPage() {
               key={side}
               onClick={() => setChoice(side)}
               disabled={flipping}
-              className={`focus-ring flex-1 rounded-xl border px-4 py-2.5 text-sm font-semibold capitalize transition-colors disabled:opacity-50 ${
+              className={`focus-ring flex-1 rounded border px-4 py-2.5 font-sans text-sm font-semibold transition-colors disabled:opacity-50 ${
                 choice === side ? 'border-gold bg-gold/10 text-gold' : 'border-border text-muted hover:text-text'
               }`}
             >
-              {side}
+              {SIDE_LABEL[side]}
             </button>
           ))}
         </div>
 
         <div className="space-y-3">
           <StakeChips stake={stake} onChange={setStake} balance={balance} disabled={flipping} />
-          <Button onClick={flip} disabled={flipping || stake > balance} className="w-full">
-            {flipping ? 'Flipping…' : `Flip · ${formatAmount(stake)}`}
+          <Button variant="primary" onClick={flip} disabled={flipping || stake > balance} className="w-full">
+            {flipping ? 'A lançar…' : `Lançar · ${formatAmount(stake)}`}
           </Button>
-          {error && <p className="text-sm text-negative">{error}</p>}
+          {error && <p className="font-sans text-sm text-negative">{error}</p>}
         </div>
       </div>
     </div>

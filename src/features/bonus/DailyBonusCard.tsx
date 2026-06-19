@@ -22,14 +22,14 @@ export function DailyBonusCard() {
     try {
       const res = await claim.mutateAsync();
       if (res.status === 'claimed') {
-        setMessage(`+${formatAmount(res.reward)} Tostões · day ${Math.min(res.streak, MAX_STREAK_DAY)} streak!`);
+        setMessage(`+${formatAmount(res.reward)} Tostões · sequência de ${Math.min(res.streak, MAX_STREAK_DAY)} dias!`);
       } else if (res.status === 'play_required') {
-        setMessage('Play a round first to unlock today’s bonus.');
+        setMessage('Jogue uma ronda primeiro para desbloquear o bónus de hoje.');
       } else {
-        setMessage('Already claimed today — come back tomorrow.');
+        setMessage('Já resgatou hoje — volte amanhã.');
       }
     } catch {
-      setMessage('Could not claim right now. Try again.');
+      setMessage('Não foi possível resgatar agora. Tente outra vez.');
     }
   }
 
@@ -37,29 +37,30 @@ export function DailyBonusCard() {
     <section className="card p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="font-display text-lg font-semibold text-text">Daily bonus</h2>
-          <p className="text-sm text-muted">
+          <h2 className="font-display text-lg font-semibold text-text">Bónus diário</h2>
+          <p className="font-sans text-sm text-muted">
             {state.status === 'claimed_today'
-              ? `Claimed today · ${state.currentStreak} day streak 🔥`
+              ? `Resgatado hoje · sequência de ${state.currentStreak} dias 🔥`
               : state.status === 'play_required'
-                ? 'Play one round today to unlock your bonus.'
-                : `Claim your day ${nextDay} reward.`}
+                ? 'Jogue uma ronda hoje para desbloquear o seu bónus.'
+                : `Resgate a recompensa do dia ${nextDay}.`}
           </p>
         </div>
 
         <Button
+          variant={state.status === 'claimable' ? 'primary' : 'ghost'}
           onClick={onClaim}
           disabled={state.status !== 'claimable' || claim.isPending}
           className={state.status === 'claimable' ? 'shadow-soft ring-1 ring-gold/40' : ''}
         >
           {state.status === 'claimed_today' ? (
-            'Claimed'
+            'Resgatado'
           ) : claim.isPending ? (
-            'Claiming…'
+            'A resgatar…'
           ) : (
             <>
               <CoinIcon className="h-4 w-4" />
-              Claim {formatAmount(state.claimableReward)}
+              Resgatar {formatAmount(state.claimableReward)}
             </>
           )}
         </Button>
