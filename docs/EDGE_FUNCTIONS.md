@@ -92,6 +92,23 @@ select cron.schedule(
 );
 ```
 
+## generate-content (optional AI)
+
+Generates short, plain-text match previews (`fixtures.preview`) and a "featured
+match of the day" blurb (`daily_content`) with Gemini Flash. The model output is
+treated as untrusted **data** — only stored and displayed (React escapes it),
+never executed or used to drive a query/action/balance.
+
+```bash
+supabase secrets set GEMINI_API_KEY=<your-gemini-flash-key>
+# optional: supabase secrets set GEMINI_MODEL=gemini-flash-latest
+supabase functions deploy generate-content
+```
+
+Run it after the daily fixtures sync (same `x-sync-secret` header). Needs
+upcoming fixtures to write previews, so it depends on the API-Football coverage
+above.
+
 ### Free-tier coverage caveat
 
 The API-Football **Free plan only covers seasons 2022–2024** — current/future

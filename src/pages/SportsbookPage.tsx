@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useFixtures, useSportsbookRealtime } from '@/features/sportsbook/useSportsbook';
 import { FixtureCard } from '@/features/sportsbook/FixtureCard';
+import { FeaturedMatch } from '@/features/sportsbook/FeaturedMatch';
 import { LiveFixtures } from '@/features/sportsbook/LiveFixtures';
 import { BetSlip } from '@/features/sportsbook/BetSlip';
 import { MyBets } from '@/features/sportsbook/MyBets';
@@ -38,6 +39,7 @@ export function SportsbookPage() {
       ) : (
         <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
           <div className="space-y-6">
+            <FeaturedMatch />
             <LiveFixtures />
             <div className="space-y-3">
               <h2 className="font-display text-lg font-semibold text-text">Upcoming</h2>
