@@ -2,6 +2,6 @@ import { PagePlaceholder } from '@/components/PagePlaceholder';
 
 export function NotFoundPage() {
   return (
-    <PagePlaceholder title="Not found" description="That page does not exist. Head back home." />
+    <PagePlaceholder title="Página não encontrada" description="Essa página não existe. Volte ao salão." />
   );
 }

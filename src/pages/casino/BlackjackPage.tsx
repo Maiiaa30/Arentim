@@ -5,15 +5,16 @@ import { useBlackjack, useBlackjackCurrent } from '@/features/casino/useBlackjac
 import { PlayingCard } from '@/features/casino/PlayingCard';
 import { StakeChips } from '@/features/casino/StakeChips';
 import { Button } from '@/components/ui/Button';
+import { Eyebrow } from '@/components/ui/primitives';
 import { formatAmount } from '@/lib/format';
 import type { BlackjackView } from '@/types/db';
 
 const outcomeLabel: Record<string, { text: string; tone: string }> = {
-  win: { text: 'Win', tone: 'text-positive' },
+  win: { text: 'Ganhou', tone: 'text-positive' },
   blackjack: { text: 'Blackjack!', tone: 'text-gold' },
-  push: { text: 'Push', tone: 'text-muted' },
-  lose: { text: 'Lose', tone: 'text-negative' },
-  busted: { text: 'Bust', tone: 'text-negative' },
+  push: { text: 'Empate', tone: 'text-muted' },
+  lose: { text: 'Perdeu', tone: 'text-negative' },
+  busted: { text: 'Rebentou', tone: 'text-negative' },
 };
 
 export function BlackjackPage() {
@@ -41,7 +42,7 @@ export function BlackjackPage() {
     try {
       setView(await deal.mutateAsync(stake));
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not deal.');
+      setError(e instanceof Error ? e.message : 'Não foi possível distribuir.');
     }
   }
 
@@ -51,18 +52,19 @@ export function BlackjackPage() {
     try {
       setView(await act.mutateAsync({ handId: view.hand_id, action }));
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Action failed.');
+      setError(e instanceof Error ? e.message : 'A ação falhou.');
     }
   }
 
-  if (isLoading) return <p className="py-12 text-center text-muted">Loading…</p>;
+  if (isLoading) return <p className="py-12 text-center text-muted">A carregar…</p>;
 
   return (
     <div className="animate-fade-in space-y-6">
       <div>
-        <Link to="/casino" className="text-sm text-muted hover:text-text">← Casino</Link>
-        <h1 className="font-display text-2xl font-bold text-text">Blackjack</h1>
-        <p className="mt-1 text-sm text-muted">Dealer stands on 17 · blackjack pays 3:2</p>
+        <Link to="/" className="font-sans text-sm text-muted-2 hover:text-text">← Voltar às Mesas</Link>
+        <Eyebrow className="mt-3">O Salão</Eyebrow>
+        <h1 className="mt-2 font-display text-[38px] font-medium leading-tight text-text">Blackjack</h1>
+        <p className="mt-2 font-sans text-sm text-muted">O croupier pára nos 17 · blackjack paga 3:2</p>
       </div>
 
       <div className="card space-y-8 p-6">
@@ -70,8 +72,8 @@ export function BlackjackPage() {
           <>
             {/* Dealer */}
             <div>
-              <p className="mb-2 text-sm text-muted">
-                Dealer {view.dealer_total !== null && <span className="text-text">· {view.dealer_total}</span>}
+              <p className="mb-2 font-sans text-sm text-muted">
+                Croupier {view.dealer_total !== null && <span className="text-text">· {view.dealer_total}</span>}
               </p>
               <div className="flex gap-2">
                 {view.dealer.map((c, i) => (
@@ -89,12 +91,12 @@ export function BlackjackPage() {
                 return (
                   <div
                     key={i}
-                    className={`rounded-xl p-3 transition-colors ${
-                      isActive ? 'bg-accent/10 ring-1 ring-accent/40' : ''
+                    className={`rounded p-3 transition-colors ${
+                      isActive ? 'bg-gold/[0.07] ring-1 ring-gold/40' : ''
                     }`}
                   >
-                    <p className="mb-2 text-sm text-muted">
-                      {view.hands.length > 1 ? `Hand ${i + 1}` : 'You'} ·{' '}
+                    <p className="mb-2 font-sans text-sm text-muted">
+                      {view.hands.length > 1 ? `Mão ${i + 1}` : 'Você'} ·{' '}
                       <span className="text-text">{hand.total}</span>
                       {view.status === 'complete' && oc && (
                         <span className={`ml-2 font-semibold ${oc.tone}`}>{oc.text}</span>
@@ -113,41 +115,41 @@ export function BlackjackPage() {
             {/* Result */}
             {view.status === 'complete' && (
               <p className={`text-center font-display text-lg font-bold ${view.payout > 0 ? 'text-positive' : 'text-muted'}`}>
-                {view.payout > 0 ? `Returned ${formatAmount(view.payout)} Tostões` : 'No return this hand'}
+                {view.payout > 0 ? `Devolvido ${formatAmount(view.payout)} Tostões` : 'Sem retorno nesta mão'}
               </p>
             )}
 
             {/* Actions */}
             {inPlay && view.options && (
               <div className="flex flex-wrap justify-center gap-2">
-                <Button onClick={() => onAction('hit')} disabled={busy || !view.options.can_hit}>Hit</Button>
+                <Button variant="primary" onClick={() => onAction('hit')} disabled={busy || !view.options.can_hit}>Pedir</Button>
                 <Button variant="secondary" onClick={() => onAction('stand')} disabled={busy || !view.options.can_stand}>
-                  Stand
+                  Ficar
                 </Button>
                 <Button variant="secondary" onClick={() => onAction('double')} disabled={busy || !view.options.can_double}>
-                  Double
+                  Dobrar
                 </Button>
                 <Button variant="secondary" onClick={() => onAction('split')} disabled={busy || !view.options.can_split}>
-                  Split
+                  Dividir
                 </Button>
               </div>
             )}
           </>
         ) : (
-          <p className="py-8 text-center text-muted">Place a bet to deal.</p>
+          <p className="py-8 text-center font-sans text-muted">Faça uma aposta para distribuir.</p>
         )}
 
         {/* Betting */}
         {showBetting && (
           <div className="space-y-3 border-t border-border pt-6">
             <StakeChips stake={stake} onChange={setStake} balance={balance} disabled={busy} />
-            <Button onClick={onDeal} disabled={busy || stake > balance} className="w-full">
-              {busy ? 'Dealing…' : view?.status === 'complete' ? `Deal again · ${formatAmount(stake)}` : `Deal · ${formatAmount(stake)}`}
+            <Button variant="primary" onClick={onDeal} disabled={busy || stake > balance} className="w-full">
+              {busy ? 'A distribuir…' : view?.status === 'complete' ? `Distribuir de novo · ${formatAmount(stake)}` : `Distribuir · ${formatAmount(stake)}`}
             </Button>
           </div>
         )}
 
-        {error && <p className="text-center text-sm text-negative">{error}</p>}
+        {error && <p className="text-center font-sans text-sm text-negative">{error}</p>}
       </div>
     </div>
   );

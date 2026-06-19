@@ -5,6 +5,7 @@ import { useSlots } from '@/features/casino/useQuickGames';
 import { StakeChips } from '@/features/casino/StakeChips';
 import { REEL_STRIP, SYMBOL_LABEL, type SlotSymbol } from '@/features/casino/slots';
 import { Button } from '@/components/ui/Button';
+import { Eyebrow } from '@/components/ui/primitives';
 import { formatAmount } from '@/lib/format';
 
 function Reel({ symbol, spinning }: { symbol: SlotSymbol; spinning: boolean }) {
@@ -24,7 +25,7 @@ function Reel({ symbol, spinning }: { symbol: SlotSymbol; spinning: boolean }) {
 
   return (
     <div
-      className={`flex h-24 w-24 items-center justify-center rounded-2xl border border-border bg-bg text-5xl transition-transform ${
+      className={`flex h-24 w-24 items-center justify-center rounded border border-border bg-bg text-5xl transition-transform ${
         spinning ? 'animate-pulse' : ''
       }`}
     >
@@ -61,15 +62,16 @@ export function SlotsPage() {
       }, 900);
     } catch (e) {
       setSpinning(false);
-      setError(e instanceof Error ? e.message : 'Spin failed.');
+      setError(e instanceof Error ? e.message : 'A jogada falhou.');
     }
   }
 
   return (
     <div className="animate-fade-in space-y-6">
       <div>
-        <Link to="/casino" className="text-sm text-muted hover:text-text">← Casino</Link>
-        <h1 className="font-display text-2xl font-bold text-text">Slots</h1>
+        <Link to="/" className="font-sans text-sm text-muted-2 hover:text-text">← Voltar às Mesas</Link>
+        <Eyebrow className="mt-3">O Salão</Eyebrow>
+        <h1 className="mt-2 font-display text-[38px] font-medium leading-tight text-text">Slots</h1>
       </div>
 
       <div className="card mx-auto max-w-md space-y-6 p-6 text-center">
@@ -83,23 +85,23 @@ export function SlotsPage() {
           {payout !== null &&
             (payout > 0 ? (
               <p className="font-display text-lg font-bold text-positive">
-                Won {formatAmount(payout)} Tostões!
+                Ganhou {formatAmount(payout)} Tostões!
               </p>
             ) : (
-              <p className="text-sm text-muted">No win — spin again.</p>
+              <p className="font-sans text-sm text-muted">Sem prémio — rode outra vez.</p>
             ))}
         </div>
 
         <div className="space-y-3">
           <StakeChips stake={stake} onChange={setStake} balance={balance} disabled={spinning} />
-          <Button onClick={spin} disabled={spinning || stake > balance} className="w-full">
-            {spinning ? 'Spinning…' : `Spin · ${formatAmount(stake)}`}
+          <Button variant="primary" onClick={spin} disabled={spinning || stake > balance} className="w-full">
+            {spinning ? 'A rodar…' : `Rodar · ${formatAmount(stake)}`}
           </Button>
-          {error && <p className="text-sm text-negative">{error}</p>}
+          {error && <p className="font-sans text-sm text-negative">{error}</p>}
         </div>
 
-        <p className="text-xs text-muted">
-          🪙×3 = 100× · 7×3 = 40× · 🐓×3 = 18× · 🍷×3 = 13× · 🐟×3 = 7× · pairs of 🪙/7 pay too
+        <p className="font-mono text-xs text-muted-2">
+          🪙×3 = 100× · 7×3 = 40× · 🐓×3 = 18× · 🍷×3 = 13× · 🐟×3 = 7× · pares de 🪙/7 também pagam
         </p>
       </div>
     </div>

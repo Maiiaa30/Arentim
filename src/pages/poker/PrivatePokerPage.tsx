@@ -11,22 +11,34 @@ import { PokerCard } from '@/features/poker/PokerCard';
 import type { PokerPlayerView } from '@/features/poker/types';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { Eyebrow } from '@/components/ui/primitives';
 import { CoinIcon } from '@/components/CoinIcon';
 import { formatAmount } from '@/lib/format';
 
+const STATUS_LABEL: Record<string, string> = {
+  active: 'ativo',
+  folded: 'desistiu',
+  allin: 'all-in',
+  out: 'fora',
+  waiting: 'à espera',
+  open: 'aberta',
+  playing: 'a jogar',
+  done: 'terminada',
+};
+
 function Seat({ p, isTurn, isYou }: { p: PokerPlayerView; isTurn: boolean; isYou: boolean }) {
   return (
-    <div className={`rounded-xl border p-3 ${isTurn ? 'border-gold bg-gold/10' : 'border-border bg-surface'} ${p.status === 'folded' ? 'opacity-50' : ''}`}>
+    <div className={`rounded border p-3 ${isTurn ? 'border-gold bg-gold/10' : 'border-border bg-surface'} ${p.status === 'folded' ? 'opacity-50' : ''}`}>
       <div className="flex items-center justify-between gap-2">
-        <span className="text-sm font-medium text-text">{p.name}{isYou && <span className="text-muted"> (you)</span>}</span>
-        <span className="flex items-center gap-1 text-xs text-muted"><CoinIcon className="h-3 w-3" /> {formatAmount(p.stack)}</span>
+        <span className="font-sans text-sm font-medium text-text">{p.name}{isYou && <span className="text-muted"> (você)</span>}</span>
+        <span className="flex items-center gap-1 font-mono text-xs text-muted"><CoinIcon className="h-3 w-3" /> {formatAmount(p.stack)}</span>
       </div>
       <div className="mt-2 flex gap-1">
         {p.hole.length === 0 ? <span className="text-xs text-muted">—</span> : p.hole.map((c, i) => <PokerCard key={i} card={c} small />)}
       </div>
       <div className="mt-1 flex items-center justify-between text-[11px]">
-        <span className="capitalize text-muted">{p.status === 'allin' ? 'all-in' : p.status}</span>
-        {p.committed > 0 && <span className="tabular-nums text-gold">{formatAmount(p.committed)}</span>}
+        <span className="text-muted">{STATUS_LABEL[p.status] ?? p.status}</span>
+        {p.committed > 0 && <span className="font-mono tabular-nums text-gold">{formatAmount(p.committed)}</span>}
       </div>
     </div>
   );
@@ -58,11 +70,11 @@ export function PrivatePokerPage() {
 
   const wrap = async (fn: () => Promise<unknown>) => {
     setError(null);
-    try { await fn(); } catch (e) { setError(e instanceof Error ? e.message : 'Action failed.'); }
+    try { await fn(); } catch (e) { setError(e instanceof Error ? e.message : 'A ação falhou.'); }
   };
 
   async function onCreate() {
-    if (buyIn > balance) return setError('Not enough Tostões.');
+    if (buyIn > balance) return setError('Saldo insuficiente.');
     await wrap(async () => {
       const res = await create.mutateAsync(buyIn);
       setTableId(res.table_id ?? null);
@@ -83,38 +95,41 @@ export function PrivatePokerPage() {
   // ---- Lobby ----
   if (tableId == null || !view) {
     return (
-      <div className="animate-fade-in space-y-6">
+      <div className="animate-fade-in space-y-8">
         <div>
-          <Link to="/poker" className="text-sm text-muted hover:text-text">← Poker</Link>
-          <h1 className="font-display text-2xl font-bold text-text">Private table</h1>
+          <Link to="/poker" className="font-sans text-sm text-muted-2 hover:text-text">← Póquer</Link>
+          <div className="mt-4">
+            <Eyebrow>Só para convidados</Eyebrow>
+            <h1 className="mt-2 font-display text-[40px] font-medium leading-[1.04] text-text">Mesa privada</h1>
+          </div>
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
-          <div className="card space-y-3 p-6">
-            <h2 className="font-display font-semibold text-text">Create a table</h2>
-            <Input id="buyin" type="number" label="Buy-in" min={100} value={buyIn}
+          <div className="card space-y-4 p-6">
+            <h2 className="font-display text-lg font-semibold text-text">Criar uma mesa</h2>
+            <Input id="buyin" type="number" label="Entrada" min={100} value={buyIn}
               onChange={(e) => setBuyIn(Math.max(0, Math.floor(Number(e.target.value) || 0)))} />
-            <Button onClick={onCreate} disabled={busy || buyIn > balance || buyIn < 100} className="w-full">Create</Button>
+            <Button variant="primary" onClick={onCreate} disabled={busy || buyIn > balance || buyIn < 100} className="w-full">Criar</Button>
           </div>
-          <div className="card space-y-3 p-6">
-            <h2 className="font-display font-semibold text-text">Join with a code</h2>
-            <Input id="code" label="Table code" placeholder="ABC123" value={joinCode}
+          <div className="card space-y-4 p-6">
+            <h2 className="font-display text-lg font-semibold text-text">Entrar com um código</h2>
+            <Input id="code" label="Código da mesa" placeholder="ABC123" value={joinCode}
               onChange={(e) => setJoinCode(e.target.value)} />
-            <Button onClick={onJoin} disabled={busy || joinCode.trim().length < 4} className="w-full">Join</Button>
+            <Button variant="primary" onClick={onJoin} disabled={busy || joinCode.trim().length < 4} className="w-full">Entrar</Button>
           </div>
         </div>
         {myTables && myTables.length > 0 && (
           <div className="space-y-2">
-            <h2 className="text-sm font-medium text-muted">Your tables</h2>
+            <h2 className="font-sans text-[10.5px] font-medium uppercase tracking-[0.18em] text-muted-2">As suas mesas</h2>
             {myTables.map((t) => (
               <button key={t.table_id} onClick={() => setTableId(t.table_id)}
-                className="card flex w-full items-center justify-between p-3 text-left hover:border-accent/50">
-                <span className="text-sm text-text">Table {t.code} · {t.player_count} seated</span>
-                <span className="text-xs capitalize text-muted">{t.status}{t.is_host ? ' · host' : ''}</span>
+                className="card card-hover focus-ring flex w-full items-center justify-between p-3 text-left">
+                <span className="font-sans text-sm text-text">Mesa {t.code} · {t.player_count} sentados</span>
+                <span className="font-sans text-xs text-muted">{STATUS_LABEL[t.status] ?? t.status}{t.is_host ? ' · anfitrião' : ''}</span>
               </button>
             ))}
           </div>
         )}
-        {error && <p className="text-sm text-negative">{error}</p>}
+        {error && <p className="font-sans text-sm text-negative">{error}</p>}
       </div>
     );
   }
@@ -131,10 +146,10 @@ export function PrivatePokerPage() {
     <div className="animate-fade-in space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="font-display text-2xl font-bold text-text">Private table</h1>
-          {code && <p className="text-sm text-muted">Invite code: <span className="font-mono font-semibold text-gold">{code}</span></p>}
+          <h1 className="font-display text-[32px] font-medium text-text">Mesa privada</h1>
+          {code && <p className="font-sans text-sm text-muted">Código da mesa: <span className="font-mono font-semibold text-gold">{code}</span></p>}
         </div>
-        <Button variant="secondary" onClick={onLeave} disabled={busy}>Leave</Button>
+        <Button variant="secondary" onClick={onLeave} disabled={busy}>Sair da mesa</Button>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -142,16 +157,16 @@ export function PrivatePokerPage() {
       </div>
 
       <div className="card flex flex-col items-center gap-3 p-6">
-        <span className="flex items-center gap-1 text-sm text-muted">
-          Pot <CoinIcon className="h-3.5 w-3.5" /><span className="font-semibold text-text">{formatAmount(view.pot)}</span>
+        <span className="flex items-center gap-1 font-sans text-sm text-muted">
+          Pote <CoinIcon className="h-3.5 w-3.5" /><span className="font-mono font-semibold text-text">{formatAmount(view.pot)}</span>
         </span>
         <div className="flex gap-2">
-          {view.community.length === 0 ? <span className="text-sm text-muted">{inLobby ? 'Waiting to start' : 'Pre-flop'}</span>
+          {view.community.length === 0 ? <span className="font-sans text-sm text-muted">{inLobby ? 'À espera de iniciar' : 'Pré-flop'}</span>
             : view.community.map((c, i) => <PokerCard key={i} card={c} />)}
         </div>
         {view.result && (
-          <p className="text-center text-sm font-semibold text-positive">
-            {view.result.winners.map((w) => `${view.players.find((p) => p.id === w.id)?.name ?? w.id} wins ${formatAmount(w.amount)}`).join(' · ')}
+          <p className="text-center font-sans text-sm font-semibold text-positive">
+            {view.result.winners.map((w) => `${view.players.find((p) => p.id === w.id)?.name ?? w.id} ganha ${formatAmount(w.amount)}`).join(' · ')}
           </p>
         )}
       </div>
@@ -162,21 +177,21 @@ export function PrivatePokerPage() {
       <div className="card space-y-3 p-4">
         {inLobby ? (
           <div className="flex flex-wrap justify-center gap-2">
-            {isHost && <Button variant="secondary" onClick={() => wrap(() => addBot.mutateAsync({ tableId, difficulty: 'medium' }))} disabled={busy}>Add bot</Button>}
-            {isHost && <Button onClick={() => wrap(() => start.mutateAsync(tableId))} disabled={busy || view.players.length < 2}>Start hand</Button>}
-            {!isHost && <p className="text-sm text-muted">Waiting for the host to start…</p>}
+            {isHost && <Button variant="secondary" onClick={() => wrap(() => addBot.mutateAsync({ tableId, difficulty: 'medium' }))} disabled={busy}>Adicionar bot</Button>}
+            {isHost && <Button variant="primary" onClick={() => wrap(() => start.mutateAsync(tableId))} disabled={busy || view.players.length < 2}>Iniciar mão</Button>}
+            {!isHost && <p className="font-sans text-sm text-muted">À espera de o anfitrião iniciar…</p>}
           </div>
         ) : myTurn ? (
           <>
             <div className="flex flex-wrap justify-center gap-2">
-              <Button variant="danger" onClick={() => wrap(() => act.mutateAsync({ tableId, action: 'fold', raiseTo: 0 }))} disabled={busy}>Fold</Button>
+              <Button variant="danger" onClick={() => wrap(() => act.mutateAsync({ tableId, action: 'fold', raiseTo: 0 }))} disabled={busy}>Desistir</Button>
               {owe === 0 ? (
-                <Button variant="secondary" onClick={() => wrap(() => act.mutateAsync({ tableId, action: 'check', raiseTo: 0 }))} disabled={busy}>Check</Button>
+                <Button variant="secondary" onClick={() => wrap(() => act.mutateAsync({ tableId, action: 'check', raiseTo: 0 }))} disabled={busy}>Passar</Button>
               ) : (
-                <Button onClick={() => wrap(() => act.mutateAsync({ tableId, action: 'call', raiseTo: 0 }))} disabled={busy}>Call {formatAmount(Math.min(owe, me?.stack ?? 0))}</Button>
+                <Button variant="primary" onClick={() => wrap(() => act.mutateAsync({ tableId, action: 'call', raiseTo: 0 }))} disabled={busy}>Pagar {formatAmount(Math.min(owe, me?.stack ?? 0))}</Button>
               )}
-              <Button onClick={() => wrap(() => act.mutateAsync({ tableId, action: 'raise', raiseTo: Math.max(raiseTo, minRaiseTo) }))} disabled={busy || (me?.stack ?? 0) <= owe}>
-                Raise to {formatAmount(Math.max(raiseTo, minRaiseTo))}
+              <Button variant="primary" onClick={() => wrap(() => act.mutateAsync({ tableId, action: 'raise', raiseTo: Math.max(raiseTo, minRaiseTo) }))} disabled={busy || (me?.stack ?? 0) <= owe}>
+                Subir para {formatAmount(Math.max(raiseTo, minRaiseTo))}
               </Button>
             </div>
             <Input id="raise" type="range" min={minRaiseTo} max={(me?.stack ?? 0) + (me?.committed ?? 0)}
@@ -184,16 +199,16 @@ export function PrivatePokerPage() {
           </>
         ) : view.handOver ? (
           <div className="flex justify-center gap-2">
-            {isHost ? <Button onClick={() => wrap(() => deal.mutateAsync(tableId))} disabled={busy}>Next hand</Button>
-              : <p className="text-sm text-muted">Hand over — waiting for the host.</p>}
+            {isHost ? <Button variant="primary" onClick={() => wrap(() => deal.mutateAsync(tableId))} disabled={busy}>Próxima mão</Button>
+              : <p className="font-sans text-sm text-muted">Mão terminada — à espera do anfitrião.</p>}
           </div>
         ) : (
-          <p className="text-center text-sm text-muted">Waiting for {view.players.find((p) => p.id === view.toActId)?.name ?? 'others'}…</p>
+          <p className="text-center font-sans text-sm text-muted">À espera de {view.players.find((p) => p.id === view.toActId)?.name ?? 'outros'}…</p>
         )}
-        {error && <p className="text-center text-sm text-negative">{error}</p>}
+        {error && <p className="text-center font-sans text-sm text-negative">{error}</p>}
       </div>
 
-      {view.log.length > 0 && <p className="text-center text-xs text-muted">{view.log.join(' · ')}</p>}
+      {view.log.length > 0 && <p className="text-center font-sans text-xs text-muted">{view.log.join(' · ')}</p>}
     </div>
   );
 }
