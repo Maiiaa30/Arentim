@@ -11,9 +11,10 @@ import type { Fixture } from '@/types/db';
  * Read-only: it reuses the sportsbook fixtures hook and the Realtime channel and
  * never touches money/bet logic. Auto-refreshes via React Query + Realtime.
  *
- * NOTE: the free API-Football plan only covers old (2023/2024) seasons, so only
- * seeded fixtures exist today. This page renders gracefully from whatever is
- * present; once the subscription is upgraded it fills with current-season data.
+ * Data comes from Football-Data.org (free) via the sync-fixtures /
+ * poll-live-scores Edge Functions. This page renders gracefully from whatever is
+ * present; once FOOTBALL_DATA_TOKEN is set and the daily sync runs it fills with
+ * real fixtures + the last 3 days of results.
  */
 
 type Filter = 'todos' | 'live' | 'upcoming' | 'finished';
@@ -22,8 +23,10 @@ const FILTERS: { key: Filter; label: string }[] = [
   { key: 'todos', label: 'Todos' },
   { key: 'live', label: 'Ao vivo' },
   { key: 'upcoming', label: 'Próximos' },
-  { key: 'finished', label: 'Terminados' },
+  { key: 'finished', label: 'Últimos 3 dias' },
 ];
+
+const THREE_DAYS_MS = 3 * 86_400_000;
 
 const dayLabel = (iso: string) => {
   const d = new Date(iso);
@@ -105,8 +108,9 @@ export function ScoresPage() {
     const upcomingList = all
       .filter((f) => f.status === 'scheduled' || f.status === 'postponed')
       .sort((a, b) => +new Date(a.kickoff) - +new Date(b.kickoff));
+    const cutoff = Date.now() - THREE_DAYS_MS;
     const finishedList = all
-      .filter((f) => f.status === 'finished')
+      .filter((f) => f.status === 'finished' && +new Date(f.kickoff) >= cutoff)
       .sort((a, b) => +new Date(b.kickoff) - +new Date(a.kickoff));
     return { liveList, upcomingList, finishedList };
   }, [fixtures]);
@@ -172,7 +176,7 @@ export function ScoresPage() {
           )}
           {showFinished && (
             <Section
-              title="Terminados"
+              title="Últimos 3 dias"
               count={finishedList.length}
               groups={groupByLeagueDay(finishedList)}
             />
