@@ -48,31 +48,40 @@ supabase functions deploy sync-fixtures
 
 ### Run it
 
+The functions are deployed with JWT verification on, so the **Supabase gateway**
+also needs the project's **publishable (anon) key** as `apikey` + `Authorization`
+— on top of the function's own `x-sync-secret`. (Without the apikey you get
+`UNAUTHORIZED_NO_AUTH_HEADER` from the gateway before your code runs.)
+
 Manually (also good for the first population):
 
 ```bash
 curl -X POST \
+  -H "apikey: <VITE_SUPABASE_ANON_KEY>" \
+  -H "Authorization: Bearer <VITE_SUPABASE_ANON_KEY>" \
   -H "x-sync-secret: <SYNC_SECRET>" \
   https://kactlxdjoxjrqhmkjtfj.functions.supabase.co/sync-fixtures
 ```
 
 Daily schedule — in the Supabase Dashboard → **Database → Cron** (or
 `Integrations → Cron`), create a job that POSTs to the function URL with the
-`x-sync-secret` header, e.g. every day at 06:00:
+three headers, e.g. every day at 06:00:
 
 ```sql
 select cron.schedule(
   'sync-fixtures-daily', '0 6 * * *',
   $$ select net.http_post(
        url := 'https://kactlxdjoxjrqhmkjtfj.functions.supabase.co/sync-fixtures',
-       headers := jsonb_build_object('x-sync-secret', '<SYNC_SECRET>')
+       headers := jsonb_build_object(
+         'apikey', '<VITE_SUPABASE_ANON_KEY>',
+         'Authorization', 'Bearer <VITE_SUPABASE_ANON_KEY>',
+         'x-sync-secret', '<SYNC_SECRET>')
      ); $$
 );
 ```
 
-> Keep request volume under the API-Football free tier (~100/day): the daily
-> sync makes a couple of requests per league. Don't schedule it more often than
-> needed.
+> Football-Data.org free tier allows 10 req/min; the daily sync spaces ~2
+> requests per competition. Keep `poll-live-scores` at ~1–2 min.
 
 ## poll-live-scores
 

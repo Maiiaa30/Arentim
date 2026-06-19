@@ -13,6 +13,7 @@ const FD_BASE = 'https://api.football-data.org/v4';
 
 /** Competitions to sync (free-tier codes). Liga Portugal first, then the big leagues + UCL. */
 export const FD_COMPETITIONS: { code: string; name: string }[] = [
+  { code: 'WC', name: 'Campeonato do Mundo' }, // live in summer tournament years
   { code: 'PPL', name: 'Liga Portugal' },
   { code: 'CL', name: 'Liga dos Campeões' },
   { code: 'PL', name: 'Premier League' },
@@ -82,7 +83,9 @@ export async function fetchStrength(code: string, token: string): Promise<Streng
   type Row = { team: { name: string; shortName?: string }; playedGames: number; goalsFor: number; goalsAgainst: number };
   type Resp = { standings: { type: string; table: Row[] }[] };
   const data = await fdGet<Resp>(`/competitions/${code}/standings`, token);
-  const total = data.standings?.find((s) => s.type === 'TOTAL')?.table ?? [];
+  // Leagues have one TOTAL table; group tournaments (World Cup, UCL groups) have
+  // several — merge them all so every team is covered.
+  const total = (data.standings ?? []).filter((s) => s.type === 'TOTAL').flatMap((s) => s.table);
   let sumGF = 0, sumPlayed = 0;
   for (const r of total) { sumGF += r.goalsFor ?? 0; sumPlayed += r.playedGames ?? 0; }
   const avg = sumPlayed > 0 ? sumGF / sumPlayed : 1.35; // goals/team/game
