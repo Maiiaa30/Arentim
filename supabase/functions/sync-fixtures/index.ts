@@ -23,10 +23,12 @@ import {
   teamCrest,
   teamName,
 } from '../_shared/footballData.ts';
+import { ODDS_SPORT, fetchRealOdds, oddsKey, type RealOdds } from '../_shared/oddsApi.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const TOKEN = Deno.env.get('FOOTBALL_DATA_TOKEN') ?? '';
+const ODDS_KEY = Deno.env.get('ODDS_API_KEY') ?? ''; // The Odds API — real bookmaker odds (optional)
 const SYNC_SECRET = Deno.env.get('SYNC_SECRET') ?? '';
 const GAP_MS = 6500; // keep under the 10 req/min free limit
 
@@ -58,6 +60,16 @@ Deno.serve(async (req) => {
       await sleep(GAP_MS);
       const matches = await fetchMatches(comp.code, TOKEN, from, to);
 
+      // Real bookmaker odds (optional) — overlaid on the generated model below.
+      let realOdds = new Map<string, RealOdds>();
+      if (ODDS_KEY && ODDS_SPORT[comp.code]) {
+        try {
+          realOdds = await fetchRealOdds(ODDS_SPORT[comp.code]!, ODDS_KEY);
+        } catch {
+          /* odds provider best-effort; generated odds still apply */
+        }
+      }
+
       // Upsert every match in the window with a uniform row shape: upcoming ones
       // carry generated odds; finished/live ones carry their score (so the last
       // 3 days of results show on the Resultados page). Skip "TBD" fixtures
@@ -83,7 +95,9 @@ Deno.serve(async (req) => {
             home_crest: teamCrest(m.homeTeam),
             away_crest: teamCrest(m.awayTeam),
             stats: { home: strength.stand.get(home) ?? null, away: strength.stand.get(away) ?? null },
-            odds: computeOdds(home, away, strength),
+            // Prefer real bookmaker odds; fall back to the generated model
+            // (BTTS always comes from the model — the provider doesn't offer it).
+            odds: { ...computeOdds(home, away, strength), ...(realOdds.get(oddsKey(home, away)) ?? {}) },
             updated_at: new Date().toISOString(),
           };
         });
