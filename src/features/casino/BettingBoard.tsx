@@ -71,13 +71,13 @@ export function BettingBoard({ onPlace, disabled }: BettingBoardProps) {
       {/* Dozens */}
       <div className="ml-12 grid grid-cols-3 gap-1">
         <button type="button" disabled={disabled} onClick={() => onPlace('dozen1', null)} className={outside}>
-          1st 12
+          1.ª dúzia
         </button>
         <button type="button" disabled={disabled} onClick={() => onPlace('dozen2', null)} className={outside}>
-          2nd 12
+          2.ª dúzia
         </button>
         <button type="button" disabled={disabled} onClick={() => onPlace('dozen3', null)} className={outside}>
-          3rd 12
+          3.ª dúzia
         </button>
       </div>
 
@@ -87,16 +87,16 @@ export function BettingBoard({ onPlace, disabled }: BettingBoardProps) {
           1–18
         </button>
         <button type="button" disabled={disabled} onClick={() => onPlace('even', null)} className={outside}>
-          Even
+          Par
         </button>
-        <button type="button" disabled={disabled} onClick={() => onPlace('red', null)} className={`${outside} !border-negative/50`}>
-          Red
+        <button type="button" disabled={disabled} onClick={() => onPlace('red', null)} className={`${outside} !border-negative/50 !text-negative`}>
+          Vermelho
         </button>
         <button type="button" disabled={disabled} onClick={() => onPlace('black', null)} className={outside}>
-          Black
+          Preto
         </button>
         <button type="button" disabled={disabled} onClick={() => onPlace('odd', null)} className={outside}>
-          Odd
+          Ímpar
         </button>
         <button type="button" disabled={disabled} onClick={() => onPlace('high', null)} className={outside}>
           19–36

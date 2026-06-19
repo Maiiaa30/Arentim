@@ -176,7 +176,7 @@ export function RoulettePage() {
 
         {/* Board + slip */}
         <div className="space-y-4">
-          <div className="card p-4">
+          <div className="felt felt-rail rounded-lg p-4">
             <BettingBoard onPlace={placeBet} disabled={spinning} />
           </div>
 

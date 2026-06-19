@@ -72,6 +72,10 @@ function MachineScreen({ m }: { m: SlotMachineMeta }) {
   );
   const allGlyphs = useMemo(() => m.symbols.map((s) => s.glyph), [m.symbols]);
   const jackpotGlyph = glyphById[m.jackpot_symbol] ?? '✦';
+  const maxVisible = useMemo(
+    () => Math.max(0, ...m.paytable.filter((r) => r.mult != null).map((r) => r.mult as number)),
+    [m.paytable],
+  );
 
   const betOptions = useMemo(() => {
     const set = new Set<number>([m.min_bet, m.max_bet, ...DENOMS.filter((d) => d >= m.min_bet && d <= m.max_bet)]);
@@ -132,49 +136,86 @@ function MachineScreen({ m }: { m: SlotMachineMeta }) {
       </div>
 
       <div className="grid gap-5 lg:grid-cols-[1fr_280px]">
-        {/* Cabinet */}
-        <div className="felt felt-rail relative overflow-hidden rounded-lg p-6">
-          {/* Mystery jackpot meter */}
+        {/* Cabinet — ornate gilded frame around a themed reel housing */}
+        <div
+          className="rounded-xl p-[3px] shadow-[0_24px_70px_rgba(0,0,0,0.55)]"
+          style={{ background: `linear-gradient(155deg, #f7e4ad, ${hex}, #5b4824)` }}
+        >
           <div
-            className={`mx-auto mb-6 flex max-w-sm items-center justify-center gap-3 rounded border px-4 py-2.5 ${
-              result?.jackpot ? 'animate-jackpot-flash' : ''
-            }`}
-            style={{ borderColor: `${hex}66`, background: `linear-gradient(180deg, ${hex}1f, transparent)` }}
+            className="relative overflow-hidden rounded-[9px] p-5 sm:p-6"
+            style={{
+              background: `radial-gradient(135% 90% at 50% -10%, ${hex}38, transparent 55%), linear-gradient(180deg, #171309, #0a0907 75%)`,
+            }}
           >
-            <span className="text-2xl animate-glow rounded-full" aria-hidden>{jackpotGlyph}</span>
-            <div className="text-center">
-              <p className="font-sans text-[9px] uppercase tracking-[0.3em] text-muted-2">Jackpot Mistério</p>
-              <p className="font-display text-xl font-bold" style={{ color: hex }}>
-                {result?.jackpot ? `${formatAmount(result.payout)} tós!` : '? ? ?'}
+            {/* Marquee */}
+            <div className="mb-4 text-center">
+              <p className="font-sans text-[8.5px] uppercase tracking-[0.4em] text-muted-2">Arentim Slots</p>
+              <h2
+                className="font-display text-[26px] font-bold leading-tight"
+                style={{ color: hex, textShadow: `0 0 18px ${hex}66` }}
+              >
+                {m.name}
+              </h2>
+              <p className="mt-0.5 font-sans text-[10.5px] uppercase tracking-[0.22em] text-gold-light">
+                Prémios até {maxVisible}× · Jackpot <span className="font-bold">???</span>
               </p>
             </div>
-          </div>
 
-          {/* Reels */}
-          <div className="relative flex justify-center gap-2.5 sm:gap-3.5">
-            <Reel glyphs={allGlyphs} target={targets[0]!} spinning={spin[0]} won={won} accent={hex} />
-            <Reel glyphs={allGlyphs} target={targets[1]!} spinning={spin[1]} won={won} accent={hex} />
-            <Reel glyphs={allGlyphs} target={targets[2]!} spinning={spin[2]} won={won} accent={hex} />
-            {won && result && <WinCelebration key={result.id} jackpot={result.jackpot} />}
-          </div>
+            {/* Mystery jackpot meter */}
+            <div
+              className={`mx-auto mb-5 flex max-w-sm items-center justify-center gap-3 rounded border px-4 py-2 ${
+                result?.jackpot ? 'animate-jackpot-flash' : ''
+              }`}
+              style={{ borderColor: `${hex}66`, background: `linear-gradient(180deg, ${hex}22, transparent)` }}
+            >
+              <span className="animate-glow rounded-full text-2xl" aria-hidden>{jackpotGlyph}</span>
+              <div className="text-center">
+                <p className="font-sans text-[9px] uppercase tracking-[0.3em] text-muted-2">Jackpot Mistério</p>
+                <p className="font-display text-xl font-bold" style={{ color: hex }}>
+                  {result?.jackpot ? `${formatAmount(result.payout)} tós!` : '? ? ?'}
+                </p>
+              </div>
+            </div>
 
-          {/* Outcome line */}
-          <div className="mt-5 flex h-9 items-center justify-center text-center">
-            {anySpinning ? (
-              <p className="font-sans text-sm text-muted">A rodar…</p>
-            ) : result?.jackpot ? (
-              <p className="animate-pop font-display text-2xl font-bold" style={{ color: hex }}>
-                ✦ JACKPOT ✦ {formatAmount(result.payout)} Tostões!
-              </p>
-            ) : result && result.payout > 0 ? (
-              <p className="animate-pop font-display text-lg font-bold text-positive">
-                Ganhou {formatAmount(result.payout)} Tostões! ({result.mult}×)
-              </p>
-            ) : result ? (
-              <p className="font-sans text-sm text-muted">Sem prémio — gire outra vez.</p>
-            ) : (
-              <p className="font-sans text-sm text-muted-2">Faça a sua aposta e gire.</p>
-            )}
+            {/* Reel housing with a gilded centre payline */}
+            <div
+              className="relative mx-auto max-w-md rounded-md p-2.5"
+              style={{
+                background: 'linear-gradient(180deg, rgba(0,0,0,0.55), rgba(0,0,0,0.3))',
+                boxShadow: 'inset 0 0 0 1px rgba(201,162,75,0.35), inset 0 0 30px rgba(0,0,0,0.6)',
+              }}
+            >
+              <div className="relative flex justify-center gap-2.5 sm:gap-3.5">
+                <span
+                  className="pointer-events-none absolute inset-x-1 top-1/2 z-10 h-[2px] -translate-y-1/2"
+                  style={{ background: `linear-gradient(90deg, transparent, ${hex}, transparent)` }}
+                  aria-hidden
+                />
+                <Reel glyphs={allGlyphs} target={targets[0]!} spinning={spin[0]} won={won} accent={hex} />
+                <Reel glyphs={allGlyphs} target={targets[1]!} spinning={spin[1]} won={won} accent={hex} />
+                <Reel glyphs={allGlyphs} target={targets[2]!} spinning={spin[2]} won={won} accent={hex} />
+                {won && result && <WinCelebration key={result.id} jackpot={result.jackpot} />}
+              </div>
+            </div>
+
+            {/* Outcome line */}
+            <div className="mt-5 flex h-9 items-center justify-center text-center">
+              {anySpinning ? (
+                <p className="font-sans text-sm text-muted">A rodar…</p>
+              ) : result?.jackpot ? (
+                <p className="animate-pop font-display text-2xl font-bold" style={{ color: hex }}>
+                  ✦ JACKPOT ✦ {formatAmount(result.payout)} Tostões!
+                </p>
+              ) : result && result.payout > 0 ? (
+                <p className="animate-pop font-display text-lg font-bold text-positive">
+                  Ganhou {formatAmount(result.payout)} Tostões! ({result.mult}×)
+                </p>
+              ) : result ? (
+                <p className="font-sans text-sm text-muted">Sem prémio — gire outra vez.</p>
+              ) : (
+                <p className="font-sans text-sm text-muted-2">Faça a sua aposta e gire.</p>
+              )}
+            </div>
           </div>
         </div>
 
