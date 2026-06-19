@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useProfile } from '@/features/profile/useProfile';
-import { usePoker, usePokerState } from '@/features/poker/usePoker';
+import { usePoker, usePokerState, type PokerResult } from '@/features/poker/usePoker';
 import { PokerTable, ResultBanner } from '@/features/poker/PokerTable';
 import { PokerActionBar } from '@/features/poker/PokerActionBar';
 import type { PokerView } from '@/features/poker/types';
@@ -16,6 +16,12 @@ const DIFFICULTY_LABEL: Record<'easy' | 'medium' | 'hard', string> = {
   hard: 'Difícil',
 };
 
+const BUYIN_PRESETS = [100, 200, 500, 1000, 2500];
+
+/** Pause between each bot's move when replaying a hand's trail. */
+const BOT_STEP_MS = 650;
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
 export function PokerPage() {
   const { data: profile } = useProfile();
   const { data: resumed } = usePokerState();
@@ -27,29 +33,79 @@ export function PokerPage() {
   const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
   const [raiseTo, setRaiseTo] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [animating, setAnimating] = useState(false);
 
+  // Resume an in-progress table exactly once (on first load). Without the guard
+  // the resume would re-populate the table the instant you leave it.
+  const resumeApplied = useRef(false);
   useEffect(() => {
-    if (resumed?.view && !view) setView(resumed.view);
-  }, [resumed, view]);
+    if (!resumeApplied.current && resumed?.view) {
+      resumeApplied.current = true;
+      setView(resumed.view);
+    }
+  }, [resumed]);
 
   const balance = profile?.balance ?? 0;
   const you = view?.players.find((p) => p.id === 'you');
   const myTurn = view?.toActId === 'you' && !view.handOver;
   const owe = view ? view.currentBet - (you?.committed ?? 0) : 0;
-  const busy = sit.isPending || act.isPending || deal.isPending || leave.isPending;
+  const busy = sit.isPending || act.isPending || deal.isPending || leave.isPending || animating;
 
-  async function run(fn: () => Promise<{ view: PokerView }>) {
+  // Raise range: a normal min-raise, capped by going all-in. Short stacks that
+  // can't make a full raise can still shove (min collapses to the all-in total).
+  const allInTo = (you?.stack ?? 0) + (you?.committed ?? 0);
+  const minRaiseTo = Math.min(view ? view.currentBet + view.minRaise : 0, allInTo);
+  const maxRaiseTo = allInTo;
+  const canRaise = !!view && allInTo > view.currentBet && !!myTurn;
+  const effRaiseTo = Math.max(minRaiseTo, Math.min(raiseTo || minRaiseTo, maxRaiseTo));
+
+  // Reset the chosen raise whenever it becomes the player's turn or the spot
+  // changes, so a stale amount from a previous street is never reused.
+  useEffect(() => {
+    setRaiseTo(0);
+  }, [view?.toActId, view?.street, view?.currentBet]);
+
+  // Quick bet-sizing presets, clamped to the legal range and de-duplicated.
+  const quickBets = (() => {
+    if (!view || !canRaise) return [];
+    const clamp = (n: number) => Math.max(minRaiseTo, Math.min(n, maxRaiseTo));
+    const raw = [
+      { label: 'Mín', to: minRaiseTo },
+      { label: '½ Pote', to: clamp(view.currentBet + Math.round(view.pot * 0.5)) },
+      { label: 'Pote', to: clamp(view.currentBet + view.pot) },
+      { label: 'All-in', to: maxRaiseTo },
+    ];
+    const seen = new Set<number>();
+    return raw.filter((q) => (seen.has(q.to) ? false : (seen.add(q.to), true)));
+  })();
+
+  async function run(fn: () => Promise<PokerResult>) {
     setError(null);
     try {
       const res = await fn();
+      resumeApplied.current = true; // we now own the live view; don't let resume override it
+      const trail = res.trail ?? [];
+      if (trail.length === 0) {
+        setView(res.view);
+        return;
+      }
+      // Replay the hand one move at a time so the bots don't all act instantly.
+      setAnimating(true);
+      for (const step of trail) {
+        setView(step);
+        await sleep(BOT_STEP_MS);
+      }
       setView(res.view);
+      setAnimating(false);
     } catch (e) {
+      setAnimating(false);
       setError(e instanceof Error ? e.message : 'A ação falhou.');
     }
   }
 
   async function onSit() {
     if (buyIn > balance) return setError('Saldo insuficiente para essa entrada.');
+    if (buyIn < 100) return setError('A entrada mínima é 100.');
     await run(() => sit.mutateAsync({ buyIn, botCount, difficulty }));
   }
   async function onLeave() {
@@ -77,10 +133,39 @@ export function PokerPage() {
           </div>
         </div>
         <div className="card mx-auto max-w-md space-y-5 p-6">
-          <Input
-            id="buyin" type="number" label="Entrada" min={100} value={buyIn}
-            onChange={(e) => setBuyIn(Math.max(0, Math.floor(Number(e.target.value) || 0)))}
-          />
+          <div>
+            <label htmlFor="buyin" className="mb-1.5 block font-sans text-[10.5px] font-medium uppercase tracking-[0.18em] text-muted-2">
+              Entrada (fichas para a mesa)
+            </label>
+            <Input
+              id="buyin" type="number" min={100} value={buyIn}
+              onChange={(e) => setBuyIn(Math.max(0, Math.floor(Number(e.target.value) || 0)))}
+            />
+            <div className="mt-2 flex flex-wrap gap-2">
+              {BUYIN_PRESETS.map((amt) => (
+                <button
+                  key={amt}
+                  type="button"
+                  onClick={() => setBuyIn(amt)}
+                  disabled={amt > balance}
+                  className={`focus-ring rounded-full border px-3 py-1.5 font-mono text-xs transition-colors disabled:opacity-30 ${
+                    buyIn === amt ? 'border-gold bg-gold/10 text-gold' : 'border-border text-muted hover:text-text'
+                  }`}
+                >
+                  {formatAmount(amt)}
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={() => setBuyIn(balance)}
+                disabled={balance < 100}
+                className="focus-ring rounded-full border border-border px-3 py-1.5 font-mono text-xs text-muted transition-colors hover:text-text disabled:opacity-30"
+              >
+                Máx
+              </button>
+            </div>
+            <p className="mt-1.5 font-sans text-[11px] text-muted-2">Saldo: {formatAmount(balance)} Tostões</p>
+          </div>
           <div>
             <label className="mb-1.5 block font-sans text-[10.5px] font-medium uppercase tracking-[0.18em] text-muted-2">Adversários</label>
             <div className="flex gap-2">
@@ -113,16 +198,13 @@ export function PokerPage() {
   }
 
   // ---- Table ----
-  const minRaiseTo = view.currentBet + view.minRaise;
-  const maxRaiseTo = (you?.stack ?? 0) + (you?.committed ?? 0);
-  const effRaiseTo = Math.max(raiseTo, minRaiseTo);
-  const canRaise = (you?.stack ?? 0) > owe;
-
   return (
     <div className="animate-fade-in space-y-5">
       <div className="flex items-center justify-between gap-3">
         <h1 className="font-display text-[28px] font-medium text-text sm:text-[32px]">Póquer</h1>
-        <Button variant="secondary" onClick={onLeave} disabled={busy}>Sair da mesa</Button>
+        <Button variant="secondary" onClick={onLeave} disabled={busy}>
+          {leave.isPending ? 'A sair…' : 'Sair da mesa'}
+        </Button>
       </div>
 
       <PokerTable view={view} youId="you" myTurn={!!myTurn} resultBanner={<ResultBanner view={view} />} />
@@ -138,6 +220,7 @@ export function PokerPage() {
             maxRaiseTo={maxRaiseTo}
             canRaise={canRaise}
             busy={busy}
+            quickBets={quickBets}
             onFold={() => run(() => act.mutateAsync({ action: 'fold', raiseTo: 0 }))}
             onCheck={() => run(() => act.mutateAsync({ action: 'check', raiseTo: 0 }))}
             onCall={() => run(() => act.mutateAsync({ action: 'call', raiseTo: 0 }))}

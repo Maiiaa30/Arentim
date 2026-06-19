@@ -50,6 +50,13 @@ export interface TableState {
 }
 
 export type Rand = () => number; // uniform [0,1)
+/**
+ * Optional per-action observer. When supplied to the action helpers, it is
+ * called with the mutated table after each *bot* action (and after each street's
+ * cards are dealt), so the caller can capture a trail of snapshots and replay
+ * them with a delay client-side — otherwise the whole hand resolves instantly.
+ */
+export type StepRecorder = (s: TableState) => void;
 const randInt = (rand: Rand, n: number) => Math.floor(rand() * n);
 
 function activeCount(s: TableState): number {
@@ -155,7 +162,7 @@ function postBlind(s: TableState, idx: number, amount: number) {
 }
 
 /** Start a new hand. Players with chips sit in; the button moves. */
-export function startHand(s: TableState, rand: Rand): TableState {
+export function startHand(s: TableState, rand: Rand, rec?: StepRecorder): TableState {
   for (const p of s.players) {
     p.hole = [];
     p.committed = 0;
@@ -193,7 +200,7 @@ export function startHand(s: TableState, rand: Rand): TableState {
   s.currentBet = s.bigBlind;
 
   s.toAct = nextIndex(s, bbIdx, (p) => p.status === 'active');
-  return runBots(s, rand);
+  return runBots(s, rand, rec);
 }
 
 function streetCardsDealt(s: TableState) {
@@ -207,7 +214,7 @@ function everyoneMatched(s: TableState): boolean {
     .every((p) => p.hasActed && p.committed === s.currentBet);
 }
 
-function advanceStreet(s: TableState, rand: Rand): TableState {
+function advanceStreet(s: TableState, rand: Rand, rec?: StepRecorder): TableState {
   // Reset per-street state.
   for (const p of s.players) {
     p.committed = 0;
@@ -225,8 +232,9 @@ function advanceStreet(s: TableState, rand: Rand): TableState {
   streetCardsDealt(s);
   // First to act post-flop is left of the button.
   s.toAct = nextIndex(s, s.button, (p) => p.status === 'active');
+  rec?.(s); // snapshot the freshly-dealt board before anyone acts
   if (s.toAct === -1) return showdown(s);
-  return runBots(s, rand);
+  return runBots(s, rand, rec);
 }
 
 /** Apply the single-player human's action (seat id 'you'), then progress. */
@@ -235,8 +243,9 @@ export function applyAction(
   action: PokerAction,
   raiseTo: number,
   rand: Rand,
+  rec?: StepRecorder,
 ): TableState {
-  return applyActionFor(s, s.toAct >= 0 ? s.players[s.toAct]!.id : '', action, raiseTo, rand);
+  return applyActionFor(s, s.toAct >= 0 ? s.players[s.toAct]!.id : '', action, raiseTo, rand, rec);
 }
 
 /**
@@ -250,12 +259,14 @@ export function applyActionFor(
   action: PokerAction,
   raiseTo: number,
   rand: Rand,
+  rec?: StepRecorder,
 ): TableState {
   if (s.handOver || s.toAct < 0) return s;
   const p = s.players[s.toAct]!;
   if (p.isBot || p.id !== playerId) return s; // not this player's turn
   applyFor(s, p, action, raiseTo);
-  return progress(s, rand);
+  rec?.(s); // snapshot the human's own action first
+  return progress(s, rand, rec);
 }
 
 function applyFor(s: TableState, p: Player, action: PokerAction, raiseTo: number) {
@@ -295,19 +306,19 @@ function commit(s: TableState, p: Player, amount: number) {
   s.pot += pay;
 }
 
-function progress(s: TableState, rand: Rand): TableState {
+function progress(s: TableState, rand: Rand, rec?: StepRecorder): TableState {
   // Only one player left -> they win immediately.
   if (activeCount(s) === 1) return showdown(s);
 
-  if (everyoneMatched(s)) return advanceStreet(s, rand);
+  if (everyoneMatched(s)) return advanceStreet(s, rand, rec);
 
   s.toAct = nextIndex(s, s.toAct, (p) => p.status === 'active');
-  if (s.toAct === -1) return advanceStreet(s, rand);
-  return runBots(s, rand);
+  if (s.toAct === -1) return advanceStreet(s, rand, rec);
+  return runBots(s, rand, rec);
 }
 
 /** Auto-play consecutive bot turns until it's the human's turn or the hand ends. */
-function runBots(s: TableState, rand: Rand): TableState {
+function runBots(s: TableState, rand: Rand, rec?: StepRecorder): TableState {
   let guard = 0;
   while (!s.handOver && s.toAct >= 0 && s.players[s.toAct]!.isBot && guard++ < 100) {
     const p = s.players[s.toAct]!;
@@ -322,10 +333,11 @@ function runBots(s: TableState, rand: Rand): TableState {
       rand,
     });
     applyFor(s, p, decision.action, decision.action === 'raise' ? decision.amount + p.committed : 0);
+    rec?.(s); // snapshot this bot's action for staged client playback
     if (activeCount(s) === 1) return showdown(s);
-    if (everyoneMatched(s)) return advanceStreet(s, rand);
+    if (everyoneMatched(s)) return advanceStreet(s, rand, rec);
     s.toAct = nextIndex(s, s.toAct, (pp) => pp.status === 'active');
-    if (s.toAct === -1) return advanceStreet(s, rand);
+    if (s.toAct === -1) return advanceStreet(s, rand, rec);
   }
   return s;
 }
@@ -334,17 +346,24 @@ function runBots(s: TableState, rand: Rand): TableState {
 export function showdown(s: TableState): TableState {
   const contenders = s.players.filter((p) => p.status === 'active' || p.status === 'allin');
 
-  let payouts: Map<string, number>;
+  // `credit` = chips returned to each stack (pot wins + uncalled refunds);
+  // `won` = contested winnings only, for the winner banner.
+  let credit: Map<string, number>;
+  let won: Map<string, number>;
   let reveal: { id: string; hole: number[]; hand: string }[] = [];
 
   if (contenders.length <= 1) {
     // Uncontested: the lone player takes the whole pot; no cards are shown.
-    payouts = new Map();
-    if (contenders[0]) payouts.set(contenders[0].id, s.pot);
+    credit = new Map();
+    won = new Map();
+    if (contenders[0]) {
+      credit.set(contenders[0].id, s.pot);
+      won.set(contenders[0].id, s.pot);
+    }
   } else {
     // Run the board out to five cards, then evaluate and split with side pots.
     while (s.community.length < 5 && s.deck.length > 0) s.community.push(s.deck.pop()!);
-    payouts = distributePots(s, contenders);
+    ({ credit, won } = distributePots(s, contenders));
     reveal = contenders.map((p) => ({
       id: p.id,
       hole: p.hole,
@@ -353,14 +372,14 @@ export function showdown(s: TableState): TableState {
   }
 
   for (const p of s.players) {
-    const won = payouts.get(p.id) ?? 0;
-    if (won > 0) p.stack += won;
+    const c = credit.get(p.id) ?? 0;
+    if (c > 0) p.stack += c;
     p.committed = 0;
   }
-  s.pot = 0; // fully distributed into stacks
+  s.pot = 0; // fully distributed into stacks (incl. any uncalled refunds)
 
   s.result = {
-    winners: [...payouts.entries()].filter(([, a]) => a > 0).map(([id, amount]) => ({ id, amount })),
+    winners: [...won.entries()].filter(([, a]) => a > 0).map(([id, amount]) => ({ id, amount })),
     reveal,
   };
   s.street = 'showdown';
@@ -372,10 +391,21 @@ export function showdown(s: TableState): TableState {
 /**
  * Award the pot using contribution layers, which yields correct side pots.
  * Each layer is contested only by players who contributed to it; the best
- * hand(s) among them split it (odd chip to the earliest seat).
+ * hand(s) among them split it (odd chip to the earliest seat). A top layer
+ * that no remaining contender is eligible for is *uncalled* money — it is
+ * refunded to whoever put it in (e.g. a folded player who over-committed beyond
+ * every contender) so chips are always conserved.
+ *
+ * Returns `credit` (everything added back to stacks) and `won` (contested
+ * winnings only — refunds are excluded so a folded player isn't shown as a
+ * "winner" of their own returned chips).
  */
-function distributePots(s: TableState, contenders: Player[]): Map<string, number> {
-  const payouts = new Map<string, number>();
+function distributePots(
+  s: TableState,
+  contenders: Player[],
+): { credit: Map<string, number>; won: Map<string, number> } {
+  const credit = new Map<string, number>();
+  const won = new Map<string, number>();
   const contributions = s.players.map((p) => ({ id: p.id, amt: p.totalCommitted }));
   const levels = [...new Set(contributions.map((c) => c.amt).filter((a) => a > 0))].sort((a, b) => a - b);
 
@@ -385,14 +415,16 @@ function distributePots(s: TableState, contenders: Player[]): Map<string, number
 
   for (const level of levels) {
     const layer = level - prev;
-    let pot = 0;
-    for (const c of contributions) {
-      const take = Math.min(layer, Math.max(0, c.amt - prev));
-      pot += take;
-    }
+    // Per-player contribution to THIS layer (used for refunds + the pot total).
+    const layerContrib = contributions
+      .map((c) => ({ id: c.id, amt: Math.min(layer, Math.max(0, c.amt - prev)) }))
+      .filter((c) => c.amt > 0);
+    const pot = layerContrib.reduce((t, c) => t + c.amt, 0);
+    if (pot <= 0) { prev = level; continue; }
+
     // Eligible: contenders who contributed at least up to this level.
     const eligible = contenders.filter((p) => p.totalCommitted >= level);
-    if (eligible.length > 0 && pot > 0) {
+    if (eligible.length > 0) {
       let best: number[] | null = null;
       for (const p of eligible) if (!best || compareScores(score.get(p.id)!, best) > 0) best = score.get(p.id)!;
       const winners = eligible.filter((p) => compareScores(score.get(p.id)!, best!) === 0);
@@ -401,20 +433,26 @@ function distributePots(s: TableState, contenders: Player[]): Map<string, number
       for (const w of winners) {
         let amt = share;
         if (remainder > 0) { amt += 1; remainder -= 1; }
-        payouts.set(w.id, (payouts.get(w.id) ?? 0) + amt);
+        credit.set(w.id, (credit.get(w.id) ?? 0) + amt);
+        won.set(w.id, (won.get(w.id) ?? 0) + amt);
       }
+    } else {
+      // Uncalled layer: no contender can win it. Refund to its contributors.
+      for (const c of layerContrib) credit.set(c.id, (credit.get(c.id) ?? 0) + c.amt);
     }
     prev = level;
   }
-  return payouts;
+  return { credit, won };
 }
 
 /** Sanitized view for a given viewer: hides other players' hole cards until showdown. */
 export function viewFor(s: TableState, viewerId: string): unknown {
   const reveal = s.street === 'showdown';
   return {
+    // Copy the board so point-in-time snapshots (the bot-action trail) stay
+    // stable when later streets push more cards onto s.community.
     street: s.street,
-    community: s.community,
+    community: [...s.community],
     pot: s.pot,
     currentBet: s.currentBet,
     minRaise: s.minRaise,
