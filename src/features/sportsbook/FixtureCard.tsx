@@ -56,6 +56,8 @@ export function FixtureCard({ fixture }: { fixture: Fixture }) {
         </div>
       </div>
 
+      {fixture.preview && <p className="mb-3 text-xs italic text-muted">{fixture.preview}</p>}
+
       <div className="space-y-2">
         <div className="flex gap-2">
           <OddsButton fixture={fixture} market="1x2" selection="home" label="1" />

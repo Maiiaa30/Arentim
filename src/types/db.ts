@@ -35,8 +35,18 @@ export type Fixture = {
   away_score: number | null;
   odds: Record<string, Record<string, number>>;
   events: { type?: string; minute?: number | null; team?: string | null; player?: string | null }[];
+  preview: string | null;
   created_at: string;
   updated_at: string;
+};
+
+export type DailyContent = {
+  id: number;
+  kind: 'featured' | 'recap';
+  fixture_id: number | null;
+  title: string;
+  body: string;
+  created_at: string;
 };
 
 export type Bet = {
@@ -289,6 +299,12 @@ export type Database = {
         Row: BetSelectionRow;
         Insert: Partial<BetSelectionRow> & { bet_id: number; fixture_id: number; market: string; selection: string; odds: number };
         Update: Partial<BetSelectionRow>;
+        Relationships: [];
+      };
+      daily_content: {
+        Row: DailyContent;
+        Insert: Partial<DailyContent> & { kind: string; title: string; body: string };
+        Update: Partial<DailyContent>;
         Relationships: [];
       };
       announcements: {
