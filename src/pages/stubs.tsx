@@ -1,15 +1,5 @@
 import { PagePlaceholder } from '@/components/PagePlaceholder';
 
-export function PokerPage() {
-  return (
-    <PagePlaceholder
-      title="Poker"
-      description="Texas Hold'em against AI bots first, then private server-authoritative tables with friends."
-      phase="Phases 8 & 10"
-    />
-  );
-}
-
 export function FriendsPage() {
   return (
     <PagePlaceholder
