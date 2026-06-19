@@ -2,6 +2,50 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import type { AdminAction, Fixture, Profile } from '@/types/db';
 
+export interface AdminTop {
+  id: string;
+  display_name: string;
+  balance?: number;
+  total_wagered?: number;
+  created_at?: string;
+}
+
+/** One-shot KPI snapshot for the admin overview (admin_stats RPC). */
+export interface AdminStats {
+  users_total: number;
+  users_new_today: number;
+  users_new_7d: number;
+  online_now: number;
+  active_24h: number;
+  active_7d: number;
+  suspended: number;
+  admins: number;
+  bettors: number;
+  balance_total: number;
+  wagered_total: number;
+  won_total: number;
+  games_total: number;
+  sports_bets_total: number;
+  sports_bets_today: number;
+  sports_bets_open: number;
+  sports_stake_total: number;
+  top_balances: AdminTop[];
+  top_wagered: AdminTop[];
+  recent_signups: AdminTop[];
+}
+
+export function useAdminStats() {
+  return useQuery({
+    queryKey: ['admin-stats'] as const,
+    queryFn: async (): Promise<AdminStats> => {
+      const { data, error } = await supabase.rpc('admin_stats');
+      if (error) throw error;
+      return data as unknown as AdminStats;
+    },
+    refetchInterval: 30_000,
+  });
+}
+
 /** Player search (admin RLS lets admins read all profiles). */
 export function useAdminPlayers(query: string) {
   return useQuery({
@@ -91,6 +135,13 @@ export function useAdminActionsMutations() {
     },
     onSuccess: refresh,
   });
+  const suspendUntil = useMutation({
+    mutationFn: async (v: { user: string; minutes: number; reason: string }) => {
+      const { error } = await supabase.rpc('admin_suspend_until', { p_user: v.user, p_minutes: v.minutes, p_reason: v.reason });
+      if (error) throw error;
+    },
+    onSuccess: refresh,
+  });
   const settleFixture = useMutation({
     mutationFn: async (v: { fixture: number; home: number; away: number }) => {
       const { error } = await supabase.rpc('admin_settle_fixture', { p_fixture_id: v.fixture, p_home: v.home, p_away: v.away });
@@ -119,5 +170,5 @@ export function useAdminActionsMutations() {
     onSuccess: refresh,
   });
 
-  return { adjustBalance, setStreak, setSuspended, settleFixture, broadcast, upsertChallenge };
+  return { adjustBalance, setStreak, setSuspended, suspendUntil, settleFixture, broadcast, upsertChallenge };
 }

@@ -310,6 +310,7 @@ export type Profile = {
   last_online: string | null;
   last_rescue_date: string | null;
   suspended: boolean;
+  suspended_until: string | null;
 };
 
 export type Announcement = {
@@ -529,6 +530,14 @@ export type Database = {
       admin_set_suspended: {
         Args: { p_user: string; p_suspended: boolean; p_reason: string };
         Returns: undefined;
+      };
+      admin_suspend_until: {
+        Args: { p_user: string; p_minutes: number; p_reason: string };
+        Returns: string | null;
+      };
+      admin_stats: {
+        Args: Record<string, never>;
+        Returns: Record<string, unknown>;
       };
       admin_set_odds: {
         Args: { p_fixture: number; p_odds: Record<string, Record<string, number>> };
