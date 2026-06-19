@@ -1,36 +1,38 @@
 // Supabase Edge Function: poll-live-scores
 //
-// Polls API-Football's live feed and pushes score/minute/event updates into
-// public.fixtures (which streams to clients over Realtime). When a fixture
-// finishes, it records the final score and auto-settles its bets via the
-// idempotent settle_fixture RPC. Intended to run on a short schedule, but only
-// touches fixtures it already knows about, so off-window runs are cheap no-ops.
+// Polls Football-Data.org for today's matches and pushes score/minute/status
+// updates into public.fixtures (which streams to clients over Realtime). When a
+// fixture finishes, it records the final score and auto-settles its bets via the
+// idempotent settle_fixture RPC. Only touches fixtures it already tracks, so
+// off-window runs are cheap. One API call per run (well under the free limit).
 //
-// Same guardrails as sync-fixtures: key in secrets, fixed allowlisted host,
-// shared-secret auth that fails closed. Deploy/schedule: docs/EDGE_FUNCTIONS.md.
+// Same guardrails as sync-fixtures: token in secrets, fixed allowlisted host,
+// shared-secret auth that fails closed. Setup/schedule: docs/EDGE_FUNCTIONS.md.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4';
-import { apiFootballGet, parseLive } from '../_shared/apiFootball.ts';
+import { fetchMatchesByDate, mapStatus, score } from '../_shared/footballData.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-const API_KEY = Deno.env.get('API_FOOTBALL_KEY') ?? '';
+const TOKEN = Deno.env.get('FOOTBALL_DATA_TOKEN') ?? '';
 const SYNC_SECRET = Deno.env.get('SYNC_SECRET') ?? '';
+
+const ymd = (d: Date) => d.toISOString().slice(0, 10);
 
 Deno.serve(async (req) => {
   if (!SYNC_SECRET || req.headers.get('x-sync-secret') !== SYNC_SECRET) {
     return new Response(JSON.stringify({ error: 'unauthorized' }), { status: 401 });
   }
-  if (!API_KEY) {
-    return new Response(JSON.stringify({ error: 'API key not configured' }), { status: 500 });
+  if (!TOKEN) {
+    return new Response(JSON.stringify({ error: 'FOOTBALL_DATA_TOKEN not configured' }), { status: 500 });
   }
 
   const supabase = createClient(SUPABASE_URL, SERVICE_KEY);
+  const today = ymd(new Date());
 
-  let live;
+  let matches;
   try {
-    const raw = await apiFootballGet<unknown>('/fixtures', { live: 'all' }, API_KEY);
-    live = parseLive(raw as never[]);
+    matches = await fetchMatchesByDate(TOKEN, today, today);
   } catch (err) {
     return new Response(JSON.stringify({ error: String(err) }), { status: 502 });
   }
@@ -38,30 +40,30 @@ Deno.serve(async (req) => {
   let updated = 0;
   let settled = 0;
 
-  for (const f of live) {
-    // Only update fixtures we already track (avoid inserting unrelated leagues).
+  for (const m of matches) {
+    const ref = `fd:${m.id}`;
     const { data: existing } = await supabase
       .from('fixtures')
       .select('id, status')
-      .eq('external_ref', f.external_ref)
+      .eq('external_ref', ref)
       .maybeSingle();
-    if (!existing) continue;
+    if (!existing) continue; // only update fixtures we already synced
 
+    const status = mapStatus(m.status);
+    const { home, away } = score(m);
     await supabase
       .from('fixtures')
       .update({
-        status: f.status,
-        minute: f.minute,
-        home_score: f.home_score,
-        away_score: f.away_score,
-        events: f.events,
+        status,
+        minute: m.minute ?? null,
+        home_score: home,
+        away_score: away,
         updated_at: new Date().toISOString(),
       })
       .eq('id', existing.id);
     updated += 1;
 
-    // Auto-settle on full-time (idempotent: settle_fixture only touches pending rows).
-    if (f.status === 'finished' && existing.status !== 'finished' && f.home_score != null && f.away_score != null) {
+    if (status === 'finished' && existing.status !== 'finished' && home != null && away != null) {
       const { error } = await supabase.rpc('settle_fixture', { p_fixture_id: existing.id });
       if (!error) settled += 1;
     }

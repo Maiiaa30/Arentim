@@ -15,20 +15,28 @@ supabase link --project-ref kactlxdjoxjrqhmkjtfj
 
 ## sync-fixtures
 
-Pulls upcoming fixtures + pre-match odds for the configured leagues
-(`supabase/functions/_shared/apiFootball.ts` → Primeira Liga, World Cup) from
-API-Football and upserts them into `public.fixtures`. The API-Football key stays
-in the function's secrets and never reaches the browser; fetches are locked to a
-fixed allowlisted host (SSRF-safe). Invocation requires a shared `SYNC_SECRET`.
+Pulls upcoming fixtures for the configured competitions
+(`supabase/functions/_shared/footballData.ts` → Liga Portugal, Champions League,
+Premier League, La Liga, Serie A, Bundesliga) from **Football-Data.org (free
+tier)** and upserts them into `public.fixtures`. The free plan has no odds, so we
+**generate realistic odds** with a Poisson model fed by each team's live form
+from the league standings (see `computeOdds`). The token stays in the function's
+secrets and never reaches the browser; fetches are locked to a fixed allowlisted
+host (SSRF-safe). Invocation requires a shared `SYNC_SECRET`.
+
+Get a **free** API token at https://www.football-data.org/client/register.
+The free tier covers the major competitions (incl. Liga Portugal) — no payment,
+no card. Rate limit is 10 req/min, so the function spaces its calls (~6.5s).
 
 ### Secrets
 
 ```bash
-supabase secrets set API_FOOTBALL_KEY=<your-api-football-key>
+supabase secrets set FOOTBALL_DATA_TOKEN=<your-football-data-token>
 supabase secrets set SYNC_SECRET=<a-long-random-string>
-# Optional: pin the season (defaults to the current UTC year)
-supabase secrets set FOOTBALL_SEASON=2026
 ```
+
+(The legacy API-Football integration is still in the repo at
+`_shared/apiFootball.ts` if you ever want to switch to a paid live provider.)
 
 `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are injected automatically.
 
@@ -68,13 +76,13 @@ select cron.schedule(
 
 ## poll-live-scores
 
-Polls API-Football's live feed and writes score/minute/events into
+Polls Football-Data.org for today's matches and writes score/minute/status into
 `public.fixtures` (which streams to clients over Realtime). On full-time it
 records the final score and auto-settles the fixture's bets via the idempotent
 `settle_fixture` RPC. Only updates fixtures already in the DB, so off-window
-runs are cheap no-ops.
+runs are cheap no-ops (one API call per run).
 
-Uses the same `API_FOOTBALL_KEY` / `SYNC_SECRET` secrets as `sync-fixtures`.
+Uses the same `FOOTBALL_DATA_TOKEN` / `SYNC_SECRET` secrets as `sync-fixtures`.
 
 ```bash
 supabase functions deploy poll-live-scores
