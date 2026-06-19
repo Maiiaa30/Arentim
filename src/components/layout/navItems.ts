@@ -29,6 +29,7 @@ export const NAV: NavEntry[] = [
     items: [
       { to: '/sportsbook', label: 'Apostas' },
       { to: '/resultados', label: 'Resultados' },
+      { to: '/onze', label: 'Onze de Ouro' },
     ],
   },
   { to: '/poker', label: 'Póquer' },

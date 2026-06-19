@@ -187,6 +187,17 @@ export type LeaderboardRow = {
   is_me: boolean;
 };
 
+/** A row in the Onze de Ouro daily leaderboard. */
+export type OnzeLeaderboardRow = {
+  id: string;
+  display_name: string;
+  avatar_url: string | null;
+  score: number;
+  record: string;
+  champion: boolean;
+  is_me: boolean;
+};
+
 /** A single player hand in the blackjack view. */
 export type BlackjackHandView = {
   cards: number[];
@@ -471,6 +482,17 @@ export type Database = {
       leaderboard: {
         Args: { p_scope: string; p_metric: string };
         Returns: LeaderboardRow[];
+      };
+      onze_leaderboard: {
+        Args: { p_scope: string };
+        Returns: OnzeLeaderboardRow[];
+      };
+      submit_onze_score: {
+        Args: {
+          p_score: number; p_rating: number; p_wins: number; p_champion: boolean;
+          p_record: string; p_formation: string; p_xi: unknown[];
+        };
+        Returns: { best: number };
       };
       list_my_poker_tables: {
         Args: Record<string, never>;
