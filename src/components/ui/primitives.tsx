@@ -12,7 +12,12 @@ import { useIsFetching, useIsMutating } from '@tanstack/react-query';
  * sheen while data is being fetched/mutated (acts as a global loading bar).
  */
 export function TopAccentRule() {
-  const loading = useIsFetching() + useIsMutating() > 0;
+  // Skip anything flagged meta.silent (e.g. routine game spins) so the bar
+  // doesn't flash on every bet.
+  const loading =
+    useIsFetching({ predicate: (q) => q.meta?.silent !== true }) +
+      useIsMutating({ predicate: (m) => m.meta?.silent !== true }) >
+    0;
   return (
     <div
       className={`top-accent-rule ${loading ? 'is-loading' : ''}`}

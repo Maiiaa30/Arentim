@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/features/auth/AuthProvider';
 import { profileKey } from '@/features/profile/useProfile';
-import type { SlotMachineMeta, SlotSpinResult } from '@/types/db';
+import type { Profile, SlotMachineMeta, SlotSpinResult } from '@/types/db';
 
 /** The slots floor — every machine's sanitized config (jackpot value masked). */
 export function useSlotMachines() {
@@ -22,6 +22,8 @@ export function usePlaySlot() {
   const { user } = useAuth();
   const qc = useQueryClient();
   return useMutation({
+    // Routine spin — don't flash the global top loading bar on every bet.
+    meta: { silent: true },
     mutationFn: async (v: { machine: string; stake: number }): Promise<SlotSpinResult> => {
       const { data, error } = await supabase.rpc('play_slot', {
         p_machine: v.machine,
@@ -31,8 +33,12 @@ export function usePlaySlot() {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: profileKey(user?.id) });
+    onSuccess: (res) => {
+      // Patch the cached balance from the authoritative result instead of
+      // refetching, so the spin doesn't trigger a loading sheen.
+      qc.setQueryData<Profile>(profileKey(user?.id), (old) =>
+        old ? { ...old, balance: res.balance } : old,
+      );
       void qc.invalidateQueries({ queryKey: ['transactions', user?.id] });
     },
   });
