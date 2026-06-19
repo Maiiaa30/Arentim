@@ -5,6 +5,7 @@ import { useBlackjack, useBlackjackCurrent } from '@/features/casino/useBlackjac
 import { PlayingCard } from '@/features/casino/PlayingCard';
 import { StakeChips } from '@/features/casino/StakeChips';
 import { WinCelebration } from '@/features/casino/WinCelebration';
+import { Chip } from '@/features/casino/Chip';
 import { Button } from '@/components/ui/Button';
 import { Eyebrow } from '@/components/ui/primitives';
 import { formatAmount } from '@/lib/format';
@@ -155,6 +156,10 @@ export function BlackjackPage() {
         {/* Betting */}
         {showBetting && (
           <div className="space-y-3 border-t border-border pt-6">
+            <div className="flex items-center justify-center gap-3">
+              <Chip value={stake} size={50} />
+              <span className="font-display text-lg text-text">Aposta · {formatAmount(stake)}</span>
+            </div>
             <StakeChips stake={stake} onChange={setStake} balance={balance} disabled={busy} />
             <Button variant="primary" onClick={onDeal} disabled={busy || stake > balance} className="w-full">
               {busy ? 'A distribuir…' : view?.status === 'complete' ? `Distribuir de novo · ${formatAmount(stake)}` : `Distribuir · ${formatAmount(stake)}`}

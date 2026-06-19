@@ -5,6 +5,7 @@ import { useRoulette } from '@/features/casino/useRoulette';
 import { RouletteWheel } from '@/features/casino/RouletteWheel';
 import { BettingBoard } from '@/features/casino/BettingBoard';
 import { WinCelebration } from '@/features/casino/WinCelebration';
+import { Chip } from '@/features/casino/Chip';
 import {
   colorOf,
   totalStake,
@@ -50,6 +51,45 @@ const colorText: Record<string, string> = {
   black: 'text-text',
   green: 'text-positive',
 };
+
+function numberBadge(n: number, key: string) {
+  const c = colorOf(n);
+  return (
+    <span
+      key={key}
+      className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold text-white ${
+        c === 'red' ? 'bg-negative' : c === 'green' ? 'bg-positive' : 'bg-black/70'
+      }`}
+    >
+      {n}
+    </span>
+  );
+}
+
+/** Hot (most frequent) and cold (absent) numbers over the recent spins. */
+function HotCold({ recent }: { recent: number[] }) {
+  if (recent.length < 4) return null;
+  const counts = new Map<number, number>();
+  recent.forEach((n) => counts.set(n, (counts.get(n) ?? 0) + 1));
+  const hot = [...counts.entries()]
+    .sort((a, b) => b[1] - a[1] || recent.indexOf(a[0]) - recent.indexOf(b[0]))
+    .slice(0, 4)
+    .map((e) => e[0]);
+  const cold = Array.from({ length: 37 }, (_, i) => i).filter((n) => !counts.has(n)).slice(0, 4);
+
+  return (
+    <div className="grid w-full grid-cols-2 gap-3 border-t border-border/60 pt-3">
+      <div>
+        <p className="mb-1.5 font-sans text-[9px] uppercase tracking-[0.2em] text-negative">Quentes</p>
+        <div className="flex gap-1">{hot.map((n, i) => numberBadge(n, `h${n}-${i}`))}</div>
+      </div>
+      <div>
+        <p className="mb-1.5 font-sans text-[9px] uppercase tracking-[0.2em] text-positive">Frios</p>
+        <div className="flex gap-1">{cold.map((n, i) => numberBadge(n, `c${n}-${i}`))}</div>
+      </div>
+    </div>
+  );
+}
 
 export function RoulettePage() {
   const { data: profile } = useProfile();
@@ -156,22 +196,11 @@ export function RoulettePage() {
 
           {recent.length > 0 && (
             <div className="flex flex-wrap justify-center gap-1.5">
-              {recent.map((n, i) => (
-                <span
-                  key={`${n}-${i}`}
-                  className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold text-white ${
-                    colorOf(n) === 'red'
-                      ? 'bg-negative'
-                      : colorOf(n) === 'green'
-                        ? 'bg-positive'
-                        : 'bg-black/70'
-                  }`}
-                >
-                  {n}
-                </span>
-              ))}
+              {recent.map((n, i) => numberBadge(n, `${n}-${i}`))}
             </div>
           )}
+
+          <HotCold recent={recent} />
         </div>
 
         {/* Board + slip */}
@@ -181,18 +210,19 @@ export function RoulettePage() {
           </div>
 
           <div className="card p-4">
-            <div className="mb-3 flex items-center justify-between">
-              <span className="font-sans text-sm font-medium text-muted">Tamanho da ficha</span>
-              <div className="flex gap-1.5">
+            <div className="mb-3">
+              <span className="mb-2 block font-sans text-sm font-medium text-muted">Tamanho da ficha</span>
+              <div className="flex flex-wrap gap-2">
                 {CHIPS.map((c) => (
                   <button
                     key={c}
                     onClick={() => setChip(c)}
-                    className={`focus-ring rounded px-3 py-1 font-mono text-sm font-semibold transition-colors ${
-                      chip === c ? 'bg-gold text-bg' : 'border border-border text-muted hover:text-text'
+                    aria-label={`Ficha de ${c}`}
+                    className={`focus-ring rounded-full transition-transform ${
+                      chip === c ? 'scale-110 ring-2 ring-gold ring-offset-2 ring-offset-surface' : 'opacity-70 hover:opacity-100'
                     }`}
                   >
-                    {c}
+                    <Chip value={c} size={42} />
                   </button>
                 ))}
               </div>
