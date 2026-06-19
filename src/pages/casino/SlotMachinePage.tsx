@@ -6,8 +6,7 @@ import { accentHex } from '@/features/casino/slotTheme';
 import { SymbolArt } from '@/features/casino/slotSymbols';
 import { SlotBackdrop } from '@/features/casino/SlotBackdrop';
 import { WinCelebration } from '@/features/casino/WinCelebration';
-import { Button } from '@/components/ui/Button';
-import { Eyebrow } from '@/components/ui/primitives';
+import { Chip } from '@/features/casino/Chip';
 import { CoinIcon } from '@/components/CoinIcon';
 import { formatAmount } from '@/lib/format';
 import type { SlotMachineMeta } from '@/types/db';
@@ -147,20 +146,25 @@ function MachineScreen({ m }: { m: SlotMachineMeta }) {
     setError(null);
     setResult(null);
     setBusy(true);
-    setModes(['spin', 'spin', 'spin']); // immediate scroll while the server rolls
+    setModes(['spin', 'spin', 'spin']); // all three spin together while the server rolls
+    const startedAt = performance.now();
     try {
       const res = await play.mutateAsync({ machine: m.key, stake });
       setTargets(res.reels);
       const id = ++spinId.current;
-      // Reels stop left→right, each decelerating onto its symbol; then reveal.
+      // Keep all reels spinning in sync for at least ~750ms, then stop them
+      // left→right with a clear gap so you see one land before the next.
+      const base = Math.max(0, 750 - (performance.now() - startedAt));
+      const GAP = 470;
+      const SETTLE = 900;
       timers.current.push(
-        window.setTimeout(() => setModes((s) => ['land', s[1], s[2]]), 250),
-        window.setTimeout(() => setModes((s) => [s[0], 'land', s[2]]), 600),
-        window.setTimeout(() => setModes((s) => [s[0], s[1], 'land']), 950),
+        window.setTimeout(() => setModes((s) => ['land', s[1], s[2]]), base),
+        window.setTimeout(() => setModes((s) => [s[0], 'land', s[2]]), base + GAP),
+        window.setTimeout(() => setModes((s) => [s[0], s[1], 'land']), base + GAP * 2),
         window.setTimeout(() => {
           setBusy(false);
           setResult({ payout: res.payout, jackpot: res.jackpot, mult: res.multiplier, id });
-        }, 1850),
+        }, base + GAP * 2 + SETTLE),
       );
     } catch (e) {
       setModes(['idle', 'idle', 'idle']);
@@ -169,46 +173,49 @@ function MachineScreen({ m }: { m: SlotMachineMeta }) {
     }
   }
 
+  const canSpin = !busy && stake <= balance && stake >= m.min_bet;
+
   return (
-    <div className="animate-fade-in space-y-6">
-      <div>
-        <Link to="/casino/slots" className="font-sans text-sm text-muted-2 hover:text-text">← Slots</Link>
-        <Eyebrow className="mt-3">Máquina</Eyebrow>
-        <h1 className="mt-2 font-display text-[36px] font-medium leading-tight text-text">{m.name}</h1>
-        <p className="mt-2 font-sans text-sm text-muted">{m.blurb}</p>
+    <div className="animate-fade-in space-y-5">
+      {/* Compact header */}
+      <div className="flex items-center justify-between">
+        <Link to="/casino/slots" className="font-sans text-sm text-muted-2 hover:text-text">← Todas as slots</Link>
+        <span className="flex items-center gap-2">
+          <span className="inline-block h-2 w-2 rounded-full" style={{ background: hex }} />
+          <span className="font-sans text-[11px] uppercase tracking-[0.2em] text-muted-2">{m.name}</span>
+        </span>
       </div>
 
-      <div className="grid gap-5 lg:grid-cols-[1fr_280px]">
-        {/* Cabinet — ornate gilded frame around a themed reel housing */}
+      {/* Cabinet — ornate gilded frame around a themed reel housing */}
+      <div
+        className="mx-auto max-w-2xl rounded-2xl p-[3px] shadow-[0_24px_70px_rgba(0,0,0,0.55)]"
+        style={{ background: `linear-gradient(155deg, #f7e4ad, ${hex}, #5b4824)` }}
+      >
         <div
-          className="rounded-xl p-[3px] shadow-[0_24px_70px_rgba(0,0,0,0.55)]"
-          style={{ background: `linear-gradient(155deg, #f7e4ad, ${hex}, #5b4824)` }}
+          className="relative overflow-hidden rounded-[14px] p-5 sm:p-8"
+          style={{
+            background: `radial-gradient(135% 90% at 50% -10%, ${hex}38, transparent 55%), linear-gradient(180deg, #171309, #0a0907 75%)`,
+          }}
         >
-          <div
-            className="relative overflow-hidden rounded-[9px] p-5 sm:p-6"
-            style={{
-              background: `radial-gradient(135% 90% at 50% -10%, ${hex}38, transparent 55%), linear-gradient(180deg, #171309, #0a0907 75%)`,
-            }}
-          >
-            <SlotBackdrop machineKey={m.key} />
-            <div className="relative z-10">
+          <SlotBackdrop machineKey={m.key} />
+          <div className="relative z-10">
             {/* Marquee */}
-            <div className="mb-4 text-center">
+            <div className="mb-5 text-center">
               <p className="font-sans text-[8.5px] uppercase tracking-[0.4em] text-muted-2">Arentim Slots</p>
-              <h2
-                className="font-display text-[26px] font-bold leading-tight"
-                style={{ color: hex, textShadow: `0 0 18px ${hex}66` }}
+              <h1
+                className="font-display text-[30px] font-bold leading-tight sm:text-[36px]"
+                style={{ color: hex, textShadow: `0 0 20px ${hex}66` }}
               >
                 {m.name}
-              </h2>
-              <p className="mt-0.5 font-sans text-[10.5px] uppercase tracking-[0.22em] text-gold-light">
+              </h1>
+              <p className="mt-1 font-sans text-[10.5px] uppercase tracking-[0.22em] text-gold-light">
                 Prémios até {maxVisible}× · Jackpot <span className="font-bold">???</span>
               </p>
             </div>
 
             {/* Mystery jackpot meter */}
             <div
-              className={`mx-auto mb-5 flex max-w-sm items-center justify-center gap-3 rounded border px-4 py-2 ${
+              className={`mx-auto mb-6 flex max-w-sm items-center justify-center gap-3 rounded border px-4 py-2 ${
                 result?.jackpot ? 'animate-jackpot-flash' : ''
               }`}
               style={{ borderColor: `${hex}66`, background: `linear-gradient(180deg, ${hex}22, transparent)` }}
@@ -261,79 +268,93 @@ function MachineScreen({ m }: { m: SlotMachineMeta }) {
                 <p className="font-sans text-sm text-muted-2">Faça a sua aposta e gire.</p>
               )}
             </div>
-            </div>
           </div>
         </div>
+      </div>
 
-        {/* Controls + paytable */}
-        <div className="space-y-4">
-          <div className="card space-y-4 p-5">
-            <div className="flex items-center justify-between">
-              <span className="font-sans text-[10.5px] font-medium uppercase tracking-[0.18em] text-muted-2">Aposta</span>
-              <span className="flex items-center gap-1 font-mono text-xs text-muted-2">
-                <CoinIcon className="h-3.5 w-3.5" /> {formatAmount(balance)}
-              </span>
-            </div>
-            <div className="flex flex-wrap gap-1.5">
+      {/* Control bar — balance · bet chips · SPIN */}
+      <div className="mx-auto max-w-2xl">
+        <div className="card flex flex-col items-center gap-4 p-4 sm:flex-row sm:justify-between">
+          <div className="flex items-center gap-2">
+            <span className="font-sans text-[9px] uppercase tracking-[0.2em] text-muted-2">Saldo</span>
+            <span className="flex items-center gap-1 font-mono text-text">
+              <CoinIcon className="h-4 w-4" /> {formatAmount(balance)}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="font-sans text-[9px] uppercase tracking-[0.2em] text-muted-2">Aposta</span>
+            <div className="flex flex-wrap items-center justify-center gap-1.5">
               {betOptions.map((c) => (
                 <button
                   key={c}
                   type="button"
                   disabled={busy || c > balance}
                   onClick={() => setStake(c)}
-                  className={`focus-ring rounded px-3 py-1.5 font-mono text-sm font-semibold transition-colors disabled:opacity-40 ${
-                    stake === c ? 'bg-gold text-bg' : 'border border-border text-muted hover:text-text'
+                  aria-label={`Aposta de ${c}`}
+                  className={`focus-ring rounded-full transition-transform disabled:opacity-30 ${
+                    stake === c ? 'scale-110 ring-2 ring-gold ring-offset-2 ring-offset-surface' : 'opacity-60 hover:opacity-100'
                   }`}
                 >
-                  {c}
+                  <Chip value={c} size={36} />
                 </button>
               ))}
             </div>
-            <Button
-              variant="primary"
-              onClick={onSpin}
-              disabled={busy || stake > balance || stake < m.min_bet}
-              className="w-full"
-            >
-              {busy ? 'A rodar…' : `Girar · ${formatAmount(stake)}`}
-            </Button>
-            {stake > balance && <p className="font-sans text-xs text-negative">Saldo insuficiente para esta aposta.</p>}
-            {error && <p className="font-sans text-sm text-negative">{error}</p>}
           </div>
 
-          <div className="card p-5">
-            <p className="mb-3 font-sans text-[10.5px] font-medium uppercase tracking-[0.18em] text-muted-2">
-              Tabela de prémios <span className="text-faint">(× a aposta)</span>
-            </p>
-            <ul className="space-y-1.5">
-              {m.paytable.map((row) => {
-                const isJackpot = row.id === m.jackpot_symbol;
-                return (
-                  <li
-                    key={row.id}
-                    className={`flex items-center justify-between rounded px-2 py-1 ${
-                      isJackpot ? 'bg-gold/[0.08]' : ''
-                    }`}
-                  >
-                    <span className="flex items-center gap-0.5">
-                      <SymbolArt id={row.id} glyph={row.glyph} className="h-6 w-6" />
-                      <SymbolArt id={row.id} glyph={row.glyph} className="h-6 w-6" />
-                      <SymbolArt id={row.id} glyph={row.glyph} className="h-6 w-6" />
-                    </span>
-                    {isJackpot ? (
-                      <span className="font-display text-sm font-bold" style={{ color: hex }}>JACKPOT ?</span>
-                    ) : (
-                      <span className="font-mono text-sm text-text">{row.mult}×</span>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
-            <p className="mt-3 font-sans text-[11px] leading-relaxed text-muted-2">
-              Três iguais pagam o prémio cheio; alguns pares também pagam. O jackpot é o segredo da casa.
-            </p>
-          </div>
+          <button
+            type="button"
+            onClick={onSpin}
+            disabled={!canSpin}
+            aria-label="Girar"
+            className="focus-ring flex h-[68px] w-[68px] shrink-0 items-center justify-center rounded-full font-display text-sm font-bold uppercase tracking-wide text-bg transition-transform hover:scale-105 active:scale-95 disabled:opacity-40 disabled:hover:scale-100 sm:h-[76px] sm:w-[76px]"
+            style={{ background: `radial-gradient(circle at 40% 32%, #f7e4ad, ${hex} 72%)`, boxShadow: `0 6px 20px ${hex}66` }}
+          >
+            {busy ? (
+              <span className="h-6 w-6 animate-spin rounded-full border-[3px] border-bg/30 border-t-bg" />
+            ) : (
+              'Girar'
+            )}
+          </button>
         </div>
+        {stake > balance && <p className="mt-2 text-center font-sans text-xs text-negative">Saldo insuficiente para esta aposta.</p>}
+        {error && <p className="mt-2 text-center font-sans text-sm text-negative">{error}</p>}
+      </div>
+
+      {/* Paytable */}
+      <div className="mx-auto max-w-2xl">
+        <p className="mb-2 font-sans text-[10.5px] font-medium uppercase tracking-[0.18em] text-muted-2">
+          Tabela de prémios <span className="text-faint">(× a aposta)</span>
+        </p>
+        <div className="flex flex-wrap gap-2">
+          {m.paytable.map((row) => {
+            const isJackpot = row.id === m.jackpot_symbol;
+            return (
+              <div
+                key={row.id}
+                className="flex flex-col items-center gap-1 rounded border px-3 py-2"
+                style={{
+                  borderColor: isJackpot ? `${hex}88` : 'rgba(201,162,75,0.16)',
+                  background: isJackpot ? `${hex}14` : 'transparent',
+                }}
+              >
+                <span className="flex">
+                  <SymbolArt id={row.id} glyph={row.glyph} className="h-6 w-6" />
+                  <SymbolArt id={row.id} glyph={row.glyph} className="h-6 w-6" />
+                  <SymbolArt id={row.id} glyph={row.glyph} className="h-6 w-6" />
+                </span>
+                {isJackpot ? (
+                  <span className="font-display text-xs font-bold" style={{ color: hex }}>JACKPOT ?</span>
+                ) : (
+                  <span className="font-mono text-xs text-text">{row.mult}×</span>
+                )}
+              </div>
+            );
+          })}
+        </div>
+        <p className="mt-3 font-sans text-[11px] leading-relaxed text-muted-2">
+          Três iguais pagam o prémio cheio; alguns pares também pagam. O jackpot é o segredo da casa.
+        </p>
       </div>
     </div>
   );
