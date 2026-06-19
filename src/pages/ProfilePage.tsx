@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useProfile, useUpdateProfile } from '@/features/profile/useProfile';
+import { useChallenges } from '@/features/challenges/useChallenges';
 import { netResult, winRate } from '@/features/profile/stats';
 import { formatTostoes, formatAmount } from '@/lib/format';
 import { displayNameSchema } from '@/features/auth/schema';
@@ -15,6 +16,7 @@ function formatDate(iso: string): string {
 
 export function ProfilePage() {
   const { data: profile, isLoading, error } = useProfile();
+  const { data: challenges } = useChallenges();
   const updateProfile = useUpdateProfile();
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState('');
@@ -116,7 +118,21 @@ export function ProfilePage() {
 
       <section className="card p-6">
         <h2 className="font-display text-lg font-semibold text-text">Achievements</h2>
-        <p className="mt-1 text-sm text-muted">Coming soon — earn badges as you play. (Phase 14)</p>
+        {(() => {
+          const earned = (challenges ?? []).filter((c) => c.claimed);
+          if (earned.length === 0) {
+            return <p className="mt-1 text-sm text-muted">No badges yet — complete challenges to earn them.</p>;
+          }
+          return (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {earned.map((c) => (
+                <span key={c.key} className="rounded-full border border-gold/40 bg-gold/10 px-3 py-1 text-xs font-medium text-gold">
+                  🏅 {c.title}
+                </span>
+              ))}
+            </div>
+          );
+        })()}
       </section>
     </div>
   );

@@ -1,54 +1,67 @@
+import { lazy, Suspense } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { RequireAuth } from '@/features/auth/RequireAuth';
 import { HomePage } from '@/pages/HomePage';
-import { LoginPage } from '@/pages/auth/LoginPage';
-import { SignupPage } from '@/pages/auth/SignupPage';
-import { ProfilePage } from '@/pages/ProfilePage';
-import { WalletPage } from '@/pages/WalletPage';
-import { CasinoLobby } from '@/pages/casino/CasinoLobby';
-import { RoulettePage } from '@/pages/casino/RoulettePage';
-import { SlotsPage } from '@/pages/casino/SlotsPage';
-import { CoinflipPage } from '@/pages/casino/CoinflipPage';
-import { BlackjackPage } from '@/pages/casino/BlackjackPage';
-import { SportsbookPage } from '@/pages/SportsbookPage';
-import { PokerPage } from '@/pages/PokerPage';
-import { PokerHome } from '@/pages/poker/PokerHome';
-import { PrivatePokerPage } from '@/pages/poker/PrivatePokerPage';
-import { FriendsPage } from '@/pages/FriendsPage';
-import { ChallengesPage } from '@/pages/ChallengesPage';
-import { AdminPage } from '@/pages/AdminPage';
-import { NotFoundPage } from '@/pages/stubs';
+
+// Route-level code splitting: each screen is its own chunk, so the initial load
+// stays small and supabase-heavy pages only download when visited.
+const named = <T extends Record<string, unknown>, K extends keyof T>(p: Promise<T>, key: K) =>
+  p.then((m) => ({ default: m[key] as React.ComponentType }));
+
+const LoginPage = lazy(() => named(import('@/pages/auth/LoginPage'), 'LoginPage'));
+const SignupPage = lazy(() => named(import('@/pages/auth/SignupPage'), 'SignupPage'));
+const ProfilePage = lazy(() => named(import('@/pages/ProfilePage'), 'ProfilePage'));
+const WalletPage = lazy(() => named(import('@/pages/WalletPage'), 'WalletPage'));
+const CasinoLobby = lazy(() => named(import('@/pages/casino/CasinoLobby'), 'CasinoLobby'));
+const RoulettePage = lazy(() => named(import('@/pages/casino/RoulettePage'), 'RoulettePage'));
+const SlotsPage = lazy(() => named(import('@/pages/casino/SlotsPage'), 'SlotsPage'));
+const CoinflipPage = lazy(() => named(import('@/pages/casino/CoinflipPage'), 'CoinflipPage'));
+const BlackjackPage = lazy(() => named(import('@/pages/casino/BlackjackPage'), 'BlackjackPage'));
+const SportsbookPage = lazy(() => named(import('@/pages/SportsbookPage'), 'SportsbookPage'));
+const PokerPage = lazy(() => named(import('@/pages/PokerPage'), 'PokerPage'));
+const PokerHome = lazy(() => named(import('@/pages/poker/PokerHome'), 'PokerHome'));
+const PrivatePokerPage = lazy(() => named(import('@/pages/poker/PrivatePokerPage'), 'PrivatePokerPage'));
+const FriendsPage = lazy(() => named(import('@/pages/FriendsPage'), 'FriendsPage'));
+const ChallengesPage = lazy(() => named(import('@/pages/ChallengesPage'), 'ChallengesPage'));
+const AdminPage = lazy(() => named(import('@/pages/AdminPage'), 'AdminPage'));
+const NotFoundPage = lazy(() => named(import('@/pages/stubs'), 'NotFoundPage'));
+
+function PageFallback() {
+  return <div className="py-24 text-center text-muted">Loading…</div>;
+}
 
 export default function App() {
   return (
-    <Routes>
-      <Route element={<AppLayout />}>
-        {/* Public */}
-        <Route index element={<HomePage />} />
-        <Route path="login" element={<LoginPage />} />
-        <Route path="signup" element={<SignupPage />} />
+    <Suspense fallback={<PageFallback />}>
+      <Routes>
+        <Route element={<AppLayout />}>
+          {/* Public */}
+          <Route index element={<HomePage />} />
+          <Route path="login" element={<LoginPage />} />
+          <Route path="signup" element={<SignupPage />} />
 
-        {/* Authenticated only */}
-        <Route element={<RequireAuth />}>
-          <Route path="casino" element={<CasinoLobby />} />
-          <Route path="casino/roulette" element={<RoulettePage />} />
-          <Route path="casino/slots" element={<SlotsPage />} />
-          <Route path="casino/coinflip" element={<CoinflipPage />} />
-          <Route path="casino/blackjack" element={<BlackjackPage />} />
-          <Route path="sportsbook" element={<SportsbookPage />} />
-          <Route path="poker" element={<PokerHome />} />
-          <Route path="poker/bots" element={<PokerPage />} />
-          <Route path="poker/private" element={<PrivatePokerPage />} />
-          <Route path="friends" element={<FriendsPage />} />
-          <Route path="challenges" element={<ChallengesPage />} />
-          <Route path="wallet" element={<WalletPage />} />
-          <Route path="profile" element={<ProfilePage />} />
-          <Route path="admin" element={<AdminPage />} />
+          {/* Authenticated only */}
+          <Route element={<RequireAuth />}>
+            <Route path="casino" element={<CasinoLobby />} />
+            <Route path="casino/roulette" element={<RoulettePage />} />
+            <Route path="casino/slots" element={<SlotsPage />} />
+            <Route path="casino/coinflip" element={<CoinflipPage />} />
+            <Route path="casino/blackjack" element={<BlackjackPage />} />
+            <Route path="sportsbook" element={<SportsbookPage />} />
+            <Route path="poker" element={<PokerHome />} />
+            <Route path="poker/bots" element={<PokerPage />} />
+            <Route path="poker/private" element={<PrivatePokerPage />} />
+            <Route path="friends" element={<FriendsPage />} />
+            <Route path="challenges" element={<ChallengesPage />} />
+            <Route path="wallet" element={<WalletPage />} />
+            <Route path="profile" element={<ProfilePage />} />
+            <Route path="admin" element={<AdminPage />} />
+          </Route>
+
+          <Route path="*" element={<NotFoundPage />} />
         </Route>
-
-        <Route path="*" element={<NotFoundPage />} />
-      </Route>
-    </Routes>
+      </Routes>
+    </Suspense>
   );
 }
