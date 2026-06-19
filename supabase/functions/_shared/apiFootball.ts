@@ -82,6 +82,51 @@ export function parseFixtures(raw: RawFixture[], leagueName: string): ParsedFixt
   return out;
 }
 
+export interface LiveEvent {
+  minute: number | null;
+  type: string;
+  team: string | null;
+  player: string | null;
+}
+
+export interface ParsedLiveFixture {
+  external_ref: string;
+  status: 'scheduled' | 'live' | 'finished';
+  minute: number | null;
+  home_score: number | null;
+  away_score: number | null;
+  events: LiveEvent[];
+}
+
+interface RawLiveFixture {
+  fixture?: { id?: number; status?: { short?: string; elapsed?: number } };
+  goals?: { home?: number | null; away?: number | null };
+  events?: { time?: { elapsed?: number }; type?: string; team?: { name?: string }; player?: { name?: string } }[];
+}
+
+/** Parse the live-fixtures feed into score/minute/event updates. */
+export function parseLive(raw: RawLiveFixture[]): ParsedLiveFixture[] {
+  const out: ParsedLiveFixture[] = [];
+  for (const r of raw) {
+    const id = r.fixture?.id;
+    if (id == null) continue;
+    out.push({
+      external_ref: String(id),
+      status: mapStatus(r.fixture?.status?.short),
+      minute: r.fixture?.status?.elapsed ?? null,
+      home_score: r.goals?.home ?? null,
+      away_score: r.goals?.away ?? null,
+      events: (r.events ?? []).map((e) => ({
+        minute: e.time?.elapsed ?? null,
+        type: e.type ?? 'event',
+        team: e.team?.name ?? null,
+        player: e.player?.name ?? null,
+      })),
+    });
+  }
+  return out;
+}
+
 export interface ParsedOdds {
   external_ref: string;
   odds: Record<string, Record<string, number>>;
