@@ -102,6 +102,31 @@ export type FriendRequest = {
   created_at: string;
 };
 
+export type ChallengeRow = {
+  key: string;
+  title: string;
+  description: string;
+  track: 'recovery' | 'highroller';
+  target: number;
+  reward: number;
+  progress: number;
+  claimed: boolean;
+};
+
+export type ChallengeClaimResult = {
+  status: 'claimed' | 'already_claimed' | 'incomplete';
+  reward?: number;
+  balance?: number;
+  progress?: number;
+  target?: number;
+};
+
+export type RescueResult = {
+  status: 'granted' | 'not_eligible' | 'already_claimed';
+  amount?: number;
+  balance?: number;
+};
+
 export type MyPokerTable = {
   table_id: number;
   code: string;
@@ -324,6 +349,18 @@ export type Database = {
       list_my_poker_tables: {
         Args: Record<string, never>;
         Returns: MyPokerTable[];
+      };
+      list_challenges: {
+        Args: Record<string, never>;
+        Returns: ChallengeRow[];
+      };
+      claim_challenge: {
+        Args: { p_key: string };
+        Returns: ChallengeClaimResult;
+      };
+      claim_rescue: {
+        Args: Record<string, never>;
+        Returns: RescueResult;
       };
     };
     Enums: {
