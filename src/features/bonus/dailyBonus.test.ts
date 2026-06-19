@@ -3,12 +3,12 @@ import { rewardForDay, deriveBonusState } from './dailyBonus';
 
 describe('rewardForDay', () => {
   it('follows the escalating table and caps at day 7', () => {
-    expect(rewardForDay(1)).toBe(100);
-    expect(rewardForDay(2)).toBe(150);
-    expect(rewardForDay(3)).toBe(225);
-    expect(rewardForDay(7)).toBe(800);
-    expect(rewardForDay(8)).toBe(800);
-    expect(rewardForDay(99)).toBe(800);
+    expect(rewardForDay(1)).toBe(10);
+    expect(rewardForDay(2)).toBe(15);
+    expect(rewardForDay(3)).toBe(25);
+    expect(rewardForDay(7)).toBe(100);
+    expect(rewardForDay(8)).toBe(100);
+    expect(rewardForDay(99)).toBe(100);
     expect(rewardForDay(0)).toBe(0);
   });
 });
@@ -33,7 +33,7 @@ describe('deriveBonusState', () => {
     );
     expect(s.status).toBe('claimable');
     expect(s.prospectiveStreak).toBe(3);
-    expect(s.claimableReward).toBe(225);
+    expect(s.claimableReward).toBe(25);
   });
 
   it('resets the streak after a missed day', () => {
@@ -43,7 +43,7 @@ describe('deriveBonusState', () => {
     );
     expect(s.status).toBe('claimable');
     expect(s.prospectiveStreak).toBe(1);
-    expect(s.claimableReward).toBe(100);
+    expect(s.claimableReward).toBe(10);
   });
 
   it('reflects an already-claimed day', () => {

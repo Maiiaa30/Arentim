@@ -1,7 +1,7 @@
 import type { Profile } from '@/types/db';
 
 /** Escalating daily reward by streak day (capped at day 7). Mirrors SQL. */
-export const DAILY_REWARDS = [100, 150, 225, 325, 450, 600, 800] as const;
+export const DAILY_REWARDS = [10, 15, 25, 35, 50, 70, 100] as const;
 export const MAX_STREAK_DAY = 7;
 
 /** Reward for a given streak day (1-based); capped at day 7. */

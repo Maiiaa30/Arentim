@@ -12,7 +12,7 @@
 export const MAX_TOSTOES = 1_000_000_000_000; // 1 trillion
 
 /** Starting balance for a new account. */
-export const STARTING_BALANCE = 5_000;
+export const STARTING_BALANCE = 500;
 
 export class MoneyError extends Error {
   constructor(message: string) {
