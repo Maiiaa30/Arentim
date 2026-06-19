@@ -45,6 +45,18 @@
     background-color: rgba(201, 162, 75, 0.3);
   }
 
+  /* Full-screen confetti rain + a one-shot gold flash for jackpots. */
+  @keyframes confetti-fall {
+    0% { transform: translateY(-12vh) rotate(0deg); opacity: 0; }
+    8% { opacity: 1; }
+    100% { transform: translateY(106vh) rotate(700deg); opacity: 1; }
+  }
+  @keyframes win-flash {
+    0% { opacity: 0; }
+    25% { opacity: 0.55; }
+    100% { opacity: 0; }
+  }
+
   /* Respect reduced-motion: freeze decorative game-tile animations. */
   @media (prefers-reduced-motion: reduce) {
     *,
