@@ -24,7 +24,7 @@ interface GameTile {
 const GAMES: GameTile[] = [
   { to: '/casino/roulette', name: 'Roleta', desc: 'Roleta europeia, zero único.', art: 'roulette', badge: 'Em alta', tone: 'from-chip-ruby/40 to-bg' },
   { to: '/casino/blackjack', name: 'Blackjack', desc: 'O croupier pára nos 17.', art: 'blackjack', tone: 'from-positive-felt/40 to-bg' },
-  { to: '/casino/slots', name: 'Slots Aurelia', desc: 'Três rolos, tema Arentim.', art: 'slots', tone: 'from-gold/30 to-bg' },
+  { to: '/casino/slots', name: 'Slots', desc: 'Cinco máquinas, jackpots secretos.', art: 'slots', badge: '5 máquinas', tone: 'from-gold/30 to-bg' },
   { to: '/casino/coinflip', name: 'Moeda', desc: 'Cara ou coroa — dobro ou nada.', art: 'coinflip', badge: 'Novo', tone: 'from-gold-light/30 to-bg' },
   { to: '/poker', name: "Hold'em", desc: 'Contra bots ou amigos.', art: 'poker', tone: 'from-chip-navy/40 to-bg' },
   { to: '/sportsbook', name: 'Futebol', desc: 'Primeira Liga e mais.', art: 'football', badge: 'Ao vivo', tone: 'from-positive-felt/30 to-bg', cta: 'Abrir' },

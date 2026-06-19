@@ -214,6 +214,36 @@ export type SlotsResult = {
   replayed: boolean;
 };
 
+/** A reel symbol (id + emoji glyph) as exposed by list_slot_machines. */
+export type SlotSymbolMeta = { id: string; glyph: string };
+
+/** One paytable row; `mult` is null for the (hidden) jackpot symbol. */
+export type SlotPayRow = { id: string; glyph: string; mult: number | null };
+
+/** Public, jackpot-masked machine config from list_slot_machines. */
+export type SlotMachineMeta = {
+  key: string;
+  name: string;
+  blurb: string;
+  accent: string;
+  min_bet: number;
+  max_bet: number;
+  jackpot_symbol: string;
+  symbols: SlotSymbolMeta[];
+  paytable: SlotPayRow[];
+};
+
+/** Result returned by the play_slot RPC (themed machines). */
+export type SlotSpinResult = {
+  reels: string[];
+  machine: string;
+  multiplier: number;
+  jackpot: boolean;
+  payout: number;
+  balance: number;
+  replayed: boolean;
+};
+
 /** Result returned by the claim_daily_bonus RPC. */
 export type DailyBonusResult = {
   status: 'claimed' | 'already_claimed' | 'play_required';
@@ -368,6 +398,14 @@ export type Database = {
       play_slots: {
         Args: { p_stake: number; p_idempotency_key: string | null };
         Returns: SlotsResult;
+      };
+      list_slot_machines: {
+        Args: Record<string, never>;
+        Returns: SlotMachineMeta[];
+      };
+      play_slot: {
+        Args: { p_machine: string; p_stake: number; p_idempotency_key: string | null };
+        Returns: SlotSpinResult;
       };
       bj_deal: {
         Args: { p_stake: number };

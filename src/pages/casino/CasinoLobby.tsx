@@ -10,7 +10,7 @@ interface GameTile {
 
 const GAMES: GameTile[] = [
   { to: '/casino/roulette', title: 'Roleta', body: 'Roleta europeia, zero único.', available: true },
-  { to: '/casino/slots', title: 'Slots', body: 'Três rolos, tema Arentim.', available: true },
+  { to: '/casino/slots', title: 'Slots', body: 'Cinco máquinas temáticas, cada uma com o seu jackpot.', available: true },
   { to: '/casino/coinflip', title: 'Moeda', body: 'Dobro ou nada, prémio par.', available: true },
   { to: '/casino/blackjack', title: 'Blackjack', body: 'Pedir, ficar, dobrar, dividir.', available: true },
 ];

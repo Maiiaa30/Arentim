@@ -7,6 +7,7 @@ export interface NavItem {
 export const NAV_ITEMS: readonly NavItem[] = [
   { to: '/', label: 'Salão' },
   { to: '/casino', label: 'Casino' },
+  { to: '/casino/slots', label: 'Slots' },
   { to: '/sportsbook', label: 'Futebol' },
   { to: '/poker', label: 'Póquer' },
   { to: '/friends', label: 'Amigos' },
