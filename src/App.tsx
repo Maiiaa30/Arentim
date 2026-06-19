@@ -17,6 +17,7 @@ import { PokerHome } from '@/pages/poker/PokerHome';
 import { PrivatePokerPage } from '@/pages/poker/PrivatePokerPage';
 import { FriendsPage } from '@/pages/FriendsPage';
 import { ChallengesPage } from '@/pages/ChallengesPage';
+import { AdminPage } from '@/pages/AdminPage';
 import { NotFoundPage } from '@/pages/stubs';
 
 export default function App() {
@@ -43,6 +44,7 @@ export default function App() {
           <Route path="challenges" element={<ChallengesPage />} />
           <Route path="wallet" element={<WalletPage />} />
           <Route path="profile" element={<ProfilePage />} />
+          <Route path="admin" element={<AdminPage />} />
         </Route>
 
         <Route path="*" element={<NotFoundPage />} />
