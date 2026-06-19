@@ -5,7 +5,7 @@ import { usePlaceBet } from './useSportsbook';
 import { combineOdds, potentialPayout, selectionLabel, type Market, type Selection } from './odds';
 import { Button } from '@/components/ui/Button';
 import { CoinIcon } from '@/components/CoinIcon';
-import { formatAmount, formatTt } from '@/lib/format';
+import { formatAmount, formatTos } from '@/lib/format';
 
 const CHIPS = [-50, 50, 250];
 
@@ -35,7 +35,7 @@ export function BetSlip() {
         stake,
       });
       clear();
-      setMsg({ text: `Aposta registada — retorno potencial ${formatTt(res.potential_payout)}.`, tone: 'win' });
+      setMsg({ text: `Aposta registada — retorno potencial ${formatTos(res.potential_payout)}.`, tone: 'win' });
     } catch (e) {
       setMsg({ text: e instanceof Error ? e.message : 'Não foi possível registar a aposta.', tone: 'loss' });
     }

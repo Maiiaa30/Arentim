@@ -78,7 +78,7 @@ export function Header() {
                 </span>
                 <span className="flex items-center justify-end gap-1 font-display text-lg font-medium text-gold">
                   {profile ? <AnimatedNumber value={profile.balance} /> : '—'}
-                  <span className="font-mono text-xs">Tt</span>
+                  <span className="font-mono text-xs">tós</span>
                 </span>
               </div>
               <Button variant="secondary" className="!px-4 !py-2" onClick={() => navigate('/wallet')}>

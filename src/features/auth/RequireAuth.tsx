@@ -9,7 +9,7 @@ export function RequireAuth() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-24 text-muted" role="status">
-        Loading…
+        A carregar…
       </div>
     );
   }

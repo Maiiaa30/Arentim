@@ -4,7 +4,7 @@ import { useProfile, useUpdateProfile } from '@/features/profile/useProfile';
 import { useChallenges } from '@/features/challenges/useChallenges';
 import { useTransactions } from '@/features/wallet/useTransactions';
 import { netResult, winRate } from '@/features/profile/stats';
-import { formatAmount, formatTt } from '@/lib/format';
+import { formatAmount, formatTos } from '@/lib/format';
 import { displayNameSchema } from '@/features/auth/schema';
 import { AnimatedNumber } from '@/components/AnimatedNumber';
 import { Button } from '@/components/ui/Button';
@@ -118,7 +118,7 @@ export function ProfilePage() {
           <div className="border-gold/20 sm:border-l sm:pl-6">
             <p className="font-sans text-[10.5px] uppercase tracking-[0.18em] text-muted-2">Saldo</p>
             <p className="flex items-baseline gap-1 font-display text-3xl font-medium text-gold">
-              <AnimatedNumber value={profile.balance} /> <span className="font-mono text-base">Tt</span>
+              <AnimatedNumber value={profile.balance} /> <span className="font-mono text-base">tós</span>
             </p>
             <Link to="/challenges">
               <Button variant="ghost" className="mt-3 !px-4 !py-2">Adicionar Tostões</Button>
@@ -129,11 +129,11 @@ export function ProfilePage() {
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard label="Jogos" value={formatAmount(profile.games_played)} sub="no total" />
-        <StatCard label="Maior ganho" value={formatTt(profile.biggest_win)} sub="num só lance" tone="text-positive" />
+        <StatCard label="Maior ganho" value={formatTos(profile.biggest_win)} sub="num só lance" tone="text-positive" />
         <StatCard label="Taxa de vitória" value={`${winRate(profile)}%`} sub="ao longo do tempo" />
         <StatCard
           label="Resultado"
-          value={`${net >= 0 ? '+' : '−'}${formatAmount(Math.abs(net))} Tt`}
+          value={`${net >= 0 ? '+' : '−'}${formatAmount(Math.abs(net))} tós`}
           sub="ganhos − perdas"
           tone={net >= 0 ? 'text-positive' : 'text-negative'}
         />

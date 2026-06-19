@@ -28,7 +28,7 @@ export function BettingBoard({ onPlace, disabled }: BettingBoardProps) {
       disabled={disabled}
       onClick={() => onPlace('straight', n)}
       className={`${cell} h-9 ${numberBg[colorOf(n)]}`}
-      aria-label={`Bet on ${n}`}
+      aria-label={`Apostar no ${n}`}
     >
       {n}
     </button>
@@ -43,7 +43,7 @@ export function BettingBoard({ onPlace, disabled }: BettingBoardProps) {
           disabled={disabled}
           onClick={() => onPlace('straight', 0)}
           className={`${cell} w-10 shrink-0 ${numberBg.green}`}
-          aria-label="Bet on 0"
+          aria-label="Apostar no 0"
         >
           0
         </button>

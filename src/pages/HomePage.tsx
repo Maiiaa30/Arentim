@@ -6,30 +6,33 @@ import { useLeaderboard } from '@/features/friends/useLeaderboard';
 import { DailyBonusCard } from '@/features/bonus/DailyBonusCard';
 import { Button } from '@/components/ui/Button';
 import { Eyebrow, FramedPanel, RingAvatar, SectionHeader } from '@/components/ui/primitives';
-import { formatTt } from '@/lib/format';
+import { GameArt, type GameArtKind } from '@/features/casino/GameArt';
+import { formatTos } from '@/lib/format';
 
 interface GameTile {
   to: string;
   name: string;
   desc: string;
+  art: GameArtKind;
   badge?: string;
   tone: string; // artwork gradient
   cta?: string;
 }
 
 const GAMES: GameTile[] = [
-  { to: '/casino/roulette', name: 'Roleta', desc: 'Roleta europeia, zero único.', badge: 'Em alta', tone: 'from-chip-ruby/40 to-bg' },
-  { to: '/casino/blackjack', name: 'Blackjack', desc: 'O croupier pára nos 17.', tone: 'from-positive-felt/40 to-bg' },
-  { to: '/casino/slots', name: 'Slots Aurelia', desc: 'Três rolos, tema Arentim.', tone: 'from-gold/30 to-bg' },
-  { to: '/casino/coinflip', name: 'Moeda', desc: 'Cara ou coroa — dobro ou nada.', badge: 'Novo', tone: 'from-gold-light/30 to-bg' },
-  { to: '/poker', name: "Hold'em", desc: 'Contra bots ou amigos.', tone: 'from-chip-navy/40 to-bg' },
-  { to: '/sportsbook', name: 'Futebol', desc: 'Primeira Liga e mais.', badge: 'Ao vivo', tone: 'from-positive-felt/30 to-bg', cta: 'Abrir' },
+  { to: '/casino/roulette', name: 'Roleta', desc: 'Roleta europeia, zero único.', art: 'roulette', badge: 'Em alta', tone: 'from-chip-ruby/40 to-bg' },
+  { to: '/casino/blackjack', name: 'Blackjack', desc: 'O croupier pára nos 17.', art: 'blackjack', tone: 'from-positive-felt/40 to-bg' },
+  { to: '/casino/slots', name: 'Slots Aurelia', desc: 'Três rolos, tema Arentim.', art: 'slots', tone: 'from-gold/30 to-bg' },
+  { to: '/casino/coinflip', name: 'Moeda', desc: 'Cara ou coroa — dobro ou nada.', art: 'coinflip', badge: 'Novo', tone: 'from-gold-light/30 to-bg' },
+  { to: '/poker', name: "Hold'em", desc: 'Contra bots ou amigos.', art: 'poker', tone: 'from-chip-navy/40 to-bg' },
+  { to: '/sportsbook', name: 'Futebol', desc: 'Primeira Liga e mais.', art: 'football', badge: 'Ao vivo', tone: 'from-positive-felt/30 to-bg', cta: 'Abrir' },
 ];
 
 function GameCard({ g }: { g: GameTile }) {
   return (
     <Link to={g.to} className="card card-hover focus-ring group flex flex-col overflow-hidden">
       <div className={`relative h-[120px] bg-gradient-to-br ${g.tone}`}>
+        <GameArt kind={g.art} />
         {g.badge && (
           <span className="absolute left-3 top-3 rounded-full border border-gold/40 bg-bg/60 px-2 py-0.5 font-sans text-[9px] uppercase tracking-[0.18em] text-gold">
             {g.badge}
@@ -40,7 +43,7 @@ function GameCard({ g }: { g: GameTile }) {
         <h3 className="font-display text-[22px] font-semibold text-text group-hover:text-gold">{g.name}</h3>
         <p className="mt-1 flex-1 font-sans text-[12.5px] text-muted">{g.desc}</p>
         <div className="mt-3 flex items-center justify-between">
-          <span className="font-mono text-xs text-muted-2">50 – 5 000 Tt</span>
+          <span className="font-mono text-xs text-muted-2">50 – 5 000 tós</span>
           <span className="rounded border border-gold/40 px-3 py-1 font-sans text-[10px] uppercase tracking-[0.18em] text-gold transition-colors group-hover:bg-gold group-hover:text-bg">
             {g.cta ?? 'Entrar'}
           </span>
@@ -64,7 +67,7 @@ function HighRollers() {
             <span className={`w-5 text-right font-display ${i < 3 ? 'text-gold' : 'text-muted-2'}`}>{i + 1}</span>
             <RingAvatar initials={row.display_name.slice(0, 2).toUpperCase()} size={34} tone={i < 3 ? 'gold' : 'muted'} />
             <span className="flex-1 truncate font-sans text-sm text-body">{row.display_name}</span>
-            <span className="font-mono text-sm text-gold">{formatTt(row.value)}</span>
+            <span className="font-mono text-sm text-gold">{formatTos(row.value)}</span>
           </div>
         ))}
         {(!data || data.length === 0) && <p className="px-3 py-2 text-sm text-muted-2">Ainda sem dados.</p>}
