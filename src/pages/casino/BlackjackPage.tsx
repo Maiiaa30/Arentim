@@ -4,10 +4,20 @@ import { useProfile } from '@/features/profile/useProfile';
 import { useBlackjack, useBlackjackCurrent } from '@/features/casino/useBlackjack';
 import { PlayingCard } from '@/features/casino/PlayingCard';
 import { StakeChips } from '@/features/casino/StakeChips';
+import { WinCelebration } from '@/features/casino/WinCelebration';
 import { Button } from '@/components/ui/Button';
 import { Eyebrow } from '@/components/ui/primitives';
 import { formatAmount } from '@/lib/format';
 import type { BlackjackView } from '@/types/db';
+
+/** Cards animate in with a small staggered pop as they're dealt. */
+function DealtCard({ card, i }: { card: number | null; i: number }) {
+  return (
+    <span className="inline-block animate-pop" style={{ animationDelay: `${i * 70}ms` }}>
+      <PlayingCard card={card} />
+    </span>
+  );
+}
 
 const outcomeLabel: Record<string, { text: string; tone: string }> = {
   win: { text: 'Ganhou', tone: 'text-positive' },
@@ -61,13 +71,16 @@ export function BlackjackPage() {
   return (
     <div className="animate-fade-in space-y-6">
       <div>
-        <Link to="/" className="font-sans text-sm text-muted-2 hover:text-text">← Voltar às Mesas</Link>
+        <Link to="/casino" className="font-sans text-sm text-muted-2 hover:text-text">← Casino</Link>
         <Eyebrow className="mt-3">O Salão</Eyebrow>
         <h1 className="mt-2 font-display text-[38px] font-medium leading-tight text-text">Blackjack</h1>
         <p className="mt-2 font-sans text-sm text-muted">O croupier pára nos 17 · blackjack paga 3:2</p>
       </div>
 
-      <div className="card space-y-8 p-6">
+      <div className="felt felt-rail relative space-y-8 overflow-hidden rounded-lg p-6">
+        {view?.status === 'complete' && view.payout > 0 && (
+          <WinCelebration key={view.hand_id} jackpot={view.hands.some((h) => h.status === 'blackjack')} />
+        )}
         {view ? (
           <>
             {/* Dealer */}
@@ -77,9 +90,9 @@ export function BlackjackPage() {
               </p>
               <div className="flex gap-2">
                 {view.dealer.map((c, i) => (
-                  <PlayingCard key={i} card={c} />
+                  <DealtCard key={i} card={c} i={i} />
                 ))}
-                {view.dealer_hidden && <PlayingCard card={null} />}
+                {view.dealer_hidden && <DealtCard card={null} i={view.dealer.length} />}
               </div>
             </div>
 
@@ -104,7 +117,7 @@ export function BlackjackPage() {
                     </p>
                     <div className="flex gap-2">
                       {hand.cards.map((c, j) => (
-                        <PlayingCard key={j} card={c} />
+                        <DealtCard key={j} card={c} i={j} />
                       ))}
                     </div>
                   </div>

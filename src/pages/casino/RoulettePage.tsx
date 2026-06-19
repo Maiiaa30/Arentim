@@ -4,6 +4,7 @@ import { useProfile } from '@/features/profile/useProfile';
 import { useRoulette } from '@/features/casino/useRoulette';
 import { RouletteWheel } from '@/features/casino/RouletteWheel';
 import { BettingBoard } from '@/features/casino/BettingBoard';
+import { WinCelebration } from '@/features/casino/WinCelebration';
 import {
   colorOf,
   totalStake,
@@ -119,8 +120,8 @@ export function RoulettePage() {
     <div className="animate-fade-in space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <Link to="/" className="font-sans text-sm text-muted-2 hover:text-text">
-            ← Voltar às Mesas
+          <Link to="/casino" className="font-sans text-sm text-muted-2 hover:text-text">
+            ← Casino
           </Link>
           <Eyebrow className="mt-3">O Salão</Eyebrow>
           <h1 className="mt-2 font-display text-[38px] font-medium leading-tight text-text">Roleta</h1>
@@ -129,7 +130,8 @@ export function RoulettePage() {
 
       <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
         {/* Wheel + result */}
-        <div className="card flex flex-col items-center gap-4 p-6">
+        <div className="felt felt-rail relative flex flex-col items-center gap-4 overflow-hidden rounded-lg p-6">
+          {landed && result && result.payout > 0 && <WinCelebration key={spinToken} />}
           <RouletteWheel spinToken={spinToken} result={result?.number ?? null} spinning={spinning} />
 
           <div className="h-12 text-center">
@@ -174,7 +176,7 @@ export function RoulettePage() {
 
         {/* Board + slip */}
         <div className="space-y-4">
-          <div className="card p-4">
+          <div className="felt felt-rail rounded-lg p-4">
             <BettingBoard onPlace={placeBet} disabled={spinning} />
           </div>
 

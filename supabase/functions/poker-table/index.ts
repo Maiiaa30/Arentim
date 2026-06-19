@@ -18,6 +18,7 @@ import {
   type TableState,
 } from '../_shared/pokerTable.ts';
 import type { BotDifficulty, PokerAction } from '../_shared/poker.ts';
+import { corsHeaders } from '../_shared/cors.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!;
@@ -26,7 +27,10 @@ const TURN_MS = 30_000;
 
 const rand = () => crypto.getRandomValues(new Uint32Array(1))[0]! / 4294967296;
 const json = (b: unknown, status = 200) =>
-  new Response(JSON.stringify(b), { status, headers: { 'content-type': 'application/json' } });
+  new Response(JSON.stringify(b), {
+    status,
+    headers: { 'content-type': 'application/json', ...corsHeaders },
+  });
 
 function genCode(): string {
   const alphabet = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
@@ -37,6 +41,8 @@ function genCode(): string {
 type Row = { id: number; host_id: string; status: string; buy_in: number; state: TableState; turn_deadline: string | null };
 
 Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
+
   const authHeader = req.headers.get('Authorization') ?? '';
   const userClient = createClient(SUPABASE_URL, ANON_KEY, { global: { headers: { Authorization: authHeader } } });
   const { data: auth } = await userClient.auth.getUser();

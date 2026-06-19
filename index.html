@@ -16,10 +16,13 @@
       defence-in-depth fallback for environments that serve static files directly.
       'unsafe-inline' for styles is required by Tailwind's injected styles; scripts
       stay locked to 'self'. connect-src is widened to Supabase at build time.
+      Note: frame-ancestors is intentionally omitted here — it's ignored in a
+      <meta> CSP (browser warning) and is enforced via the real HTTP header at
+      the host/CDN (vercel.json) instead.
     -->
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; base-uri 'self'; form-action 'self'; object-src 'none'"
     />
 
     <!-- Fonts: preconnect + a single stylesheet link so they fetch early and in

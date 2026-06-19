@@ -73,6 +73,30 @@ export default {
           '0%,100%': { transform: 'translate(-26px,6px)' },
           '50%': { transform: 'translate(26px,-6px)' },
         },
+        // Casino interactions — reel spin, celebration, jackpot glow.
+        pop: {
+          '0%': { opacity: '0', transform: 'scale(0.7)' },
+          '60%': { transform: 'scale(1.06)' },
+          '100%': { opacity: '1', transform: 'scale(1)' },
+        },
+        'reel-spin': { '0%': { transform: 'translateY(0)' }, '100%': { transform: 'translateY(-66.6667%)' } },
+        glow: {
+          '0%,100%': { boxShadow: '0 0 0 0 rgba(201,162,75,0)', borderColor: 'rgba(201,162,75,0.3)' },
+          '50%': { boxShadow: '0 0 24px 5px rgba(201,162,75,0.5)', borderColor: 'rgba(201,162,75,0.9)' },
+        },
+        confetti: {
+          '0%': { transform: 'translateY(-12px) rotate(0deg)', opacity: '1' },
+          '100%': { transform: 'translateY(360px) rotate(620deg)', opacity: '0' },
+        },
+        'jackpot-flash': {
+          '0%,100%': { opacity: '1', transform: 'scale(1)' },
+          '50%': { opacity: '0.6', transform: 'scale(1.04)' },
+        },
+        shake: {
+          '10%,90%': { transform: 'translateX(-1px)' },
+          '30%,70%': { transform: 'translateX(2px)' },
+          '50%': { transform: 'translateX(-2px)' },
+        },
       },
       animation: {
         'fade-in': 'fade-in 0.25s cubic-bezier(0.22,0.61,0.36,1)',
@@ -83,6 +107,11 @@ export default {
         coin3d: 'coin3d 2.4s linear infinite',
         floaty: 'floaty 3.4s ease-in-out infinite',
         ball: 'ball 3s ease-in-out infinite',
+        pop: 'pop 0.4s cubic-bezier(0.22,0.61,0.36,1)',
+        'reel-spin': 'reel-spin 0.22s linear infinite',
+        glow: 'glow 1.8s ease-in-out infinite',
+        'jackpot-flash': 'jackpot-flash 0.7s ease-in-out infinite',
+        shake: 'shake 0.5s ease-in-out',
       },
     },
   },
