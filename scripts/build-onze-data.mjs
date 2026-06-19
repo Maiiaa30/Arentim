@@ -113,7 +113,7 @@ for (const year of YEARS) {
   const header = rows[0];
   const idx = (k) => header.indexOf(k);
   const iName = idx('name'), iRating = idx('rating'), iClub = idx('club'),
-    iPos = idx('preferred_positions'), iPhoto = idx('headshot_url'), iNat = idx('nationality');
+    iPos = idx('preferred_positions'), iNat = idx('nationality');
 
   const clubs = {};
   for (let r = 1; r < rows.length; r++) {
@@ -131,7 +131,7 @@ for (const year of YEARS) {
       r: rating,
       p: row[iPos],
       l: lines,
-      ph: row[iPhoto] || null,
+      ph: null, // fifaindex headshots are hotlink-blocked (403); use initials avatars
       nat: row[iNat] || null,
     });
   }
