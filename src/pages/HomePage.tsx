@@ -1,51 +1,145 @@
 import { Link } from 'react-router-dom';
-import { CoinIcon } from '@/components/CoinIcon';
 import { useAuth } from '@/features/auth/AuthProvider';
+import { useFriends } from '@/features/friends/useFriends';
+import { usePresence } from '@/features/friends/usePresence';
+import { useLeaderboard } from '@/features/friends/useLeaderboard';
 import { DailyBonusCard } from '@/features/bonus/DailyBonusCard';
+import { Button } from '@/components/ui/Button';
+import { Eyebrow, FramedPanel, RingAvatar, SectionHeader } from '@/components/ui/primitives';
+import { formatTt } from '@/lib/format';
 
-const tiles = [
-  { to: '/casino', title: 'Casino', body: 'Roulette, Blackjack, Slots & quick games.' },
-  { to: '/sportsbook', title: 'Sportsbook', body: 'Primeira Liga & World Cup. Build a bet slip.' },
-  { to: '/poker', title: 'Poker', body: "Texas Hold'em vs bots and friends." },
-  { to: '/friends', title: 'Friends', body: 'Presence, leaderboards & challenges.' },
+interface GameTile {
+  to: string;
+  name: string;
+  desc: string;
+  badge?: string;
+  tone: string; // artwork gradient
+  cta?: string;
+}
+
+const GAMES: GameTile[] = [
+  { to: '/casino/roulette', name: 'Roleta', desc: 'Roleta europeia, zero único.', badge: 'Em alta', tone: 'from-chip-ruby/40 to-bg' },
+  { to: '/casino/blackjack', name: 'Blackjack', desc: 'O croupier pára nos 17.', tone: 'from-positive-felt/40 to-bg' },
+  { to: '/casino/slots', name: 'Slots Aurelia', desc: 'Três rolos, tema Arentim.', tone: 'from-gold/30 to-bg' },
+  { to: '/casino/coinflip', name: 'Moeda', desc: 'Cara ou coroa — dobro ou nada.', badge: 'Novo', tone: 'from-gold-light/30 to-bg' },
+  { to: '/poker', name: "Hold'em", desc: 'Contra bots ou amigos.', tone: 'from-chip-navy/40 to-bg' },
+  { to: '/sportsbook', name: 'Futebol', desc: 'Primeira Liga e mais.', badge: 'Ao vivo', tone: 'from-positive-felt/30 to-bg', cta: 'Abrir' },
 ];
+
+function GameCard({ g }: { g: GameTile }) {
+  return (
+    <Link to={g.to} className="card card-hover focus-ring group flex flex-col overflow-hidden">
+      <div className={`relative h-[120px] bg-gradient-to-br ${g.tone}`}>
+        {g.badge && (
+          <span className="absolute left-3 top-3 rounded-full border border-gold/40 bg-bg/60 px-2 py-0.5 font-sans text-[9px] uppercase tracking-[0.18em] text-gold">
+            {g.badge}
+          </span>
+        )}
+      </div>
+      <div className="flex flex-1 flex-col p-4">
+        <h3 className="font-display text-[22px] font-semibold text-text group-hover:text-gold">{g.name}</h3>
+        <p className="mt-1 flex-1 font-sans text-[12.5px] text-muted">{g.desc}</p>
+        <div className="mt-3 flex items-center justify-between">
+          <span className="font-mono text-xs text-muted-2">50 – 5 000 Tt</span>
+          <span className="rounded border border-gold/40 px-3 py-1 font-sans text-[10px] uppercase tracking-[0.18em] text-gold transition-colors group-hover:bg-gold group-hover:text-bg">
+            {g.cta ?? 'Entrar'}
+          </span>
+        </div>
+      </div>
+    </Link>
+  );
+}
+
+function HighRollers() {
+  const { data } = useLeaderboard('global', 'net');
+  return (
+    <div className="space-y-3">
+      <SectionHeader title="Grandes Apostadores" right="Esta semana" />
+      <div className="space-y-1">
+        {(data ?? []).slice(0, 5).map((row, i) => (
+          <div
+            key={row.id}
+            className={`flex items-center gap-3 rounded px-3 py-2 ${row.is_me ? 'bg-gold/[0.07]' : ''}`}
+          >
+            <span className={`w-5 text-right font-display ${i < 3 ? 'text-gold' : 'text-muted-2'}`}>{i + 1}</span>
+            <RingAvatar initials={row.display_name.slice(0, 2).toUpperCase()} size={34} tone={i < 3 ? 'gold' : 'muted'} />
+            <span className="flex-1 truncate font-sans text-sm text-body">{row.display_name}</span>
+            <span className="font-mono text-sm text-gold">{formatTt(row.value)}</span>
+          </div>
+        ))}
+        {(!data || data.length === 0) && <p className="px-3 py-2 text-sm text-muted-2">Ainda sem dados.</p>}
+      </div>
+    </div>
+  );
+}
+
+function Circle() {
+  const { data: friends } = useFriends();
+  const online = usePresence();
+  return (
+    <div className="space-y-3">
+      <SectionHeader title="O Seu Círculo" right={<Link to="/friends" className="hover:text-text">+ Convidar</Link>} />
+      <div className="space-y-1">
+        {(friends ?? []).slice(0, 5).map((f) => (
+          <div key={f.id} className="flex items-center gap-3 rounded px-3 py-2">
+            <RingAvatar initials={f.display_name.slice(0, 2).toUpperCase()} size={34} presence={online.has(f.id) ? 'online' : 'offline'} />
+            <span className="flex-1 truncate font-sans text-sm text-body">{f.display_name}</span>
+            <span className="font-sans text-xs text-muted-2">{online.has(f.id) ? 'Online' : 'Offline'}</span>
+          </div>
+        ))}
+        {(!friends || friends.length === 0) && (
+          <p className="px-3 py-2 text-sm text-muted-2">
+            Sem amigos ainda — <Link to="/friends" className="text-gold hover:underline">encontre alguns</Link>.
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
 
 export function HomePage() {
   const { user } = useAuth();
-  return (
-    <div className="animate-fade-in space-y-8">
-      {user && <DailyBonusCard />}
-      <section className="card relative overflow-hidden p-8">
-        <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-accent/20 blur-3xl" />
-        <div className="relative">
-          <div className="inline-flex items-center gap-2 rounded-full border border-border bg-bg/50 px-3 py-1 text-xs text-muted">
-            <CoinIcon className="h-3.5 w-3.5" />
-            Play money only — no real currency involved
-          </div>
-          <h1 className="mt-4 font-display text-4xl font-bold tracking-tight text-text">
-            Welcome to Arent<span className="text-gold">im</span>
-          </h1>
-          <p className="mt-3 max-w-xl text-muted">
-            A social casino and football sportsbook for friends. Every account starts with{' '}
-            <span className="font-semibold text-text">5.000 Tostões</span>. It is just for fun.
-          </p>
-        </div>
-      </section>
 
-      <section className="grid gap-4 sm:grid-cols-2">
-        {tiles.map((tile) => (
-          <Link
-            key={tile.to}
-            to={tile.to}
-            className="card focus-ring group p-6 transition-colors hover:border-accent/50"
-          >
-            <h2 className="font-display text-lg font-semibold text-text group-hover:text-gold">
-              {tile.title}
-            </h2>
-            <p className="mt-1 text-sm text-muted">{tile.body}</p>
-          </Link>
-        ))}
-      </section>
+  return (
+    <div className="animate-fade-in space-y-10">
+      {user && <DailyBonusCard />}
+
+      <FramedPanel>
+        <div className="max-w-xl">
+          <Eyebrow>Bem-vindo ao Arentim</Eyebrow>
+          <h1 className="mt-3 font-display text-[44px] font-medium leading-[1.04] text-text">
+            A sorte está <span className="italic text-gold">lançada.</span>
+          </h1>
+          <p className="mt-4 font-sans text-[15px] leading-relaxed text-muted">
+            Uma casa de jogos só para amigos. Cada conta começa com 5 000 Tostões. É tudo a brincar.
+          </p>
+          <div className="mt-7 flex flex-wrap gap-3">
+            <Link to="/casino/coinflip">
+              <Button variant="ghost">Lançar a Moeda</Button>
+            </Link>
+            <Link to="/sportsbook">
+              <Button variant="secondary">Ver Futebol</Button>
+            </Link>
+          </div>
+        </div>
+      </FramedPanel>
+
+      <div className="flex flex-wrap gap-8">
+        <div className="min-w-[300px] flex-[3_1_600px] space-y-5">
+          <SectionHeader title="As Mesas" right="Salão" />
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(238px,1fr))] gap-[18px]">
+            {GAMES.map((g) => (
+              <GameCard key={g.to} g={g} />
+            ))}
+          </div>
+        </div>
+        {user && (
+          <aside className="min-w-[296px] flex-[1_1_300px] space-y-8">
+            <HighRollers />
+            <Circle />
+          </aside>
+        )}
+      </div>
     </div>
   );
 }

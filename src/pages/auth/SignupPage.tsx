@@ -48,24 +48,24 @@ export function SignupPage() {
 
   if (needsConfirm) {
     return (
-      <AuthCard title="Check your email" subtitle="One more step to start playing.">
+      <AuthCard title="Verifique o seu email" subtitle="Falta um passo para começar a jogar.">
         <p className="text-sm text-muted">
-          We sent a confirmation link to <span className="text-text">{email}</span>. Confirm it,
-          then sign in.
+          Enviámos uma ligação de confirmação para <span className="text-text">{email}</span>.
+          Confirme-a e depois entre.
         </p>
         <Link to="/login" className="mt-6 inline-block font-medium text-gold hover:underline">
-          Go to sign in
+          Ir para a entrada
         </Link>
       </AuthCard>
     );
   }
 
   return (
-    <AuthCard title="Create your account" subtitle="Start with 5.000 Tostões on the house.">
+    <AuthCard title="Criar a sua conta" subtitle="Comece com 5 000 Tostões oferecidos.">
       <form onSubmit={onSubmit} className="space-y-4" noValidate>
         <Input
           id="displayName"
-          label="Display name"
+          label="Nome de exibição"
           autoComplete="nickname"
           value={displayName}
           onChange={(e) => setDisplayName(e.target.value)}
@@ -83,24 +83,24 @@ export function SignupPage() {
         <Input
           id="password"
           type="password"
-          label="Password"
+          label="Palavra-passe"
           autoComplete="new-password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
         />
         <p className="text-xs text-muted">
-          At least 10 characters with upper- and lowercase letters and a number.
+          Pelo menos 10 caracteres com letras maiúsculas, minúsculas e um número.
         </p>
         {error && <p className="text-sm text-negative">{error}</p>}
-        <Button type="submit" className="w-full" disabled={busy}>
-          {busy ? 'Creating…' : 'Create account'}
+        <Button type="submit" variant="primary" className="w-full" disabled={busy}>
+          {busy ? 'A criar…' : 'Criar conta'}
         </Button>
       </form>
       <p className="mt-6 text-center text-sm text-muted">
-        Already have an account?{' '}
+        Já tem conta?{' '}
         <Link to="/login" className="font-medium text-gold hover:underline">
-          Sign in
+          Entrar
         </Link>
       </p>
     </AuthCard>

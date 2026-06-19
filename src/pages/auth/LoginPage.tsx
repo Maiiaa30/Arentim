@@ -36,14 +36,14 @@ export function LoginPage() {
 
     if (signInError) {
       // Generic message — never reveal whether the email exists (A07).
-      setError('Incorrect email or password.');
+      setError('Email ou palavra-passe incorretos.');
       return;
     }
     navigate(from, { replace: true });
   }
 
   return (
-    <AuthCard title="Welcome back" subtitle="Sign in to your Arentim account.">
+    <AuthCard title="Bem-vindo de volta" subtitle="Entre na sua conta Arentim.">
       <form onSubmit={onSubmit} className="space-y-4" noValidate>
         <Input
           id="email"
@@ -57,21 +57,21 @@ export function LoginPage() {
         <Input
           id="password"
           type="password"
-          label="Password"
+          label="Palavra-passe"
           autoComplete="current-password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
         />
         {error && <p className="text-sm text-negative">{error}</p>}
-        <Button type="submit" className="w-full" disabled={busy}>
-          {busy ? 'Signing in…' : 'Sign in'}
+        <Button type="submit" variant="primary" className="w-full" disabled={busy}>
+          {busy ? 'A entrar…' : 'Entrar'}
         </Button>
       </form>
       <p className="mt-6 text-center text-sm text-muted">
-        New here?{' '}
+        Novo por aqui?{' '}
         <Link to="/signup" className="font-medium text-gold hover:underline">
-          Create an account
+          Criar conta
         </Link>
       </p>
     </AuthCard>
