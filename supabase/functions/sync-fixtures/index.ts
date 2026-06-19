@@ -17,6 +17,7 @@ import {
   fetchMatches,
   fetchStrength,
   mapStatus,
+  score,
   seasonYear,
   sleep,
   teamName,
@@ -42,7 +43,8 @@ Deno.serve(async (req) => {
   }
 
   const supabase = createClient(SUPABASE_URL, SERVICE_KEY);
-  const from = ymd(new Date());
+  // Window: last 3 days (recent results) → next 10 days (upcoming, bettable).
+  const from = ymd(new Date(Date.now() - 3 * 86_400_000));
   const to = ymd(new Date(Date.now() + 10 * 86_400_000));
   const summary: Record<string, number | string> = {};
   let first = true;
@@ -55,23 +57,29 @@ Deno.serve(async (req) => {
       await sleep(GAP_MS);
       const matches = await fetchMatches(comp.code, TOKEN, from, to);
 
-      const rows = matches
-        .filter((m) => mapStatus(m.status) === 'scheduled')
-        .map((m) => {
-          const home = teamName(m.homeTeam);
-          const away = teamName(m.awayTeam);
-          return {
-            external_ref: `fd:${m.id}`,
-            league: comp.name,
-            season: seasonYear(m),
-            home,
-            away,
-            kickoff: m.utcDate,
-            status: 'scheduled',
-            odds: computeOdds(home, away, strength),
-            updated_at: new Date().toISOString(),
-          };
-        });
+      // Upsert every match in the window with a uniform row shape: upcoming ones
+      // carry generated odds; finished/live ones carry their score (so the last
+      // 3 days of results show on the Resultados page).
+      const rows = matches.map((m) => {
+        const home = teamName(m.homeTeam);
+        const away = teamName(m.awayTeam);
+        const status = mapStatus(m.status);
+        const sc = score(m);
+        return {
+          external_ref: `fd:${m.id}`,
+          league: comp.name,
+          season: seasonYear(m),
+          home,
+          away,
+          kickoff: m.utcDate,
+          status,
+          minute: status === 'live' ? (m.minute ?? null) : null,
+          home_score: sc.home,
+          away_score: sc.away,
+          odds: computeOdds(home, away, strength),
+          updated_at: new Date().toISOString(),
+        };
+      });
 
       if (rows.length > 0) {
         const { error } = await supabase.from('fixtures').upsert(rows, { onConflict: 'external_ref' });
