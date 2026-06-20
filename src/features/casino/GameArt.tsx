@@ -20,7 +20,11 @@ export type GameArtKind =
   | 'wheel'
   | 'crash'
   | 'chest'
-  | 'highlow';
+  | 'highlow'
+  | 'mines'
+  | 'tigrinho'
+  | 'horse'
+  | 'chicken';
 
 const GOLD = '#C9A24B';
 const GOLD_LIGHT = '#f3dca0';
@@ -349,6 +353,56 @@ function Chest() {
   );
 }
 
+function Mines() {
+  const faces = ['💎', '', '💣', '', '💎', '', '', '💎', ''];
+  return (
+    <div className="flex h-full items-center justify-center">
+      <div className="grid grid-cols-3 gap-1.5">
+        {faces.map((f, i) => (
+          <span
+            key={i}
+            className={`flex h-8 w-8 items-center justify-center rounded-md text-sm ${f === '💎' ? 'bg-positive/15' : f === '💣' ? 'animate-floaty bg-negative/15' : 'bg-surface-raised'}`}
+          >
+            {f}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function Tigrinho() {
+  return (
+    <div className="flex h-full items-center justify-center gap-1.5" style={{ background: 'radial-gradient(120% 90% at 50% 0%, rgba(120,24,24,0.5), transparent 70%)' }}>
+      <span className="text-2xl">🪙</span>
+      <span className="animate-floaty text-5xl" style={{ filter: 'drop-shadow(0 0 8px rgba(201,162,75,0.55))' }}>🐯</span>
+      <span className="text-2xl">🧧</span>
+    </div>
+  );
+}
+
+function Horse() {
+  return (
+    <div className="relative h-full overflow-hidden">
+      <div className="absolute inset-x-0 bottom-4 h-px bg-gold/30" />
+      <div className="absolute inset-x-0 bottom-7 h-px bg-gold/15" />
+      <span className="animate-ball absolute bottom-5 left-1/2 -translate-x-1/2 text-3xl">🏇</span>
+    </div>
+  );
+}
+
+function Chicken() {
+  return (
+    <div className="relative h-full overflow-hidden">
+      <div className="absolute inset-0 flex items-center justify-around opacity-40">
+        {[0, 1, 2, 3, 4].map((i) => <span key={i} className="h-10 w-px bg-gold/30" />)}
+      </div>
+      <span className="animate-floaty absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-3xl">🐔</span>
+      <span className="absolute right-3 top-3 text-lg">🚗</span>
+    </div>
+  );
+}
+
 const SCENES: Record<GameArtKind, () => JSX.Element> = {
   roulette: Roulette,
   blackjack: Blackjack,
@@ -362,6 +416,10 @@ const SCENES: Record<GameArtKind, () => JSX.Element> = {
   crash: Crash,
   chest: Chest,
   highlow: HighLow,
+  mines: Mines,
+  tigrinho: Tigrinho,
+  horse: Horse,
+  chicken: Chicken,
 };
 
 export function GameArt({ kind }: { kind: GameArtKind }) {

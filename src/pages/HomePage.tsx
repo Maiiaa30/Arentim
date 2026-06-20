@@ -15,6 +15,9 @@ import { WinPopup } from '@/features/sportsbook/WinPopup';
 import { formatTos } from '@/lib/format';
 
 const GAMES: GameTile[] = [
+  { to: '/casino/tigrinho', name: 'Tigrinho', desc: 'A slot do tigre da sorte.', art: 'tigrinho', badge: 'Novo', tone: 'from-chip-ruby/40 to-bg' },
+  { to: '/casino/mines', name: 'Mines', desc: 'Diamantes ou minas?', art: 'mines', badge: 'Novo', tone: 'from-positive-felt/40 to-bg' },
+  { to: '/casino/frango', name: 'Frango na Estrada', desc: 'Atravessa sem morrer.', art: 'chicken', badge: 'Novo', tone: 'from-gold/30 to-bg' },
   { to: '/casino/crash', name: 'Crash', desc: 'Saia antes de rebentar.', art: 'crash', badge: 'Novo', tone: 'from-chip-ruby/40 to-bg' },
   { to: '/casino/wheel', name: 'Fita da Sorte', desc: 'Pare no multiplicador certo.', art: 'wheel', badge: 'Novo', tone: 'from-gold/30 to-bg' },
   { to: '/casino/roulette', name: 'Roleta', desc: 'Roleta europeia, zero único.', art: 'roulette', badge: 'Em alta', tone: 'from-chip-ruby/40 to-bg' },

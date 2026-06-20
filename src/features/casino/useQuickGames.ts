@@ -16,6 +16,14 @@ import type {
   CupsStartResult,
   CupsPickResult,
   HighLowResult,
+  MinesState,
+  MinesPickResult,
+  MinesCashoutResult,
+  TigrinhoResult,
+  HorseResult,
+  ChickenState,
+  ChickenStepResult,
+  ChickenCashoutResult,
 } from '@/types/db';
 
 function useInvalidateWallet() {
@@ -172,6 +180,110 @@ export function useCrashStart() {
         p_stake: input.stake,
         p_auto_target: input.autoTarget,
       });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: invalidate,
+  });
+}
+
+/** Mines: start a round (debit + draw the hidden mine layout). */
+export function useMinesStart() {
+  const invalidate = useInvalidateWallet();
+  return useMutation({
+    mutationFn: async (input: { stake: number; mines: number }): Promise<MinesState> => {
+      const { data, error } = await supabase.rpc('mines_start', { p_stake: input.stake, p_mines: input.mines });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: invalidate,
+  });
+}
+
+/** Mines: reveal a tile (safe → grow multiplier, mine → bust). */
+export function useMinesPick() {
+  const invalidate = useInvalidateWallet();
+  return useMutation({
+    mutationFn: async (cell: number): Promise<MinesPickResult> => {
+      const { data, error } = await supabase.rpc('mines_pick', { p_cell: cell });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: invalidate,
+  });
+}
+
+/** Mines: cash out at the current multiplier. */
+export function useMinesCashout() {
+  const invalidate = useInvalidateWallet();
+  return useMutation({
+    mutationFn: async (): Promise<MinesCashoutResult> => {
+      const { data, error } = await supabase.rpc('mines_cashout');
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: invalidate,
+  });
+}
+
+/** Tigrinho: spin the 3×3 tiger slot. */
+export function useTigrinho() {
+  const invalidate = useInvalidateWallet();
+  return useMutation({
+    mutationFn: async (stake: number): Promise<TigrinhoResult> => {
+      const { data, error } = await supabase.rpc('play_tigrinho', { p_stake: stake, p_idempotency_key: crypto.randomUUID() });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: invalidate,
+  });
+}
+
+/** Corrida de Cavalos: back a horse and run the race. */
+export function useHorse() {
+  const invalidate = useInvalidateWallet();
+  return useMutation({
+    mutationFn: async (input: { stake: number; horse: number }): Promise<HorseResult> => {
+      const { data, error } = await supabase.rpc('play_horse', { p_stake: input.stake, p_horse: input.horse, p_idempotency_key: crypto.randomUUID() });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: invalidate,
+  });
+}
+
+/** Frango: start a crossing at a difficulty (draws the hidden survivable lanes). */
+export function useChickenStart() {
+  const invalidate = useInvalidateWallet();
+  return useMutation({
+    mutationFn: async (input: { stake: number; difficulty: string }): Promise<ChickenState> => {
+      const { data, error } = await supabase.rpc('chicken_start', { p_stake: input.stake, p_difficulty: input.difficulty });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: invalidate,
+  });
+}
+
+/** Frango: step into the next lane (survive → grow, hit → lose). */
+export function useChickenStep() {
+  const invalidate = useInvalidateWallet();
+  return useMutation({
+    mutationFn: async (): Promise<ChickenStepResult> => {
+      const { data, error } = await supabase.rpc('chicken_step');
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: invalidate,
+  });
+}
+
+/** Frango: cash out at the current lane. */
+export function useChickenCashout() {
+  const invalidate = useInvalidateWallet();
+  return useMutation({
+    mutationFn: async (): Promise<ChickenCashoutResult> => {
+      const { data, error } = await supabase.rpc('chicken_cashout');
       if (error) throw error;
       return data;
     },

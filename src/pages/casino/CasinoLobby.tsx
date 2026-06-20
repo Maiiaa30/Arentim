@@ -3,6 +3,10 @@ import { CasinoActivity } from '@/features/casino/CasinoActivity';
 import { GameCard, type GameTile } from '@/features/casino/GameCard';
 
 const NEW: GameTile[] = [
+  { to: '/casino/tigrinho', name: 'Tigrinho', desc: 'A slot do tigre da sorte. Três iguais pagam — o tigre é o prémio maior.', art: 'tigrinho', badge: 'Novo', tone: 'from-chip-ruby/40 to-bg', range: '5 – 100 tós' },
+  { to: '/casino/mines', name: 'Mines', desc: 'Revela diamantes e foge das minas. Retira antes de rebentar.', art: 'mines', badge: 'Novo', tone: 'from-positive-felt/40 to-bg', range: '5 – 100 tós' },
+  { to: '/casino/frango', name: 'Frango na Estrada', desc: 'Atravessa as faixas sem seres atropelado — o prémio sobe a cada faixa.', art: 'chicken', badge: 'Novo', tone: 'from-gold/30 to-bg', range: '5 – 100 tós' },
+  { to: '/casino/corrida', name: 'Corrida de Cavalos', desc: 'Escolhe um cavalo e aposta. Cota maior, prémio maior.', art: 'horse', badge: 'Novo', tone: 'from-chip-navy/40 to-bg', range: '5 – 100 tós' },
   { to: '/casino/crash', name: 'Crash', desc: 'Saia antes do foguetão rebentar. Multiplicador sem limite.', art: 'crash', badge: 'Novo', tone: 'from-chip-ruby/40 to-bg', range: '5 – 100 tós' },
   { to: '/casino/wheel', name: 'Fita da Sorte', desc: 'A fita corre e pára no multiplicador — até 5×.', art: 'wheel', badge: 'Novo', tone: 'from-gold/30 to-bg', range: '5 – 100 tós' },
   { to: '/casino/chest', name: 'Jogo dos Copos', desc: 'Siga a joia debaixo do copo enquanto baralham — encontre-a por 2.85×.', art: 'chest', badge: 'Novo', tone: 'from-gold/30 to-bg', range: '5 – 100 tós' },

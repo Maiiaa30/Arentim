@@ -587,6 +587,73 @@ export type Transaction = {
   created_at: string;
 };
 
+/** Mines: masked round snapshot + pick/cash-out results. */
+export type MinesState = {
+  mines: number;
+  picks: number[];
+  multiplier: number;
+  next_multiplier?: number;
+  balance: number;
+};
+export type MinesPickResult = {
+  safe: boolean;
+  cell: number;
+  picks?: number[];
+  multiplier?: number;
+  next_multiplier?: number;
+  cashed?: boolean;
+  payout?: number;
+  mines?: number[];
+  balance?: number;
+};
+export type MinesCashoutResult = {
+  payout: number;
+  multiplier: number;
+  picks: number[];
+  mines: number[];
+  balance: number;
+};
+
+/** Tigrinho (3×3 tiger slot). */
+export type TigrinhoResult = {
+  grid: number[];
+  wins: { row: number; symbol: number; amount: number }[];
+  payout: number;
+  multiplier: number;
+  balance: number;
+  replayed: boolean;
+};
+
+/** Corrida de Cavalos. */
+export type HorseResult = {
+  winner: number;
+  horse: number;
+  won: boolean;
+  payout: number;
+  odds: number[];
+  balance: number;
+  replayed: boolean;
+};
+
+/** Frango na Estrada (chicken). */
+export type ChickenState = {
+  difficulty: string;
+  step: number;
+  multiplier: number;
+  next_multiplier?: number;
+  balance: number;
+};
+export type ChickenStepResult = {
+  alive: boolean;
+  lane: number;
+  multiplier?: number;
+  next_multiplier?: number;
+  cashed?: boolean;
+  payout?: number;
+  balance?: number;
+};
+export type ChickenCashoutResult = { payout: number; multiplier: number; lane: number; balance: number };
+
 /** Minimal shape consumed by the typed Supabase client. */
 export type Database = {
   public: {
@@ -713,6 +780,38 @@ export type Database = {
       cups_pick: {
         Args: { p_picked: number };
         Returns: CupsPickResult;
+      };
+      mines_start: {
+        Args: { p_stake: number; p_mines: number };
+        Returns: MinesState;
+      };
+      mines_pick: {
+        Args: { p_cell: number };
+        Returns: MinesPickResult;
+      };
+      mines_cashout: {
+        Args: Record<string, never>;
+        Returns: MinesCashoutResult;
+      };
+      play_tigrinho: {
+        Args: { p_stake: number; p_idempotency_key?: string };
+        Returns: TigrinhoResult;
+      };
+      play_horse: {
+        Args: { p_stake: number; p_horse: number; p_idempotency_key?: string };
+        Returns: HorseResult;
+      };
+      chicken_start: {
+        Args: { p_stake: number; p_difficulty?: string };
+        Returns: ChickenState;
+      };
+      chicken_step: {
+        Args: Record<string, never>;
+        Returns: ChickenStepResult;
+      };
+      chicken_cashout: {
+        Args: Record<string, never>;
+        Returns: ChickenCashoutResult;
       };
       play_highlow: {
         Args: { p_stake: number; p_pick: string; p_idempotency_key: string | null };
