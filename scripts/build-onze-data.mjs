@@ -34,6 +34,18 @@ const LINE = {
 
 const norm = (s) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[.]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
 
+/** Decode HTML entities the source CSVs leak into names (e.g. "N&#39;Doye"). */
+const cleanName = (s) =>
+  (s || '')
+    .replace(/&#x([0-9a-f]+);/gi, (_, c) => String.fromCharCode(parseInt(c, 16)))
+    .replace(/&#(\d+);/g, (_, c) => String.fromCharCode(Number(c)))
+    .replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+    .replace(/&[a-z]+;/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+/** Drop placeholder/junk entries (empty, or a 1–2 letter all-caps code like "MT"). */
+const isJunkName = (n) => !n || n.length < 2 || /^[A-Z]{1,2}$/.test(n);
+
 /**
  * Map a raw club string to its canonical Liga Portugal name, or null if it's
  * not a Portuguese top-flight club. Rules are precise to avoid foreign false
@@ -139,10 +151,11 @@ for (const year of YEARS) {
     if (!club) continue;
     const rating = parseInt(row[iRating], 10);
     const lines = linesFor(row[iPos] || '');
-    if (!Number.isFinite(rating) || lines.length === 0) continue;
+    const name = cleanName(row[iName]);
+    if (!Number.isFinite(rating) || lines.length === 0 || isJunkName(name)) continue;
     clubsSeen.add(club);
     (clubs[club] ??= []).push({
-      n: row[iName],
+      n: name,
       r: rating,
       p: row[iPos],
       l: lines,
@@ -179,9 +192,10 @@ try {
       const rating = parseInt(row[jRating], 10);
       const posStr = (row[jPos] || '').replace(/,\s*/g, '/'); // normalise to slash form
       const lines = linesFor(posStr);
-      if (!Number.isFinite(rating) || lines.length === 0) continue;
+      const name = cleanName(row[jName]);
+      if (!Number.isFinite(rating) || lines.length === 0 || isJunkName(name)) continue;
       clubsSeen.add(club);
-      ((byVer[2000 + ver] ??= {})[club] ??= []).push({ n: row[jName], r: rating, p: posStr, l: lines, ph: null, nat: row[jNat] || null });
+      ((byVer[2000 + ver] ??= {})[club] ??= []).push({ n: name, r: rating, p: posStr, l: lines, ph: null, nat: row[jNat] || null });
     }
     for (const ver of WANT) {
       const year = 2000 + ver;
@@ -217,9 +231,10 @@ try {
       const posStr = [row[jPos], ...(row[jAlt] || '').split(',')]
         .map((s) => s.trim()).filter(Boolean).join('/');
       const lines = linesFor(posStr);
-      if (!Number.isFinite(rating) || lines.length === 0) continue;
+      const name = cleanName(row[jName]);
+      if (!Number.isFinite(rating) || lines.length === 0 || isJunkName(name)) continue;
       clubsSeen.add(club);
-      (clubs[club] ??= []).push({ n: row[jName], r: rating, p: posStr, l: lines, ph: null, nat: row[jNat] || null });
+      (clubs[club] ??= []).push({ n: name, r: rating, p: posStr, l: lines, ph: null, nat: row[jNat] || null });
     }
     byYear[2025] = buildClubs(clubs);
     console.log(`2025: ${Object.keys(byYear[2025]).length} clubs, ${Object.values(byYear[2025]).reduce((s, c) => s + c.players.length, 0)} players`);
@@ -250,9 +265,10 @@ try {
       const rating = parseInt(row[jRating], 10);
       const posStr = (row[jPos] || '').replace(/,\s*/g, '/'); // normalise to slash form
       const lines = linesFor(posStr);
-      if (!Number.isFinite(rating) || lines.length === 0) continue;
+      const name = cleanName(row[jName]);
+      if (!Number.isFinite(rating) || lines.length === 0 || isJunkName(name)) continue;
       clubsSeen.add(club);
-      (clubs[club] ??= []).push({ n: row[jName], r: rating, p: posStr, l: lines, ph: null, nat: row[jNat] || null });
+      (clubs[club] ??= []).push({ n: name, r: rating, p: posStr, l: lines, ph: null, nat: row[jNat] || null });
     }
     byYear[2026] = buildClubs(clubs);
     console.log(`2026: ${Object.keys(byYear[2026]).length} clubs, ${Object.values(byYear[2026]).reduce((s, c) => s + c.players.length, 0)} players`);
