@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Eyebrow, FramedPanel, SectionHeader } from '@/components/ui/primitives';
 import { GameArt, type GameArtKind } from '@/features/casino/GameArt';
+import { CasinoActivity } from '@/features/casino/CasinoActivity';
 
 interface GameTile {
   to: string;
@@ -95,6 +96,8 @@ export function CasinoLobby() {
           </p>
         </div>
       </FramedPanel>
+
+      <CasinoActivity />
 
       <Section title="Novidades" right="Acabadas de chegar" games={NEW} featured />
       <Section title="As Mesas" right="Clássicos" games={TABLES} />

@@ -462,6 +462,13 @@ export type RouletteRoomState = {
 
 export type RouletteRoomBetResult = { ok?: boolean; balance: number; stake: number };
 
+/** Live casino-lobby activity (casino_activity RPC). */
+export type CasinoActivity = {
+  crash: { players: number; friends: number };
+  roulette: { players: number; friends: number };
+  recent: { name: string; game: string | null; amount: number; at: string; is_me: boolean }[];
+};
+
 /** A row in the per-user notification inbox (header bell). */
 export type NotificationRow = {
   id: number;
@@ -755,6 +762,10 @@ export type Database = {
       mark_notifications_read: {
         Args: { p_ids: number[] | null };
         Returns: undefined;
+      };
+      casino_activity: {
+        Args: Record<string, never>;
+        Returns: CasinoActivity;
       };
       bj_deal: {
         Args: { p_stake: number };
