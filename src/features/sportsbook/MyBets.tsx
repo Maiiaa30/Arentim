@@ -28,51 +28,81 @@ function ResultPill({ result }: { result: string }) {
   );
 }
 
-/** One bet, with each leg's live state and the final score where known. */
-export function BetCard({ bet }: { bet: BetWithLegs }) {
+/** A round status marker (✓ / ✗ / ·) for a leg. */
+function LegMark({ result }: { result: string }) {
+  const map: Record<string, { ch: string; cls: string }> = {
+    won: { ch: '✓', cls: 'bg-positive/15 text-positive' },
+    lost: { ch: '✗', cls: 'bg-negative/15 text-negative' },
+    void: { ch: '—', cls: 'bg-bg text-muted-2 ring-1 ring-border' },
+    pending: { ch: '', cls: 'bg-bg text-muted-2 ring-1 ring-border' },
+  };
+  const m = map[result] ?? map.pending!;
   return (
-    <li className="card p-4">
-      <div className="mb-2 flex items-center justify-between gap-2">
-        <span className="font-sans text-sm text-body">
-          {bet.legs.length > 1 ? `Múltipla de ${bet.legs.length}` : 'Simples'} ·{' '}
-          <span className="font-mono text-muted-2">{Number(bet.combined_odds).toFixed(2)}</span>
-        </span>
+    <span className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full font-mono text-[11px] font-bold ${m.cls}`}>
+      {m.ch || <span className="h-1.5 w-1.5 rounded-full bg-current opacity-60" />}
+    </span>
+  );
+}
+
+/** One bet, with each leg on its own clear two-line row + live state/score. */
+export function BetCard({ bet }: { bet: BetWithLegs }) {
+  const accent =
+    bet.status === 'won' ? 'border-l-positive' : bet.status === 'lost' ? 'border-l-negative' : 'border-l-gold/50';
+  return (
+    <li className={`card border-l-2 ${accent} p-4`}>
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <div className="min-w-0">
+          <p className="font-sans text-sm font-medium text-text">
+            {bet.legs.length > 1 ? `Múltipla · ${bet.legs.length} jogos` : 'Aposta simples'}
+          </p>
+          <p className="font-mono text-[11px] text-muted-2">Cota {Number(bet.combined_odds).toFixed(2)}</p>
+        </div>
         <ResultPill result={bet.status} />
       </div>
-      <ul className="space-y-1.5">
+
+      <ul className="space-y-2.5">
         {bet.legs.map((leg) => {
           const fx = leg.fixture;
           const finished = fx?.status === 'finished';
           const live = fx?.status === 'live';
           const hasScore = fx && fx.home_score != null && fx.away_score != null;
           return (
-            <li key={leg.id} className="flex items-center justify-between gap-2 font-sans text-xs">
-              <span className="min-w-0">
-                <span className="text-muted-2">
-                  {fx ? `${fx.home} v ${fx.away}` : `Jogo ${leg.fixture_id}`}
-                </span>
-                {hasScore && (
-                  <span
-                    className={`ml-1.5 font-mono ${finished ? 'text-body' : live ? 'text-gold' : 'text-muted-2'}`}
-                  >
-                    {fx!.home_score}–{fx!.away_score}
-                    {live && <span className="ml-1 text-[10px] uppercase tracking-wide text-negative">ao vivo</span>}
+            <li key={leg.id} className="flex items-start gap-2.5">
+              <LegMark result={leg.result} />
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-sans text-[13px] leading-tight text-text">
+                  {fx ? `${fx.home} — ${fx.away}` : `Jogo ${leg.fixture_id}`}
+                </p>
+                <p className="mt-0.5 flex flex-wrap items-center gap-x-2 font-sans text-[11px] leading-tight">
+                  <span className="font-medium text-gold-light">
+                    {selectionLabel(leg.market as Market, leg.selection as Selection, fx?.home, fx?.away)}
                   </span>
-                )}
-                <span className="ml-1 text-body">
-                  · {selectionLabel(leg.market as Market, leg.selection as Selection, fx?.home, fx?.away)}
-                </span>
-              </span>
-              <ResultPill result={leg.result} />
+                  {hasScore ? (
+                    <span className={`font-mono ${finished ? 'text-body' : 'text-gold'}`}>
+                      {fx!.home_score}–{fx!.away_score}
+                      {live && <span className="ml-1 uppercase tracking-wide text-negative">ao vivo</span>}
+                    </span>
+                  ) : fx ? (
+                    <span className="text-faint">{live ? 'ao vivo' : 'por jogar'}</span>
+                  ) : null}
+                </p>
+              </div>
             </li>
           );
         })}
       </ul>
-      <div className="mt-2 flex justify-between border-t border-border pt-2 font-sans text-xs text-muted-2">
-        <span>Aposta {formatAmount(bet.stake)}</span>
-        <span>
-          {bet.status === 'won' ? 'Devolvido ' : 'A devolver '}
-          <span className={`font-mono ${bet.status === 'won' ? 'text-positive' : 'text-body'}`}>
+
+      <div className="mt-3 flex items-center justify-between border-t border-border pt-2.5 font-sans text-xs">
+        <span className="text-muted-2">
+          Aposta <span className="font-mono text-body">{formatAmount(bet.stake)}</span>
+        </span>
+        <span className="text-muted-2">
+          {bet.status === 'won' ? 'Ganhou ' : bet.status === 'lost' ? 'Retorno ' : 'Retorno possível '}
+          <span
+            className={`font-mono font-semibold ${
+              bet.status === 'won' ? 'text-positive' : bet.status === 'lost' ? 'text-muted-2 line-through' : 'text-gold'
+            }`}
+          >
             {formatAmount(bet.potential_payout)}
           </span>
         </span>
