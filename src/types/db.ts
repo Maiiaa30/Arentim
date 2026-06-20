@@ -383,6 +383,98 @@ export type CrashSettleResult = {
   replayed: boolean;
 };
 
+/** A bet row in the shared Crash room (no hidden info — readable by everyone). */
+export type CrashBetRow = {
+  id: number;
+  room_id: number;
+  user_id: string;
+  display_name: string;
+  stake: number;
+  auto_target: number | null;
+  cashout: number | null;
+  payout: number;
+  settled: boolean;
+  created_at: string;
+};
+
+/** Masked snapshot of the shared Crash round (crash_room_now). */
+export type CrashRoomState = {
+  room_id: number;
+  status: 'betting' | 'flying' | 'busted';
+  server_now: string;
+  betting_ends_at: string;
+  fly_start_at: string;
+  bust_at: string | null;
+  mult: number | null;
+  crash: number | null;
+  mine: {
+    stake: number;
+    auto_target: number | null;
+    settled: boolean;
+    cashout: number | null;
+    payout: number;
+  } | null;
+};
+
+export type CrashRoomBetResult = { ok?: boolean; balance: number };
+export type CrashRoomCashoutResult = {
+  won: boolean;
+  mult: number;
+  crash: number | null;
+  payout: number;
+  balance: number;
+  replayed?: boolean;
+};
+
+/** A slip row in the shared Roulette table (no hidden info). */
+export type RouletteRoomBetRow = {
+  id: number;
+  room_id: number;
+  user_id: string;
+  display_name: string;
+  bets: RouletteBetPayload[];
+  stake: number;
+  payout: number;
+  bonus_hit: boolean;
+  settled: boolean;
+  created_at: string;
+};
+
+/** Masked snapshot of the shared Roulette round (roulette_room_now). */
+export type RouletteRoomState = {
+  room_id: number;
+  status: 'betting' | 'spinning' | 'done';
+  server_now: string;
+  betting_ends_at: string;
+  spin_start_at: string;
+  reveal_at: string;
+  /** Hidden (null) until betting closes. */
+  number: number | null;
+  bonus: RouletteBonus | null;
+  mine: {
+    bets: RouletteBetPayload[];
+    stake: number;
+    settled: boolean;
+    payout: number;
+    bonus_hit: boolean;
+  } | null;
+};
+
+export type RouletteRoomBetResult = { ok?: boolean; balance: number; stake: number };
+
+/** A row in the per-user notification inbox (header bell). */
+export type NotificationRow = {
+  id: number;
+  user_id: string;
+  type: string;
+  title: string;
+  body: string | null;
+  link: string | null;
+  data: Record<string, unknown>;
+  read_at: string | null;
+  created_at: string;
+};
+
 /** Result returned by the claim_daily_bonus RPC. */
 export type DailyBonusResult = {
   status: 'claimed' | 'already_claimed' | 'play_required';
@@ -519,6 +611,24 @@ export type Database = {
         Update: Partial<{ title: string; description: string; metric: string; target: number; reward: number; track: string; active: boolean }>;
         Relationships: [];
       };
+      notifications: {
+        Row: NotificationRow;
+        Insert: Partial<NotificationRow> & { user_id: string; type: string; title: string };
+        Update: Partial<NotificationRow>;
+        Relationships: [];
+      };
+      crash_bets: {
+        Row: CrashBetRow;
+        Insert: Partial<CrashBetRow> & { room_id: number; user_id: string; display_name: string; stake: number };
+        Update: Partial<CrashBetRow>;
+        Relationships: [];
+      };
+      roulette_room_bets: {
+        Row: RouletteRoomBetRow;
+        Insert: Partial<RouletteRoomBetRow> & { room_id: number; user_id: string; display_name: string; bets: RouletteBetPayload[]; stake: number };
+        Update: Partial<RouletteRoomBetRow>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
@@ -605,6 +715,46 @@ export type Database = {
       crash_history: {
         Args: Record<string, never>;
         Returns: number[];
+      };
+      crash_room_now: {
+        Args: Record<string, never>;
+        Returns: CrashRoomState;
+      };
+      crash_room_bet: {
+        Args: { p_room_id: number; p_stake: number; p_auto_target: number | null };
+        Returns: CrashRoomBetResult;
+      };
+      crash_room_cashout: {
+        Args: { p_room_id: number };
+        Returns: CrashRoomCashoutResult;
+      };
+      crash_room_history: {
+        Args: Record<string, never>;
+        Returns: number[];
+      };
+      roulette_room_now: {
+        Args: Record<string, never>;
+        Returns: RouletteRoomState;
+      };
+      roulette_room_bet: {
+        Args: { p_room_id: number; p_bets: RouletteBetPayload[] };
+        Returns: RouletteRoomBetResult;
+      };
+      roulette_room_history: {
+        Args: Record<string, never>;
+        Returns: number[];
+      };
+      list_notifications: {
+        Args: { p_limit: number };
+        Returns: NotificationRow[];
+      };
+      notifications_unread_count: {
+        Args: Record<string, never>;
+        Returns: number;
+      };
+      mark_notifications_read: {
+        Args: { p_ids: number[] | null };
+        Returns: undefined;
       };
       bj_deal: {
         Args: { p_stake: number };

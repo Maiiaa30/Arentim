@@ -5,6 +5,7 @@ import { useProfile } from '@/features/profile/useProfile';
 import { AnimatedNumber } from '@/components/AnimatedNumber';
 import { Button } from '@/components/ui/Button';
 import { Monogram, RingAvatar } from '@/components/ui/primitives';
+import { NotificationBell } from '@/components/NotificationBell';
 import { NAV, isGroup, type NavEntry, type NavLeaf } from './navItems';
 
 function initialsOf(name: string | undefined): string {
@@ -174,6 +175,8 @@ export function Header() {
                 {profile ? <AnimatedNumber value={profile.balance} /> : '—'}
                 <span className="font-mono text-[10px]">tós</span>
               </span>
+
+              <NotificationBell />
 
               <Button variant="secondary" className="hidden !px-4 !py-2 sm:inline-flex" onClick={() => navigate('/wallet')}>
                 Caixa
