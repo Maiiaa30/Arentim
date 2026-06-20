@@ -23,6 +23,7 @@ export function SobeDescePage() {
   const [spinId, setSpinId] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const timers = useRef<number[]>([]);
+  const stepRef = useRef<number | null>(null);
 
   const balance = profile?.balance ?? 0;
   const tooPoor = stake > balance;
@@ -45,7 +46,10 @@ export function SobeDescePage() {
   }, [dealNew]);
   useEffect(() => {
     const t = timers.current;
-    return () => t.forEach((id) => window.clearTimeout(id));
+    return () => {
+      t.forEach((id) => window.clearTimeout(id));
+      if (stepRef.current) window.clearInterval(stepRef.current);
+    };
   }, []);
 
   async function play(pick: HiLoPick) {
@@ -53,22 +57,29 @@ export function SobeDescePage() {
     setError(null);
     setResult(null);
     setRolling(true);
-    const shuffle = window.setInterval(() => setMarker(1 + Math.floor(Math.random() * 13)), 70);
+    const from = round.current;
     try {
       const res = await bet.mutateAsync({ stake, pick });
-      timers.current.push(
-        window.setTimeout(() => {
-          window.clearInterval(shuffle);
-          setMarker(res.next);
+      // Step the marker from the current rung toward the drawn number, so you
+      // see it climb (Sobe) or fall (Desce) rather than flicker randomly.
+      const dir = res.next > from ? 1 : -1;
+      let pos = from;
+      stepRef.current = window.setInterval(() => {
+        pos += dir;
+        setMarker(pos);
+        if (pos === res.next) {
+          if (stepRef.current) window.clearInterval(stepRef.current);
+          stepRef.current = null;
           setRolling(false);
           setResult({ won: res.won, payout: res.payout, next: res.next, mult: res.mult });
           if (res.won) setSpinId((n) => n + 1);
           // Deal the next random number after a beat.
           timers.current.push(window.setTimeout(() => void dealNew(), 1700));
-        }, 800),
-      );
+        }
+      }, 130);
     } catch (e) {
-      window.clearInterval(shuffle);
+      if (stepRef.current) window.clearInterval(stepRef.current);
+      stepRef.current = null;
       setRolling(false);
       setError(e instanceof Error ? e.message : 'A jogada falhou.');
     }

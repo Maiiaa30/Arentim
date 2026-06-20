@@ -41,9 +41,10 @@ export function CrashPage() {
   const [stake, setStake] = useState(25);
   const [autoOn, setAutoOn] = useState(false);
   const [autoTarget, setAutoTarget] = useState(2);
-  const [phase, setPhase] = useState<'idle' | 'flying' | 'done'>('idle');
+  const [phase, setPhase] = useState<'idle' | 'flying' | 'watching' | 'done'>('idle');
   const [mult, setMult] = useState(1);
   const [result, setResult] = useState<{ won: boolean; mult: number; crash: number; payout: number } | null>(null);
+  const [watchedBust, setWatchedBust] = useState(false);
   const [history, setHistory] = useState<number[]>([]);
   const [winId, setWinId] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -52,6 +53,7 @@ export function CrashPage() {
   const startedPerf = useRef(0);
   const raf = useRef<number | null>(null);
   const poll = useRef<number | null>(null);
+  const watchRaf = useRef<number | null>(null);
   const settling = useRef(false);
   const flyingRef = useRef(false);
 
@@ -65,10 +67,34 @@ export function CrashPage() {
   const stopLoops = useCallback(() => {
     if (raf.current) cancelAnimationFrame(raf.current);
     if (poll.current) window.clearInterval(poll.current);
+    if (watchRaf.current) cancelAnimationFrame(watchRaf.current);
     raf.current = null;
     poll.current = null;
+    watchRaf.current = null;
   }, []);
   useEffect(() => stopLoops, [stopLoops]);
+
+  // After a winning cash-out, fly the rocket on to where it really crashed, so
+  // the player sees how far it would have gone (purely cosmetic — already paid).
+  const watchToCrash = useCallback((fromMult: number, crash: number) => {
+    const startWatch = performance.now();
+    const fromT = Math.log(Math.max(1, fromMult)) / 0.15;
+    setPhase('watching');
+    const tick = () => {
+      const elapsed = fromT + (performance.now() - startWatch) / 1000;
+      const m = Math.max(1, Math.floor(Math.exp(0.15 * elapsed) * 100) / 100);
+      if (m >= crash) {
+        setMult(crash);
+        setWatchedBust(true);
+        setPhase('done');
+        watchRaf.current = null;
+        return;
+      }
+      setMult(m);
+      watchRaf.current = requestAnimationFrame(tick);
+    };
+    watchRaf.current = requestAnimationFrame(tick);
+  }, []);
 
   const finish = useCallback(
     async (id: number) => {
@@ -78,26 +104,31 @@ export function CrashPage() {
       stopLoops();
       try {
         const res = await cashout.mutateAsync(id);
-        setMult(res.won ? res.mult : res.crash);
         setResult(res);
-        setPhase('done');
-        if (res.won) setWinId((n) => n + 1);
         loadHistory();
+        if (res.won) {
+          setWinId((n) => n + 1);
+          watchToCrash(res.mult, res.crash); // keep watching until it busts
+        } else {
+          setMult(res.crash);
+          setPhase('done');
+        }
       } catch (e) {
         setError(e instanceof Error ? e.message : 'A retirada falhou.');
         setPhase('done');
       }
     },
-    [cashout, loadHistory, stopLoops],
+    [cashout, loadHistory, stopLoops, watchToCrash],
   );
 
   const balance = profile?.balance ?? 0;
   const tooPoor = stake > balance;
 
   async function launch() {
-    if (phase === 'flying' || tooPoor) return;
+    if (phase === 'flying' || phase === 'watching' || tooPoor) return;
     setError(null);
     setResult(null);
+    setWatchedBust(false);
     setMult(1);
     settling.current = false;
     try {
@@ -140,7 +171,10 @@ export function CrashPage() {
   }
 
   const flying = phase === 'flying';
-  const busted = phase === 'done' && result && !result.won;
+  const watching = phase === 'watching';
+  // The rocket is "exploded" when it has reached its crash point — either we
+  // busted, or we cashed out and watched it fly on to the bust.
+  const exploded = watchedBust || (phase === 'done' && !!result && !result.won);
   const endY = H - (Math.log(Math.max(mult, 1.0001)) / Math.log(Math.max(mult, 2))) * H;
 
   return (
@@ -171,12 +205,12 @@ export function CrashPage() {
             <line x1="0" y1={H} x2={W} y2={H} stroke="rgba(201,162,75,0.2)" strokeWidth="0.5" />
             <path
               d={`${curvePath(mult)} L ${W} ${H} L 0 ${H} Z`}
-              fill={busted ? 'rgba(224,85,95,0.14)' : 'rgba(201,162,75,0.14)'}
+              fill={exploded ? 'rgba(224,85,95,0.14)' : 'rgba(201,162,75,0.14)'}
             />
             <path
               d={curvePath(mult)}
               fill="none"
-              stroke={busted ? '#e0555f' : '#C9A24B'}
+              stroke={exploded ? '#e0555f' : '#C9A24B'}
               strokeWidth="1.6"
               strokeLinecap="round"
             />
@@ -186,12 +220,12 @@ export function CrashPage() {
             style={{ left: `calc(${W - 6}% )`, top: `calc(${(endY / H) * 100}% - 12px)`, transform: 'translate(-50%,-50%)' }}
             aria-hidden
           >
-            {busted ? '💥' : '🚀'}
+            {exploded ? '💥' : '🚀'}
           </span>
           <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
             <span
               className={`font-mono text-6xl font-bold tabular-nums sm:text-7xl ${
-                busted ? 'text-negative' : flying ? 'text-gold-light' : result?.won ? 'text-positive' : 'text-text'
+                exploded ? 'text-negative' : flying || watching ? 'text-gold-light' : result?.won ? 'text-positive' : 'text-text'
               }`}
               style={{ textShadow: '0 0 30px rgba(0,0,0,0.65)' }}
             >
@@ -200,13 +234,22 @@ export function CrashPage() {
           </div>
         </div>
 
-        <div className="mt-4 flex min-h-[2.5rem] items-center justify-center px-2">
+        <div className="mt-4 flex min-h-[2.5rem] items-center justify-center px-2 text-center">
           {flying ? (
             <p className="font-sans text-sm text-muted">{autoOn ? `Saída automática a ${autoTarget.toFixed(2)}×` : 'A subir — retire quando quiser.'}</p>
+          ) : watching ? (
+            <p className="font-display text-base font-bold text-positive">
+              Saiu a {result?.mult.toFixed(2)}× — a ver até onde ia…
+            </p>
           ) : result ? (
             result.won ? (
               <p className="animate-pop font-display text-xl font-bold text-positive">
                 Saiu a {result.mult.toFixed(2)}× — ganhou {formatAmount(result.payout)} tós!
+                {watchedBust && (
+                  <span className="mt-0.5 block font-sans text-xs font-normal text-muted-2">
+                    Acabou por rebentar a {result.crash.toFixed(2)}×
+                  </span>
+                )}
               </p>
             ) : (
               <p className="font-display text-lg font-bold text-negative">Rebentou a {result.crash.toFixed(2)}×.</p>
@@ -226,7 +269,7 @@ export function CrashPage() {
       <div className="card mx-auto max-w-2xl space-y-4 p-5 sm:p-6">
         <label className="flex cursor-pointer items-center justify-between">
           <span className="font-sans text-[12px] text-muted">Saída automática</span>
-          <input type="checkbox" checked={autoOn} disabled={flying} onChange={(e) => setAutoOn(e.target.checked)} className="h-4 w-4 accent-gold" />
+          <input type="checkbox" checked={autoOn} disabled={flying || watching} onChange={(e) => setAutoOn(e.target.checked)} className="h-4 w-4 accent-gold" />
         </label>
         {autoOn && (
           <div>
@@ -235,16 +278,16 @@ export function CrashPage() {
               <span className="font-mono text-sm text-gold">{autoTarget.toFixed(2)}×</span>
             </div>
             <input
-              type="range" min={1.1} max={20} step={0.1} value={autoTarget} disabled={flying}
+              type="range" min={1.1} max={20} step={0.1} value={autoTarget} disabled={flying || watching}
               onChange={(e) => setAutoTarget(Number(e.target.value))}
               className="h-2 w-full cursor-pointer rounded-full accent-gold disabled:opacity-50"
               aria-label="Alvo de saída automática"
             />
           </div>
         )}
-        <StakeChips stake={stake} onChange={setStake} balance={balance} disabled={flying} />
-        <Button variant="primary" onClick={launch} disabled={flying || tooPoor} className="w-full">
-          {flying ? 'Em voo…' : tooPoor ? 'Saldo insuficiente' : `Lançar · ${formatAmount(stake)} tós`}
+        <StakeChips stake={stake} onChange={setStake} balance={balance} disabled={flying || watching} />
+        <Button variant="primary" onClick={launch} disabled={flying || watching || tooPoor} className="w-full">
+          {flying ? 'Em voo…' : watching ? 'A ver…' : tooPoor ? 'Saldo insuficiente' : `Lançar · ${formatAmount(stake)} tós`}
         </Button>
         {error && <p className="font-sans text-sm text-negative">{error}</p>}
       </div>

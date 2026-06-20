@@ -36,11 +36,15 @@ export function usePlaySlot() {
       return data;
     },
     onSuccess: (res, v) => {
-      // Patch the cached balance from the authoritative result instead of
-      // refetching, so the spin doesn't trigger a loading sheen.
+      // Patch the cached balance from the authoritative result for instant
+      // feedback...
       qc.setQueryData<Profile>(profileKey(user?.id), (old) =>
         old ? { ...old, balance: res.balance } : old,
       );
+      // ...and still refetch the profile (like every other game) so a win is
+      // never left only in local cache — the server balance is the source of
+      // truth and total_won/stats stay in sync too.
+      void qc.invalidateQueries({ queryKey: profileKey(user?.id) });
       // Keep the lobby's live progressive jackpot in sync with the new pool.
       const newPool = res.jackpot_pool;
       if (newPool != null) {
