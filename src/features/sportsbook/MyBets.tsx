@@ -92,8 +92,8 @@ function Stat({ label, value, tone = '' }: { label: string; value: string; tone?
 }
 
 const FILTERS: { key: BetFilter; label: string }[] = [
-  { key: 'all', label: 'Todas' },
   { key: 'pending', label: 'Em aberto' },
+  { key: 'all', label: 'Todas' },
   { key: 'won', label: 'Ganhas' },
   { key: 'lost', label: 'Perdidas' },
 ];
@@ -105,7 +105,7 @@ const FILTERS: { key: BetFilter; label: string }[] = [
  */
 export function BetHistory() {
   const { data: bets, isLoading } = useMyBets();
-  const [filter, setFilter] = useState<BetFilter>('all');
+  const [filter, setFilter] = useState<BetFilter>('pending');
 
   const summary = useMemo(() => summariseBets(bets ?? []), [bets]);
   const shown = useMemo(() => filterBets(bets ?? [], filter), [bets, filter]);

@@ -125,6 +125,7 @@ function MachineScreen({ m }: { m: SlotMachineMeta }) {
   const [modes, setModes] = useState<[ReelMode, ReelMode, ReelMode]>(['idle', 'idle', 'idle']);
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<{ payout: number; jackpot: boolean; mult: number; id: number } | null>(null);
+  const [pool, setPool] = useState<number | null>(m.progressive ? m.jackpot_pool ?? null : null);
   const [error, setError] = useState<string | null>(null);
   const timers = useRef<number[]>([]);
   const spinId = useRef(0);
@@ -146,6 +147,7 @@ function MachineScreen({ m }: { m: SlotMachineMeta }) {
     const startedAt = performance.now();
     try {
       const res = await play.mutateAsync({ machine: m.key, stake });
+      if (m.progressive && res.jackpot_pool != null) setPool(res.jackpot_pool);
       setTargets(res.reels);
       const id = ++spinId.current;
       // Keep all reels spinning in sync for at least ~750ms, then stop them
@@ -205,7 +207,8 @@ function MachineScreen({ m }: { m: SlotMachineMeta }) {
                 {m.name}
               </h1>
               <p className="mt-1.5 font-sans text-[12px] uppercase tracking-[0.24em] text-gold-light">
-                Prémios até {maxVisible}× · Jackpot <span className="font-bold">???</span>
+                Prémios até {maxVisible}× · Jackpot{' '}
+                <span className="font-bold">{m.progressive && pool != null ? `${formatAmount(pool)} tós` : '???'}</span>
               </p>
             </div>
 
@@ -218,9 +221,15 @@ function MachineScreen({ m }: { m: SlotMachineMeta }) {
             >
               <SymbolArt id={m.jackpot_symbol} glyph={jackpotGlyph} className="h-11 w-11 drop-shadow-[0_0_8px_rgba(201,162,75,0.6)]" />
               <div className="text-center">
-                <p className="font-sans text-[10px] uppercase tracking-[0.3em] text-muted-2">Jackpot Mistério</p>
+                <p className="font-sans text-[10px] uppercase tracking-[0.3em] text-muted-2">
+                  {m.progressive ? 'Jackpot Progressivo' : 'Jackpot Mistério'}
+                </p>
                 <p className="font-display text-2xl font-bold" style={{ color: hex }}>
-                  {result?.jackpot ? `${formatAmount(result.payout)} tós!` : '? ? ?'}
+                  {result?.jackpot
+                    ? `${formatAmount(result.payout)} tós!`
+                    : m.progressive && pool != null
+                      ? `${formatAmount(pool)} tós`
+                      : '? ? ?'}
                 </p>
               </div>
             </div>

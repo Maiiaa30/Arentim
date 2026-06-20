@@ -257,6 +257,10 @@ export type SlotMachineMeta = {
   min_bet: number;
   max_bet: number;
   jackpot_symbol: string;
+  /** True for a progressive machine (shared, growing jackpot pool). */
+  progressive?: boolean;
+  /** The live progressive pool (only for progressive machines; null otherwise). */
+  jackpot_pool?: number | null;
   symbols: SlotSymbolMeta[];
   paytable: SlotPayRow[];
 };
@@ -268,6 +272,8 @@ export type SlotSpinResult = {
   multiplier: number;
   jackpot: boolean;
   payout: number;
+  /** New progressive pool value after the spin (progressive machines only). */
+  jackpot_pool?: number | null;
   balance: number;
   replayed: boolean;
 };
