@@ -25,7 +25,7 @@ interface GameTile {
 
 const GAMES: GameTile[] = [
   { to: '/casino/crash', name: 'Crash', desc: 'Saia antes de rebentar.', art: 'crash', badge: 'Novo', tone: 'from-chip-ruby/40 to-bg' },
-  { to: '/casino/wheel', name: 'Roda da Sorte', desc: 'Gire e leve o multiplicador.', art: 'wheel', badge: 'Novo', tone: 'from-gold/30 to-bg' },
+  { to: '/casino/wheel', name: 'Fita da Sorte', desc: 'Pare no multiplicador certo.', art: 'wheel', badge: 'Novo', tone: 'from-gold/30 to-bg' },
   { to: '/casino/roulette', name: 'Roleta', desc: 'Roleta europeia, zero único.', art: 'roulette', badge: 'Em alta', tone: 'from-chip-ruby/40 to-bg' },
   { to: '/casino/blackjack', name: 'Blackjack', desc: 'O croupier pára nos 17.', art: 'blackjack', tone: 'from-positive-felt/40 to-bg' },
   { to: '/casino/slots', name: 'Slots', desc: 'Cinco máquinas, pote progressivo.', art: 'slots', badge: '5 máquinas', tone: 'from-gold/30 to-bg' },

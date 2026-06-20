@@ -13,7 +13,8 @@ import type {
   WheelResult,
   CrashStartResult,
   CrashSettleResult,
-  ChestResult,
+  CupsStartResult,
+  CupsPickResult,
   HighLowResult,
 } from '@/types/db';
 
@@ -119,16 +120,25 @@ export function useWheel() {
   });
 }
 
-/** Baú do Tesouro: pick a chest (0-8); server reveals its multiplier. */
-export function useChest() {
+/** Baú do Tesouro (cup & ball): start a round — ball position + swap sequence. */
+export function useCupsStart() {
   const invalidate = useInvalidateWallet();
   return useMutation({
-    mutationFn: async (input: { stake: number; pick: number }): Promise<ChestResult> => {
-      const { data, error } = await supabase.rpc('play_chest', {
-        p_stake: input.stake,
-        p_pick: input.pick,
-        p_idempotency_key: crypto.randomUUID(),
-      });
+    mutationFn: async (stake: number): Promise<CupsStartResult> => {
+      const { data, error } = await supabase.rpc('cups_start', { p_stake: stake });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: invalidate,
+  });
+}
+
+/** Baú do Tesouro: pick a cup; server settles whether it held the ball. */
+export function useCupsPick() {
+  const invalidate = useInvalidateWallet();
+  return useMutation({
+    mutationFn: async (picked: number): Promise<CupsPickResult> => {
+      const { data, error } = await supabase.rpc('cups_pick', { p_picked: picked });
       if (error) throw error;
       return data;
     },

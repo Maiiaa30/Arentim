@@ -95,8 +95,8 @@ export function WheelPage() {
       <div>
         <Link to="/casino" className="font-sans text-sm text-muted-2 hover:text-text">← Casino</Link>
         <Eyebrow className="mt-3">O Salão</Eyebrow>
-        <h1 className="mt-2 font-display text-[34px] font-medium leading-tight text-text sm:text-[38px]">Roda da Sorte</h1>
-        <p className="mt-2 font-sans text-sm text-muted">A roda corre e pára debaixo da seta. Multiplicadores até 5× — quase todas as casas pagam.</p>
+        <h1 className="mt-2 font-display text-[34px] font-medium leading-tight text-text sm:text-[38px]">Fita da Sorte</h1>
+        <p className="mt-2 font-sans text-sm text-muted">A fita corre e pára debaixo da seta. Multiplicadores até 5× — quase todas as casas pagam.</p>
       </div>
 
       <div className="felt felt-rail relative mx-auto max-w-2xl overflow-hidden rounded-lg px-4 py-9 text-center sm:px-8">
@@ -133,17 +133,17 @@ export function WheelPage() {
 
         <div className="mt-6 flex min-h-[2.5rem] items-center justify-center px-2">
           {spinning ? (
-            <p className="animate-pulse font-display text-lg italic text-gold-light">A rodar…</p>
+            <p className="animate-pulse font-display text-lg italic text-gold-light">A correr…</p>
           ) : result ? (
             result.payout > 0 ? (
               <p className="animate-pop font-display text-2xl font-bold text-positive">
                 {result.mult}× — ganhou {formatAmount(result.payout)} tós!
               </p>
             ) : (
-              <p className="font-sans text-base text-muted">Parou no vazio — gire outra vez.</p>
+              <p className="font-sans text-base text-muted">Parou no vazio — tente outra vez.</p>
             )
           ) : (
-            <p className="font-sans text-sm text-muted-2">Defina a aposta e gire a roda.</p>
+            <p className="font-sans text-sm text-muted-2">Defina a aposta e deslize a fita.</p>
           )}
         </div>
       </div>
@@ -151,7 +151,7 @@ export function WheelPage() {
       <div className="card mx-auto max-w-2xl space-y-4 p-5 sm:p-6">
         <StakeChips stake={stake} onChange={setStake} balance={balance} disabled={spinning} />
         <Button variant="primary" onClick={spin} disabled={spinning || tooPoor} className="w-full">
-          {spinning ? 'A rodar…' : tooPoor ? 'Saldo insuficiente' : `Rodar · ${formatAmount(stake)} tós`}
+          {spinning ? 'A correr…' : tooPoor ? 'Saldo insuficiente' : `Deslizar · ${formatAmount(stake)} tós`}
         </Button>
         {error && <p className="font-sans text-sm text-negative">{error}</p>}
       </div>

@@ -31,6 +31,8 @@ const ScoresPage = lazy(() => named(import('@/pages/ScoresPage'), 'ScoresPage'))
 const OnzePage = lazy(() => named(import('@/pages/OnzePage'), 'OnzePage'));
 const PokerPage = lazy(() => named(import('@/pages/PokerPage'), 'PokerPage'));
 const PokerHome = lazy(() => named(import('@/pages/poker/PokerHome'), 'PokerHome'));
+const SuecaHome = lazy(() => named(import('@/pages/sueca/SuecaHome'), 'SuecaHome'));
+const SuecaPage = lazy(() => named(import('@/pages/sueca/SuecaPage'), 'SuecaPage'));
 const PrivatePokerPage = lazy(() => named(import('@/pages/poker/PrivatePokerPage'), 'PrivatePokerPage'));
 const FriendsPage = lazy(() => named(import('@/pages/FriendsPage'), 'FriendsPage'));
 const ChallengesPage = lazy(() => named(import('@/pages/ChallengesPage'), 'ChallengesPage'));
@@ -69,6 +71,8 @@ export default function App() {
             <Route path="resultados" element={<ScoresPage />} />
             <Route path="onze" element={<OnzePage />} />
             <Route path="poker" element={<PokerHome />} />
+            <Route path="sueca" element={<SuecaHome />} />
+            <Route path="sueca/bots" element={<SuecaPage />} />
             <Route path="poker/bots" element={<PokerPage />} />
             <Route path="poker/private" element={<PrivatePokerPage />} />
             <Route path="friends" element={<FriendsPage />} />

@@ -23,7 +23,7 @@ export const NAV: NavEntry[] = [
       { to: '/casino', label: 'Todos os jogos' },
       { to: '/casino/slots', label: 'Slots' },
       { to: '/casino/crash', label: 'Crash' },
-      { to: '/casino/wheel', label: 'Roda da Sorte' },
+      { to: '/casino/wheel', label: 'Fita da Sorte' },
       { to: '/casino/chest', label: 'Baú do Tesouro' },
       { to: '/casino/dice', label: 'Dados' },
       { to: '/casino/maior-menor', label: 'Maior ou Menor' },
@@ -39,6 +39,7 @@ export const NAV: NavEntry[] = [
     ],
   },
   { to: '/poker', label: 'Poker' },
+  { to: '/sueca', label: 'Sueca' },
   { to: '/friends', label: 'Amigos' },
   { to: '/challenges', label: 'Desafios' },
 ];

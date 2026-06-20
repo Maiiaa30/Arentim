@@ -299,15 +299,22 @@ export type HiloDealResult = {
   desce_mult: number;
 };
 
-/** Result of the play_chest RPC (find-the-prize among 3 chests). */
-export type ChestResult = {
-  pick: number;
-  prize_index: number;
+/** cups_start: where the ball goes + the exact swap sequence to animate. */
+export type CupsStartResult = {
+  start: number;
+  swaps: [number, number][];
+  multiplier: number;
+  balance: number;
+};
+
+/** cups_pick: settle which cup you chose. */
+export type CupsPickResult = {
+  prize: number;
+  picked: number;
   won: boolean;
   multiplier: number;
   payout: number;
   balance: number;
-  replayed: boolean;
 };
 
 /** One row of the football betting leaderboard. */
@@ -555,9 +562,13 @@ export type Database = {
         Args: { p_stake: number; p_pick: string; p_idempotency_key: string | null };
         Returns: DiceResult;
       };
-      play_chest: {
-        Args: { p_stake: number; p_pick: number; p_idempotency_key: string | null };
-        Returns: ChestResult;
+      cups_start: {
+        Args: { p_stake: number };
+        Returns: CupsStartResult;
+      };
+      cups_pick: {
+        Args: { p_picked: number };
+        Returns: CupsPickResult;
       };
       play_highlow: {
         Args: { p_stake: number; p_pick: string; p_idempotency_key: string | null };

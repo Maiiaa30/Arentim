@@ -147,16 +147,15 @@ function SobeDesce() {
 }
 
 function Wheel() {
+  const cells = ['#4a3b22', '#2b6f4e', '#1a1712', '#C9A24B', '#4a3b22', '#b0303a', '#1a1712', '#2b6f4e'];
   return (
-    <div className="flex h-full items-center justify-center">
-      <div
-        className="h-[92px] w-[92px] animate-spin-slow rounded-full border-2 border-gold/50"
-        style={{
-          background:
-            'repeating-conic-gradient(#C9A24B 0 30deg, #1a1712 30deg 60deg, #b0303a 60deg 90deg, #1a1712 90deg 120deg)',
-          boxShadow: 'inset 0 0 0 5px #0a0907',
-        }}
-      />
+    <div className="relative flex h-full items-center justify-center overflow-hidden">
+      <div className="animate-floaty flex gap-1">
+        {cells.map((c, i) => (
+          <span key={i} className="h-12 w-9 shrink-0 rounded" style={{ background: c }} />
+        ))}
+      </div>
+      <span className="absolute left-1/2 top-1 -translate-x-1/2 border-x-[6px] border-t-[9px] border-x-transparent border-t-gold" />
     </div>
   );
 }
