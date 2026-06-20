@@ -69,6 +69,30 @@ Deno.serve(async (req) => {
     }
   }
 
+  // Catch-up sweep: settle ANY finished fixture that still has pending bets.
+  // Covers games marked 'finished' by the daily sync (not just live
+  // transitions this run) — otherwise their bets stay pending forever.
+  // settle_fixture only touches pending legs/bets, so this is idempotent.
+  try {
+    const { data: pending } = await supabase.from('bet_selections').select('fixture_id').eq('result', 'pending');
+    const ids = [...new Set((pending ?? []).map((p) => p.fixture_id))];
+    if (ids.length) {
+      const { data: finished } = await supabase
+        .from('fixtures')
+        .select('id')
+        .in('id', ids)
+        .eq('status', 'finished')
+        .not('home_score', 'is', null)
+        .not('away_score', 'is', null);
+      for (const f of finished ?? []) {
+        const { error } = await supabase.rpc('settle_fixture', { p_fixture_id: f.id });
+        if (!error) settled += 1;
+      }
+    }
+  } catch (_) {
+    // best-effort sweep; the per-match loop above is the primary path
+  }
+
   return new Response(JSON.stringify({ ok: true, updated, settled }), {
     headers: { 'content-type': 'application/json' },
   });
