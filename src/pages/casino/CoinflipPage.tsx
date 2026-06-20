@@ -120,6 +120,10 @@ export function CoinflipPage() {
 
   const FLIP_MS = 1200;
 
+  // Which face is up at rest (heads near 0°, tails near 180°).
+  const restParity = (((restAngle % 360) + 360) % 360);
+  const headsUp = restParity < 90 || restParity >= 270;
+
   async function flip() {
     if (flipping || stake > balance) return;
     setError(null);
@@ -187,19 +191,31 @@ export function CoinflipPage() {
           A sua chamada · {SIDE_LABEL[choice]}
         </p>
 
-        {/* Coin + its cast shadow */}
+        {/* Coin + its cast shadow. NO `filter` on the coin or any ancestor of
+            it: a filter rasterises (flattens) its 3D subtree, which kills
+            backface-visibility and shows both faces (it always landed on
+            Coroa). Depth comes from the cast-shadow ellipse below instead. */}
         <div className="relative flex h-44 items-center justify-center [perspective:900px] sm:h-52">
           <div
             ref={coinRef}
-            className="relative h-32 w-32 [transform-style:preserve-3d] will-change-transform sm:h-40 sm:w-40"
-            style={{ transform: `rotateX(${restAngle}deg)`, filter: 'drop-shadow(0 14px 18px rgba(0,0,0,0.55))' }}
+            className="relative h-32 w-32 [transform-style:preserve-3d] sm:h-40 sm:w-40"
+            style={{ transform: `rotateX(${restAngle}deg)` }}
           >
-            {/* Cara (heads) */}
-            <div className="absolute inset-0 [backface-visibility:hidden]">
+            {/* Both faces flip together in 3D (backface-visibility hides the one
+                facing away). As a guarantee against any 3D-flattening quirk, the
+                resting face is ALSO pinned by opacity — so when idle only the
+                actual result side is ever shown. During the flip both show so it
+                reads as a spinning coin. */}
+            <div
+              className="absolute inset-0 [backface-visibility:hidden] transition-opacity"
+              style={{ opacity: flipping || headsUp ? 1 : 0 }}
+            >
               <CoinFace side="heads" />
             </div>
-            {/* Coroa (tails) — pre-rotated to the back face */}
-            <div className="absolute inset-0 [backface-visibility:hidden] [transform:rotateX(180deg)]">
+            <div
+              className="absolute inset-0 [backface-visibility:hidden] [transform:rotateX(180deg)] transition-opacity"
+              style={{ opacity: flipping || !headsUp ? 1 : 0 }}
+            >
               <CoinFace side="tails" />
             </div>
           </div>
