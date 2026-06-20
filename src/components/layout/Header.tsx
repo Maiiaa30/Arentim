@@ -148,7 +148,7 @@ export function Header() {
           </NavLink>
 
           {user && (
-            <nav className="hidden items-center gap-5 lg:flex">
+            <nav className="hidden items-center gap-4 xl:flex">
               {nav.map((e) =>
                 isGroup(e) ? (
                   <NavDropdown
@@ -169,7 +169,13 @@ export function Header() {
         <div className="flex shrink-0 items-center gap-2 sm:gap-4">
           {user ? (
             <>
-              <div className="hidden items-center gap-2 rounded-full border border-gold/25 bg-gold/[0.06] px-3.5 py-1.5 sm:flex">
+              {/* Balance chip doubles as the Caixa entry point (keeps the bar
+                  compact so the nav fits on narrow/vertical desktops). */}
+              <NavLink
+                to="/wallet"
+                title="Abrir a Caixa"
+                className="focus-ring hidden items-center gap-2 rounded-full border border-gold/25 bg-gold/[0.06] px-3.5 py-1.5 transition-colors hover:border-gold/50 sm:flex"
+              >
                 <CoinIcon className="h-4 w-4" />
                 <span className="leading-none">
                   <span className="block font-sans text-[8px] uppercase tracking-[0.22em] text-muted-2">Saldo</span>
@@ -178,19 +184,20 @@ export function Header() {
                     <span className="font-mono text-[10px]">tós</span>
                   </span>
                 </span>
-              </div>
+              </NavLink>
 
-              <span className="flex items-center gap-1.5 rounded-full border border-gold/25 bg-gold/[0.06] px-2.5 py-1.5 font-display text-sm font-semibold text-gold sm:hidden">
+              <NavLink
+                to="/wallet"
+                title="Abrir a Caixa"
+                className="flex items-center gap-1.5 rounded-full border border-gold/25 bg-gold/[0.06] px-2.5 py-1.5 font-display text-sm font-semibold text-gold sm:hidden"
+              >
                 <CoinIcon className="h-3.5 w-3.5" />
                 {profile ? <AnimatedNumber value={profile.balance} /> : '—'}
                 <span className="font-mono text-[10px]">tós</span>
-              </span>
+              </NavLink>
 
               <NotificationBell />
 
-              <Button variant="secondary" className="hidden !px-4 !py-2 sm:inline-flex" onClick={() => navigate('/wallet')}>
-                Caixa
-              </Button>
               <NavLink to="/profile" className="focus-ring hidden rounded-full sm:inline-flex" title="O seu perfil">
                 <RingAvatar initials={initialsOf(profile?.display_name)} size={40} />
               </NavLink>
@@ -203,7 +210,7 @@ export function Header() {
                 aria-label={drawerOpen ? 'Fechar menu' : 'Abrir menu'}
                 aria-expanded={drawerOpen}
                 onClick={() => setDrawerOpen((v) => !v)}
-                className="focus-ring inline-flex h-10 w-10 items-center justify-center rounded border border-border text-gold lg:hidden"
+                className="focus-ring inline-flex h-10 w-10 items-center justify-center rounded border border-border text-gold xl:hidden"
               >
                 <span className="relative block h-4 w-5" aria-hidden>
                   <span className={`absolute left-0 block h-0.5 w-5 bg-current transition-all ${drawerOpen ? 'top-1.5 rotate-45' : 'top-0'}`} />
@@ -230,7 +237,7 @@ export function Header() {
 
       {/* Mobile drawer (below lg, authenticated). */}
       {user && drawerOpen && (
-        <div className="fixed inset-0 top-[68px] z-40 lg:hidden">
+        <div className="fixed inset-0 top-[68px] z-40 xl:hidden">
           <button
             type="button"
             aria-label="Fechar menu"
