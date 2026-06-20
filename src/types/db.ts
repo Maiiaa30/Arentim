@@ -669,6 +669,10 @@ export type Database = {
         Args: Record<string, never>;
         Returns: MyPokerTable[];
       };
+      list_my_sueca_tables: {
+        Args: Record<string, never>;
+        Returns: { table_id: number; code: string; status: string; player_count: number; is_host: boolean }[];
+      };
       username_available: {
         Args: { p_name: string };
         Returns: boolean;

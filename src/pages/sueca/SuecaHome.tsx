@@ -25,21 +25,21 @@ export function SuecaHome() {
           <span className="self-start rounded-full border border-gold/40 px-3 py-1 font-sans text-[10px] uppercase tracking-[0.18em] text-gold">Jogar</span>
         </Link>
 
-        <div className="card flex flex-col justify-between gap-6 p-6 opacity-70">
+        <Link to="/sueca/mesa" className="card card-hover focus-ring group flex flex-col justify-between gap-6 p-6">
           <div>
-            <h2 className="font-display text-[22px] font-semibold text-text">2 contra 2 bots</h2>
-            <p className="mt-2 font-sans text-[12.5px] text-muted">Dois amigos numa dupla contra dois bots, com mesa partilhada.</p>
+            <h2 className="font-display text-[22px] font-semibold text-text group-hover:text-gold">2 contra 2 bots</h2>
+            <p className="mt-2 font-sans text-[12.5px] text-muted">Você e um amigo numa dupla; os outros dois lugares ficam para bots.</p>
           </div>
-          <span className="self-start rounded-full border border-border px-3 py-1 font-sans text-[10px] uppercase tracking-[0.18em] text-muted-2">Em breve</span>
-        </div>
+          <span className="self-start rounded-full border border-gold/40 px-3 py-1 font-sans text-[10px] uppercase tracking-[0.18em] text-gold">Mesa privada</span>
+        </Link>
 
-        <div className="card flex flex-col justify-between gap-6 p-6 opacity-70">
+        <Link to="/sueca/mesa" className="card card-hover focus-ring group flex flex-col justify-between gap-6 p-6">
           <div>
-            <h2 className="font-display text-[22px] font-semibold text-text">Mesa completa</h2>
-            <p className="mt-2 font-sans text-[12.5px] text-muted">Quatro pessoas, a escolher as duplas antes de começar.</p>
+            <h2 className="font-display text-[22px] font-semibold text-text group-hover:text-gold">Mesa completa</h2>
+            <p className="mt-2 font-sans text-[12.5px] text-muted">Até quatro pessoas — escolham os lugares e as duplas antes de começar.</p>
           </div>
-          <span className="self-start rounded-full border border-border px-3 py-1 font-sans text-[10px] uppercase tracking-[0.18em] text-muted-2">Em breve</span>
-        </div>
+          <span className="self-start rounded-full border border-gold/40 px-3 py-1 font-sans text-[10px] uppercase tracking-[0.18em] text-gold">Mesa privada</span>
+        </Link>
       </div>
     </div>
   );
