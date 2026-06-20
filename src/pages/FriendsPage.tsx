@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { useFriends, useFriendRequests, useFriendActions, useSearchUsers } from '@/features/friends/useFriends';
+import { useFriends, useFriendRequests, useFriendActions, useSearchUsers, useGiftTos } from '@/features/friends/useFriends';
+import { useProfile } from '@/features/profile/useProfile';
 import { usePresence } from '@/features/friends/usePresence';
 import {
   useLeaderboard,
@@ -28,11 +29,33 @@ function lastSeen(iso: string | null): string {
   return `há ${Math.floor(hrs / 24)} dias`;
 }
 
-function FriendCard({ f, online, showBalance, onRemove }: {
-  f: FriendRow; online: boolean; showBalance: boolean; onRemove: () => void;
+const GIFT_AMOUNTS = [50, 100, 250, 500];
+
+function FriendCard({ f, online, showBalance, myBalance, onRemove }: {
+  f: FriendRow; online: boolean; showBalance: boolean; myBalance: number; onRemove: () => void;
 }) {
   const net = f.total_won - f.total_lost;
   const winRate = f.games_played > 0 ? Math.round((f.games_won / f.games_played) * 100) : 0;
+  const gift = useGiftTos();
+  const [giftOpen, setGiftOpen] = useState(false);
+  const [sentMsg, setSentMsg] = useState<string | null>(null);
+  const [giftErr, setGiftErr] = useState<string | null>(null);
+
+  async function sendGift(amount: number) {
+    setGiftErr(null);
+    if (amount > myBalance) {
+      setGiftErr('Saldo insuficiente.');
+      return;
+    }
+    try {
+      await gift.mutateAsync({ to: f.id, amount });
+      setSentMsg(`Enviaste ${formatAmount(amount)} tós a ${f.display_name}.`);
+      setGiftOpen(false);
+    } catch {
+      setGiftErr('Não foi possível enviar o presente.');
+    }
+  }
+
   return (
     <div className="card p-4">
       <div className="flex items-center justify-between">
@@ -67,7 +90,38 @@ function FriendCard({ f, online, showBalance, onRemove }: {
           </p>
         </div>
       </div>
-      <button onClick={onRemove} className="mt-3 font-sans text-xs text-muted-2 hover:text-negative">Remover</button>
+      {giftOpen && (
+        <div className="mt-3 rounded-lg border border-gold/30 bg-gold/[0.05] p-2.5">
+          <p className="mb-2 font-sans text-[11px] text-muted">Oferecer tós a {f.display_name}</p>
+          <div className="flex flex-wrap gap-1.5">
+            {GIFT_AMOUNTS.map((a) => (
+              <button
+                key={a}
+                disabled={gift.isPending || a > myBalance}
+                onClick={() => sendGift(a)}
+                className="focus-ring rounded-full border border-gold/40 px-3 py-1 font-mono text-xs text-gold transition-colors hover:bg-gold hover:text-bg disabled:opacity-40"
+              >
+                {a}
+              </button>
+            ))}
+          </div>
+          {giftErr && <p className="mt-1.5 font-sans text-[11px] text-negative">{giftErr}</p>}
+        </div>
+      )}
+
+      {sentMsg ? (
+        <p className="mt-3 font-sans text-xs text-positive">🎁 {sentMsg}</p>
+      ) : (
+        <div className="mt-3 flex items-center justify-between">
+          <button
+            onClick={() => { setGiftOpen((v) => !v); setGiftErr(null); }}
+            className="font-sans text-xs text-gold hover:text-gold-light"
+          >
+            🎁 Oferecer tós
+          </button>
+          <button onClick={onRemove} className="font-sans text-xs text-muted-2 hover:text-negative">Remover</button>
+        </div>
+      )}
     </div>
   );
 }
@@ -77,6 +131,7 @@ export function FriendsPage() {
   const [showBalance, setShowBalance] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
   const online = usePresence();
+  const { data: profile } = useProfile();
   const { data: friends } = useFriends();
   const { data: requests } = useFriendRequests();
   const { sendRequest, respond, remove } = useFriendActions();
@@ -132,7 +187,7 @@ export function FriendsPage() {
             <div className="grid gap-3 sm:grid-cols-2">
               {friends.map((f) => (
                 <FriendCard key={f.id} f={f} online={online.has(f.id)} showBalance={showBalance}
-                  onRemove={() => remove.mutate(f.id)} />
+                  myBalance={profile?.balance ?? 0} onRemove={() => remove.mutate(f.id)} />
               ))}
             </div>
           )}

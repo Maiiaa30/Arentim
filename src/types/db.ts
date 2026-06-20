@@ -767,6 +767,10 @@ export type Database = {
         Args: Record<string, never>;
         Returns: CasinoActivity;
       };
+      gift_tos: {
+        Args: { p_to: string; p_amount: number };
+        Returns: { balance: number; amount: number };
+      };
       bj_deal: {
         Args: { p_stake: number };
         Returns: BlackjackView;
