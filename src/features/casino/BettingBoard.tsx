@@ -4,6 +4,8 @@ interface BettingBoardProps {
   onPlace: (kind: RouletteBetKind, selection: number | null) => void;
   /** Current stake per cell key, e.g. { 'straight:17': 25, 'red:null': 10 }. */
   stakes?: Record<string, number>;
+  /** This round's lucky numbers — highlighted (a straight on one pays double). */
+  bonus?: ReadonlySet<number>;
   disabled?: boolean;
 }
 
@@ -19,7 +21,7 @@ const numberBg: Record<string, string> = {
 
 const key = (kind: RouletteBetKind, selection: number | null) => `${kind}:${selection}`;
 
-export function BettingBoard({ onPlace, stakes = {}, disabled }: BettingBoardProps) {
+export function BettingBoard({ onPlace, stakes = {}, bonus, disabled }: BettingBoardProps) {
   // A little gold chip badge shown on any cell that currently carries a stake.
   const stakeDot = (kind: RouletteBetKind, selection: number | null) => {
     const v = stakes[key(kind, selection)];
@@ -36,19 +38,23 @@ export function BettingBoard({ onPlace, stakes = {}, disabled }: BettingBoardPro
   const outside =
     'focus-ring relative flex items-center justify-center rounded-[3px] border border-gold/25 bg-[#0c241b]/80 px-2 text-[11px] font-semibold uppercase tracking-wide text-body shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] transition-colors hover:border-gold/60 hover:text-text disabled:opacity-50';
 
-  const numberCell = (n: number) => (
-    <button
-      key={n}
-      type="button"
-      disabled={disabled}
-      onClick={() => onPlace('straight', n)}
-      className={`${cell} h-10 ${numberBg[colorOf(n)]}`}
-      aria-label={`Apostar no ${n}`}
-    >
-      {stakeDot('straight', n)}
-      {n}
-    </button>
-  );
+  const numberCell = (n: number) => {
+    const lucky = bonus?.has(n);
+    return (
+      <button
+        key={n}
+        type="button"
+        disabled={disabled}
+        onClick={() => onPlace('straight', n)}
+        className={`${cell} h-10 ${numberBg[colorOf(n)]} ${lucky ? 'z-10 ring-2 ring-gold ring-offset-1 ring-offset-[#0c241b] animate-glow' : ''}`}
+        aria-label={`Apostar no ${n}${lucky ? ' (número da sorte)' : ''}`}
+      >
+        {stakeDot('straight', n)}
+        {lucky && <span className="pointer-events-none absolute -left-1 -top-1 text-[10px]">⭐</span>}
+        {n}
+      </button>
+    );
+  };
 
   return (
     <div className="rounded-md bg-[#0c241b] p-2 shadow-[inset_0_0_0_1px_rgba(201,162,75,0.3),inset_0_0_24px_rgba(0,0,0,0.4)]">

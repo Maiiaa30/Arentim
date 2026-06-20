@@ -286,6 +286,9 @@ export type DailyBonusResult = {
   balance: number;
 };
 
+/** The round's lucky numbers + bonus multiple (roulette mini-game). */
+export type RouletteBonus = { numbers: number[]; mult: number };
+
 /** Result object returned by the play_roulette RPC. */
 export type RouletteSpinResult = {
   round_id: number;
@@ -294,6 +297,10 @@ export type RouletteSpinResult = {
   payout: number;
   balance: number;
   results: RouletteBetResult[];
+  /** The next round's lucky numbers (re-rolled after this spin). */
+  bonus?: RouletteBonus | null;
+  /** True if a straight bet landed on a lucky number (paid double). */
+  bonus_hit?: boolean;
   replayed: boolean;
 };
 
@@ -421,6 +428,10 @@ export type Database = {
       play_roulette: {
         Args: { p_bets: RouletteBetPayload[]; p_idempotency_key: string | null };
         Returns: RouletteSpinResult;
+      };
+      roulette_get_bonus: {
+        Args: Record<string, never>;
+        Returns: RouletteBonus;
       };
       claim_daily_bonus: {
         Args: Record<string, never>;
