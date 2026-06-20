@@ -797,6 +797,14 @@ export type Database = {
         Args: { p_to: string; p_amount: number };
         Returns: { balance: number; amount: number };
       };
+      push_subscribe: {
+        Args: { p_endpoint: string; p_p256dh: string; p_auth: string };
+        Returns: undefined;
+      };
+      push_unsubscribe: {
+        Args: { p_endpoint: string };
+        Returns: undefined;
+      };
       duel_create: {
         Args: { p_opponent: string; p_stake: number; p_game?: string };
         Returns: { duel_id: number; balance: number };
