@@ -28,6 +28,8 @@ export function useRouletteRoom() {
       try {
         const { data } = await supabase.rpc('roulette_room_now');
         if (!cancelled && data) setState(data as RouletteRoomState);
+      } catch {
+        // Transient (network/auth) blip — keep the last snapshot and retry next tick.
       } finally {
         inFlight.current = false;
       }

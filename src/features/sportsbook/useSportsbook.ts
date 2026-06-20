@@ -149,10 +149,13 @@ export function usePlaceBet() {
     mutationFn: async (input: {
       selections: BetSelectionInput[];
       stake: number;
+      /** Stable per-submission key so a retry can't double-debit (audit H1). */
+      idempotencyKey: string;
     }): Promise<PlaceBetResult> => {
       const { data, error } = await supabase.rpc('place_bet', {
         p_selections: input.selections,
         p_stake: input.stake,
+        p_idempotency_key: input.idempotencyKey,
       });
       if (error) throw error;
       return data;

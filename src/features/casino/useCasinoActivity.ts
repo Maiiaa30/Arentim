@@ -13,7 +13,7 @@ export function useCasinoActivity() {
     queryFn: async (): Promise<CasinoActivity> => {
       const { data, error } = await supabase.rpc('casino_activity');
       if (error) throw error;
-      return data;
+      return data ?? { crash: { players: 0, friends: 0 }, roulette: { players: 0, friends: 0 }, recent: [] };
     },
   });
 }

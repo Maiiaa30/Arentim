@@ -30,6 +30,8 @@ export function useCrashRoom() {
       try {
         const { data } = await supabase.rpc('crash_room_now');
         if (!cancelled && data) setState(data as CrashRoomState);
+      } catch {
+        // Transient (network/auth) blip — keep the last snapshot and retry next tick.
       } finally {
         inFlight.current = false;
       }

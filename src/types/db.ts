@@ -103,6 +103,7 @@ export type PlaceBetResult = {
   combined_odds: number;
   potential_payout: number;
   balance: number;
+  replayed?: boolean;
 };
 
 export type UserSearchResult = { id: string; display_name: string; avatar_url: string | null };
@@ -826,7 +827,7 @@ export type Database = {
         Returns: BlackjackView | null;
       };
       place_bet: {
-        Args: { p_selections: BetSelectionInput[]; p_stake: number };
+        Args: { p_selections: BetSelectionInput[]; p_stake: number; p_idempotency_key?: string };
         Returns: PlaceBetResult;
       };
       admin_settle_fixture: {

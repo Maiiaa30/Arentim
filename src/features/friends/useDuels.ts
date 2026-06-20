@@ -13,7 +13,7 @@ export function useDuels() {
     queryFn: async (): Promise<DuelRow[]> => {
       const { data, error } = await supabase.rpc('duel_list');
       if (error) throw error;
-      return data;
+      return data ?? [];
     },
   });
 }
