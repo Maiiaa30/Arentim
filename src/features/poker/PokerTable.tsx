@@ -281,8 +281,15 @@ export function PokerTable({ view, youId, myTurn, resultBanner }: PokerTableProp
             <span className="font-sans text-[10px] uppercase tracking-[0.22em] text-gold/80">{street}</span>
             <PotPill pot={view.pot} />
             <Board community={view.community} dealKey={dealKey} />
-            {resultBanner}
           </div>
+
+          {/* Winner banner — floated in the clear band above the board so it never
+              collides with the hero's hole cards (and on top of everything). */}
+          {resultBanner && (
+            <div className="pointer-events-none absolute left-1/2 top-[30%] z-40 -translate-x-1/2 -translate-y-1/2">
+              {resultBanner}
+            </div>
+          )}
 
           {/* Opponent seats around the rail */}
           {opponents.map((p, i) => {
@@ -358,8 +365,10 @@ export function ResultBanner({ view }: { view: PokerView }) {
     })
     .join(' · ');
   return (
-    <p className="animate-pop rounded-full border border-positive/40 bg-positive-felt/30 px-4 py-1.5 text-center font-sans text-sm font-semibold text-positive">
-      {text}
+    <p
+      className="animate-pop whitespace-nowrap rounded-full border border-gold/50 bg-[#0c0b08] px-5 py-2 text-center font-display text-sm font-bold text-gold shadow-[0_8px_28px_rgba(0,0,0,0.6)] ring-1 ring-gold/20"
+    >
+      🏆 {text}
     </p>
   );
 }
