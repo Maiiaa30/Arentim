@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Eyebrow } from '@/components/ui/primitives';
 import { formatAmount } from '@/lib/format';
-import type { Profile } from '@/types/db';
+import type { AdminAction, Profile } from '@/types/db';
 
 type Tab = 'overview' | 'players' | 'sportsbook' | 'challenges' | 'broadcast' | 'logs';
 
@@ -264,17 +264,76 @@ export function AdminPage() {
         </div>
       )}
 
-      {tab === 'logs' && (
-        <div className="space-y-1">
-          {(actions ?? []).map((a) => (
-            <div key={a.id} className="break-words rounded bg-surface px-3 py-2 text-xs">
-              <span className="font-medium text-text">{a.action}</span>
-              <span className="text-muted-2"> · {new Date(a.created_at).toLocaleString('pt-PT')}</span>
-              {a.detail && <span className="break-all font-mono text-muted-2"> · {JSON.stringify(a.detail)}</span>}
+      {tab === 'logs' && <LogsView actions={actions ?? []} players={players ?? []} />}
+    </div>
+  );
+}
+
+/** Action → (label, accent tone) for the audit log. */
+const LOG_META: Record<string, { label: string; tone: string }> = {
+  adjust_balance: { label: 'Ajuste de saldo', tone: 'bg-gold' },
+  set_streak: { label: 'Sequência', tone: 'bg-muted-2' },
+  suspend: { label: 'Suspensão', tone: 'bg-negative' },
+  unsuspend: { label: 'Reativação', tone: 'bg-positive' },
+  suspend_temp: { label: 'Bloqueio temporário', tone: 'bg-negative' },
+  settle_fixture: { label: 'Liquidação de jogo', tone: 'bg-positive' },
+  set_odds: { label: 'Odds', tone: 'bg-muted-2' },
+  upsert_challenge: { label: 'Desafio', tone: 'bg-muted-2' },
+  broadcast: { label: 'Anúncio', tone: 'bg-gold' },
+};
+
+function relativeTime(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime();
+  const m = Math.round(diff / 60000);
+  if (m < 1) return 'agora';
+  if (m < 60) return `há ${m} min`;
+  const h = Math.round(m / 60);
+  if (h < 24) return `há ${h} h`;
+  return new Date(iso).toLocaleDateString('pt-PT', { day: 'numeric', month: 'short' });
+}
+
+/** Human summary of an action's detail payload. */
+function logSummary(action: string, detail: Record<string, unknown> | null): string {
+  const d = detail ?? {};
+  const n = (v: unknown) => (typeof v === 'number' ? v.toLocaleString('pt-PT') : String(v ?? ''));
+  switch (action) {
+    case 'adjust_balance': return `${Number(d.amount) >= 0 ? '+' : ''}${n(d.amount)} Tt`;
+    case 'set_streak': return `${n(d.streak)} dias`;
+    case 'suspend_temp': return `${n(d.minutes)} min`;
+    case 'settle_fixture': return `resultado ${n(d.score)}`;
+    case 'upsert_challenge': return `${n(d.key)} · prémio ${n(d.reward)}`;
+    case 'broadcast': return `“${n(d.title)}”`;
+    default: return '';
+  }
+}
+
+function LogsView({ actions, players }: { actions: AdminAction[]; players: Profile[] }) {
+  const nameById = new Map(players.map((p) => [p.id, p.display_name]));
+  if (actions.length === 0) return <p className="py-10 text-center text-sm text-muted-2">Sem registos ainda.</p>;
+  return (
+    <div className="overflow-hidden rounded-lg border border-border">
+      {actions.map((a, i) => {
+        const meta = LOG_META[a.action] ?? { label: a.action, tone: 'bg-muted-2' };
+        const summary = logSummary(a.action, a.detail);
+        const reason = a.detail && typeof a.detail.reason === 'string' ? a.detail.reason : null;
+        const target = a.target_user_id ? nameById.get(a.target_user_id) : null;
+        return (
+          <div key={a.id} className={`flex items-start gap-3 px-3 py-2.5 ${i % 2 ? 'bg-surface/40' : ''}`}>
+            <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${meta.tone}`} aria-hidden />
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-baseline gap-x-2">
+                <span className="font-sans text-sm font-medium text-text">{meta.label}</span>
+                {summary && <span className="font-mono text-xs text-gold">{summary}</span>}
+                {target && <span className="font-sans text-xs text-muted">· {target}</span>}
+              </div>
+              {reason && <p className="truncate font-sans text-xs text-muted-2">{reason}</p>}
             </div>
-          ))}
-        </div>
-      )}
+            <span className="shrink-0 font-sans text-[11px] text-muted-2" title={new Date(a.created_at).toLocaleString('pt-PT')}>
+              {relativeTime(a.created_at)}
+            </span>
+          </div>
+        );
+      })}
     </div>
   );
 }

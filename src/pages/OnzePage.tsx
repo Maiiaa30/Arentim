@@ -278,9 +278,9 @@ export function OnzePage() {
           )}
 
           {phase !== 'setup' && (
-            <>
-              {/* Pitch — each slot sits at its real position on the field. */}
-              <div className="felt felt-rail mx-auto w-full max-w-md rounded-lg p-3 sm:p-4">
+            <div className="grid gap-5 lg:grid-cols-[320px_minmax(0,1fr)] lg:items-start">
+              {/* Pitch (left) — each slot sits at its real position on the field. */}
+              <div className="felt felt-rail w-full rounded-lg p-3 sm:p-4">
                 <div className="mb-2 flex items-center justify-between">
                   <span className="font-mono text-xs text-gold-light">{formation}</span>
                   <span className="font-sans text-xs text-muted">{almanac ? 'Almanaque' : `Equipa ${live.total} · Química +${live.chemistry}`}</span>
@@ -328,7 +328,7 @@ export function OnzePage() {
               </div>
 
               {phase === 'draft' ? (
-                <div className="mx-auto w-full max-w-xl card space-y-3 p-4 sm:p-5">
+                <div className="card space-y-3 p-4 sm:p-5">
                   {offer && (
                     <>
                       <div className="flex items-center justify-between gap-2">
@@ -347,7 +347,7 @@ export function OnzePage() {
                         <p className="font-sans text-[11px] text-muted-2">Escolha um jogador — só pode tirar um de cada clube.</p>
                       )}
 
-                      <div className="grid max-h-[340px] gap-2 overflow-y-auto sm:grid-cols-2">
+                      <div className="grid max-h-[460px] gap-2 overflow-y-auto sm:grid-cols-2">
                         {roster.map((p) => {
                           const usable = openEligible(p).length > 0;
                           const isArmed = armed?.id === p.id;
@@ -378,7 +378,7 @@ export function OnzePage() {
                   </Button>
                 </div>
               ) : mode === 'sete' && sete ? (
-                <div className="mx-auto w-full max-w-xl card space-y-4 p-6 text-center">
+                <div className="card space-y-4 p-6 text-center">
                   <p className="font-sans text-[10px] uppercase tracking-[0.3em] text-muted-2">Resultado</p>
                   <p className={`font-display text-3xl font-bold ${sete.champion ? 'text-gold' : 'text-text'}`}>{sete.champion ? '✦ 7–0 · CAMPEÃO ✦' : sete.record}</p>
                   <p className="font-sans text-sm text-muted">Equipa {sete.rating.total} · química +{sete.rating.chemistry} · {sete.score} pts</p>
@@ -408,7 +408,7 @@ export function OnzePage() {
                   <Button variant="secondary" onClick={() => setPhase('setup')} className="w-full">Jogar outra vez</Button>
                 </div>
               ) : season ? (
-                <div className="mx-auto w-full max-w-xl">
+                <div className="min-w-0">
                   <SeasonView
                     season={season} step={step} auto={auto} over={seasonOver} table={tableUpTo} lastMatch={lastMatch}
                     predicted={predictTable(season)}
@@ -419,7 +419,7 @@ export function OnzePage() {
                   />
                 </div>
               ) : null}
-            </>
+            </div>
           )}
         </div>
 
