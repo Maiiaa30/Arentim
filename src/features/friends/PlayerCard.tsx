@@ -3,7 +3,9 @@ import { createPortal } from 'react-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { usePublicProfile } from './usePublicProfile';
 import { useFriendActions } from './useFriends';
+import { useDuelRecord } from './useDuels';
 import { winRate } from '@/features/profile/stats';
+import { evaluateAchievements, PUBLIC_ACHIEVEMENT_KEYS } from '@/features/profile/achievements';
 import { RingAvatar } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
 import { formatTos } from '@/lib/format';
@@ -23,6 +25,7 @@ const STATUS_TEXT: Record<FriendStatus, string> = {
 /** Mini popup with a player's public stats + a friend-request action. */
 export function PlayerCard({ userId, onClose }: { userId: string; onClose: () => void }) {
   const { data: p, isLoading } = usePublicProfile(userId);
+  const { data: record } = useDuelRecord(userId);
   const { sendRequest } = useFriendActions();
   const qc = useQueryClient();
   const [msg, setMsg] = useState<string | null>(null);
@@ -94,6 +97,38 @@ export function PlayerCard({ userId, onClose }: { userId: string; onClose: () =>
                 <p className="font-display text-lg text-gold">{formatTos(p.biggest_win)}</p>
               </div>
             </div>
+
+            {(() => {
+              const badges = evaluateAchievements({
+                balance: 0, total_wagered: 0,
+                games_played: p.games_played, games_won: p.games_won,
+                biggest_win: p.biggest_win, streak_count: p.streak_count,
+              }).filter((a) => PUBLIC_ACHIEVEMENT_KEYS.has(a.key) && a.unlocked);
+              if (badges.length === 0) return null;
+              return (
+                <div className="mt-5">
+                  <p className="mb-1.5 font-sans text-[10px] uppercase tracking-[0.18em] text-muted-2">Conquistas</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {badges.map((a) => (
+                      <span key={a.key} title={a.title} className="flex h-8 w-8 items-center justify-center rounded-full border border-gold/40 bg-gold/[0.06] text-base">
+                        {a.icon}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
+            {p.friend_status !== 'self' && record && record.total > 0 && (
+              <div className="mt-4 rounded-lg border border-border bg-surface-raised/40 px-3 py-2 text-center">
+                <span className="font-sans text-[11px] uppercase tracking-[0.16em] text-muted-2">Duelos entre vocês</span>
+                <p className="mt-0.5 font-display text-sm">
+                  <span className="font-bold text-positive">{record.wins}V</span>
+                  <span className="text-muted-2"> – </span>
+                  <span className="font-bold text-negative">{record.losses}D</span>
+                </p>
+              </div>
+            )}
 
             <div className="mt-5 flex items-center justify-between gap-3">
               <Button variant="secondary" onClick={onClose} className="!px-4 !py-2">

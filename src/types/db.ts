@@ -814,6 +814,22 @@ export type Database = {
         Args: Record<string, never>;
         Returns: DuelRow[];
       };
+      duel_record: {
+        Args: { p_other: string };
+        Returns: { wins: number; losses: number; total: number };
+      };
+      request_tos: {
+        Args: { p_from: string; p_amount: number };
+        Returns: undefined;
+      };
+      cashout_bet: {
+        Args: { p_bet_id: number };
+        Returns: { refund: number; balance: number };
+      };
+      admin_reset_season: {
+        Args: Record<string, never>;
+        Returns: string;
+      };
       bj_deal: {
         Args: { p_stake: number };
         Returns: BlackjackView;

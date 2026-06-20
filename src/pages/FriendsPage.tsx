@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useFriends, useFriendRequests, useFriendActions, useSearchUsers, useGiftTos } from '@/features/friends/useFriends';
+import { useFriends, useFriendRequests, useFriendActions, useSearchUsers, useGiftTos, useRequestTos } from '@/features/friends/useFriends';
 import { useProfile } from '@/features/profile/useProfile';
 import { usePresence } from '@/features/friends/usePresence';
 import {
@@ -41,9 +41,11 @@ function FriendCard({ f, online, showBalance, myBalance, onRemove }: {
   const net = f.total_won - f.total_lost;
   const winRate = f.games_played > 0 ? Math.round((f.games_won / f.games_played) * 100) : 0;
   const gift = useGiftTos();
+  const request = useRequestTos();
   const { create: createDuel } = useDuelActions();
   const [giftOpen, setGiftOpen] = useState(false);
   const [duelOpen, setDuelOpen] = useState(false);
+  const [reqOpen, setReqOpen] = useState(false);
   const [actionMsg, setActionMsg] = useState<string | null>(null);
   const [giftErr, setGiftErr] = useState<string | null>(null);
 
@@ -74,6 +76,17 @@ function FriendCard({ f, online, showBalance, myBalance, onRemove }: {
       setDuelOpen(false);
     } catch (e) {
       setGiftErr(e instanceof Error && e.message.includes('pendente') ? 'Já tens um duelo pendente com este amigo.' : 'Não foi possível enviar o desafio.');
+    }
+  }
+
+  async function sendReq(amount: number) {
+    setGiftErr(null);
+    try {
+      await request.mutateAsync({ from: f.id, amount });
+      setActionMsg(`Pediste ${formatAmount(amount)} tós a ${f.display_name}.`);
+      setReqOpen(false);
+    } catch {
+      setGiftErr('Não foi possível enviar o pedido.');
     }
   }
 
@@ -129,15 +142,27 @@ function FriendCard({ f, online, showBalance, myBalance, onRemove }: {
           err={giftErr}
         />
       )}
+      {reqOpen && (
+        <AmountPicker
+          label={`Pedir tós a ${f.display_name}`}
+          disabled={request.isPending}
+          myBalance={Number.MAX_SAFE_INTEGER}
+          onPick={sendReq}
+          err={giftErr}
+        />
+      )}
 
       {actionMsg ? (
         <p className="mt-3 font-sans text-xs text-positive">{actionMsg}</p>
       ) : (
         <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1">
-          <button onClick={() => { setGiftOpen((v) => !v); setDuelOpen(false); setGiftErr(null); }} className="font-sans text-xs text-gold hover:text-gold-light">
+          <button onClick={() => { setGiftOpen((v) => !v); setDuelOpen(false); setReqOpen(false); setGiftErr(null); }} className="font-sans text-xs text-gold hover:text-gold-light">
             🎁 Oferecer
           </button>
-          <button onClick={() => { setDuelOpen((v) => !v); setGiftOpen(false); setGiftErr(null); }} className="font-sans text-xs text-gold hover:text-gold-light">
+          <button onClick={() => { setReqOpen((v) => !v); setGiftOpen(false); setDuelOpen(false); setGiftErr(null); }} className="font-sans text-xs text-gold hover:text-gold-light">
+            🙏 Pedir
+          </button>
+          <button onClick={() => { setDuelOpen((v) => !v); setGiftOpen(false); setReqOpen(false); setGiftErr(null); }} className="font-sans text-xs text-gold hover:text-gold-light">
             ⚔️ Desafiar
           </button>
           <button onClick={onRemove} className="ml-auto font-sans text-xs text-muted-2 hover:text-negative">Remover</button>

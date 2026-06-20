@@ -1,18 +1,31 @@
-import type { Profile } from '@/types/db';
-
 /**
- * Achievements are derived purely from the profile's lifetime aggregates, so
- * they need no storage or triggers — evaluate on read. Each has a target; an
- * achievement is unlocked once its value reaches the target.
+ * Achievements are derived purely from lifetime aggregates, so they need no
+ * storage or triggers — evaluate on read. Each has a target; an achievement is
+ * unlocked once its value reaches the target. The stat subset is shared by the
+ * full Profile and the (balance/wagered-less) PublicProfile.
  */
+export type AchievementStats = {
+  balance: number;
+  games_played: number;
+  games_won: number;
+  biggest_win: number;
+  streak_count: number;
+  total_wagered: number;
+};
+
 export type Achievement = {
   key: string;
   title: string;
   description: string;
   icon: string;
   target: number;
-  value: (p: Profile) => number;
+  value: (p: AchievementStats) => number;
 };
+
+/** Keys safe to show on another player's public profile (no balance/wagered). */
+export const PUBLIC_ACHIEVEMENT_KEYS = new Set([
+  'first', 'regular', 'veteran', 'winner', 'lucky', 'highroller', 'streak',
+]);
 
 export const ACHIEVEMENTS: Achievement[] = [
   { key: 'first', title: 'Primeiro Passo', description: 'Joga a tua primeira ronda', icon: '🎲', target: 1, value: (p) => p.games_played },
@@ -28,8 +41,8 @@ export const ACHIEVEMENTS: Achievement[] = [
 
 export type AchievementState = Achievement & { current: number; unlocked: boolean; pct: number };
 
-/** Evaluate every achievement against a profile, sorted unlocked-first. */
-export function evaluateAchievements(p: Profile): AchievementState[] {
+/** Evaluate every achievement against a stat set, sorted unlocked-first. */
+export function evaluateAchievements(p: AchievementStats): AchievementState[] {
   return ACHIEVEMENTS.map((a) => {
     const current = Math.max(0, a.value(p));
     const unlocked = current >= a.target;
@@ -37,7 +50,7 @@ export function evaluateAchievements(p: Profile): AchievementState[] {
   }).sort((x, y) => Number(y.unlocked) - Number(x.unlocked) || y.pct - x.pct);
 }
 
-/** How many achievements a profile has unlocked. */
-export function unlockedCount(p: Profile): number {
+/** How many achievements a stat set has unlocked. */
+export function unlockedCount(p: AchievementStats): number {
   return ACHIEVEMENTS.reduce((n, a) => n + (a.value(p) >= a.target ? 1 : 0), 0);
 }

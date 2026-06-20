@@ -19,6 +19,7 @@ function iconFor(type: string): string {
   if (type === 'friend_accept') return '🤝';
   if (type === 'friend_win') return '🎉';
   if (type === 'gift') return '🎁';
+  if (type === 'gift_request') return '🙏';
   if (type === 'duel') return '⚔️';
   if (type === 'duel_result') return '🏆';
   return '🔔';

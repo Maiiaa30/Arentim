@@ -81,6 +81,16 @@ export function useFriendActions() {
   return { sendRequest, respond, remove };
 }
 
+/** Ask a friend for Tostões — drops a request notification (no money moves). */
+export function useRequestTos() {
+  return useMutation({
+    mutationFn: async (input: { from: string; amount: number }) => {
+      const { error } = await supabase.rpc('request_tos', { p_from: input.from, p_amount: input.amount });
+      if (error) throw error;
+    },
+  });
+}
+
 /** Gift Tostões to a friend (atomic transfer via the gift_tos RPC). */
 export function useGiftTos() {
   const { user } = useAuth();

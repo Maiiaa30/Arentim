@@ -4,6 +4,20 @@ import { useAuth } from '@/features/auth/AuthProvider';
 import { profileKey } from '@/features/profile/useProfile';
 import type { DuelRow, DuelRespondResult } from '@/types/db';
 
+/** Head-to-head settled-duel record vs another player (for the PlayerCard). */
+export function useDuelRecord(otherId: string) {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ['duel-record', user?.id, otherId] as const,
+    enabled: !!user && !!otherId,
+    queryFn: async (): Promise<{ wins: number; losses: number; total: number }> => {
+      const { data, error } = await supabase.rpc('duel_record', { p_other: otherId });
+      if (error) throw error;
+      return data ?? { wins: 0, losses: 0, total: 0 };
+    },
+  });
+}
+
 export function useDuels() {
   const { user } = useAuth();
   return useQuery({
