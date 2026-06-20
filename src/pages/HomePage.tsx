@@ -10,6 +10,7 @@ import { LandingPage } from '@/pages/LandingPage';
 import { Button } from '@/components/ui/Button';
 import { Eyebrow, FramedPanel, RingAvatar, SectionHeader } from '@/components/ui/primitives';
 import { GameArt, type GameArtKind } from '@/features/casino/GameArt';
+import { WinPopup } from '@/features/sportsbook/WinPopup';
 import { formatTos } from '@/lib/format';
 
 interface GameTile {
@@ -120,6 +121,7 @@ export function HomePage() {
   return (
     <div className="animate-fade-in space-y-10">
       {selected && <PlayerCard userId={selected} onClose={() => setSelected(null)} />}
+      <WinPopup />
       {user && <DailyBonusCard />}
 
       <FramedPanel>
