@@ -3,8 +3,6 @@ import {
   diceMultiplier,
   hiloAdaptedMult,
   highlowMultiplier,
-  CHEST_VALUES,
-  chestRtp,
   WHEEL,
   wheelMultiplier,
   wheelRtp,
@@ -73,14 +71,6 @@ describe('maior ou menor (high/low die)', () => {
   it('keeps a house edge', () => {
     expect(0.5 * 1.9).toBeLessThan(1); // high/low EV
     expect((1 / 6) * 5.7).toBeLessThan(1); // exact EV
-  });
-});
-
-describe('baú do tesouro (chest)', () => {
-  it('has 9 chests and a house edge (RTP 0.9–0.97)', () => {
-    expect(CHEST_VALUES).toHaveLength(9);
-    expect(chestRtp()).toBeGreaterThan(0.9);
-    expect(chestRtp()).toBeLessThan(0.97);
   });
 });
 

@@ -65,16 +65,6 @@ export function highlowMultiplier(pick: HighLowPick, die: number): number {
   return 0;
 }
 
-/**
- * The 9 treasure-chest values, shuffled server-side each round. Mostly empty
- * with one 5×. Mirrors v_vals in 20260621100000_chest_highlow.sql. RTP ≈ 0.94.
- */
-export const CHEST_VALUES: readonly number[] = [0, 0, 0, 0, 0.5, 0.5, 1, 1.5, 5];
-
-export function chestRtp(): number {
-  return CHEST_VALUES.reduce((a, b) => a + b, 0) / CHEST_VALUES.length;
-}
-
 /** Distinct accent colour per wheel multiplier, for the wheel rendering. */
 export function wheelColor(mult: number): string {
   if (mult === 0) return '#1a1712'; // blank

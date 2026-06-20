@@ -88,13 +88,14 @@ export function CrashPage() {
         setWatchedBust(true);
         setPhase('done');
         watchRaf.current = null;
+        loadHistory(); // only now reveal the strip — after it has actually crashed
         return;
       }
       setMult(m);
       watchRaf.current = requestAnimationFrame(tick);
     };
     watchRaf.current = requestAnimationFrame(tick);
-  }, []);
+  }, [loadHistory]);
 
   const finish = useCallback(
     async (id: number) => {
@@ -105,13 +106,13 @@ export function CrashPage() {
       try {
         const res = await cashout.mutateAsync(id);
         setResult(res);
-        loadHistory();
         if (res.won) {
           setWinId((n) => n + 1);
-          watchToCrash(res.mult, res.crash); // keep watching until it busts
+          watchToCrash(res.mult, res.crash); // keep watching; history reveals when it busts
         } else {
           setMult(res.crash);
           setPhase('done');
+          loadHistory();
         }
       } catch (e) {
         setError(e instanceof Error ? e.message : 'A retirada falhou.');

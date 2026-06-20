@@ -299,14 +299,26 @@ export type HiloDealResult = {
   desce_mult: number;
 };
 
-/** Result of the play_chest RPC (treasure chest picker). */
+/** Result of the play_chest RPC (find-the-prize among 3 chests). */
 export type ChestResult = {
-  index: number;
+  pick: number;
+  prize_index: number;
+  won: boolean;
   multiplier: number;
-  layout: number[];
   payout: number;
   balance: number;
   replayed: boolean;
+};
+
+/** One row of the football betting leaderboard. */
+export type FootballLeaderRow = {
+  id: string;
+  name: string;
+  wagered: number;
+  won: number;
+  lost: number;
+  net: number;
+  bets: number;
 };
 
 /** Result of the play_highlow RPC (single-die High/Low). */
@@ -550,6 +562,10 @@ export type Database = {
       play_highlow: {
         Args: { p_stake: number; p_pick: string; p_idempotency_key: string | null };
         Returns: HighLowResult;
+      };
+      football_leaderboard: {
+        Args: Record<string, never>;
+        Returns: FootballLeaderRow[];
       };
       hilo_deal: {
         Args: Record<string, never>;
