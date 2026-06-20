@@ -60,7 +60,12 @@ export function useRoulette() {
     mutationFn: async (bets: RouletteBet[]): Promise<RouletteSpinResult> => {
       const idempotencyKey = crypto.randomUUID();
       const { data, error } = await supabase.rpc('play_roulette', {
-        p_bets: bets.map((b) => ({ kind: b.kind, selection: b.selection, stake: b.stake })),
+        p_bets: bets.map((b) => ({
+          kind: b.kind,
+          selection: b.selection,
+          stake: b.stake,
+          ...(b.numbers ? { numbers: b.numbers } : {}),
+        })),
         p_idempotency_key: idempotencyKey,
       });
       if (error) throw error;

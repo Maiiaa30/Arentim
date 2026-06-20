@@ -9,6 +9,8 @@ export type TransactionType = 'bonus' | 'bet' | 'win' | 'loss' | 'refund' | 'adj
 export type RouletteBetPayload = {
   kind: string;
   selection: number | null;
+  /** Covered numbers for split (2) / corner (4) bets. */
+  numbers?: number[];
   stake: number;
 };
 

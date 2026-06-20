@@ -9,6 +9,7 @@ import { Chip } from '@/features/casino/Chip';
 import {
   colorOf,
   totalStake,
+  betCellKey,
   type RouletteBet,
   type RouletteBetKind,
 } from '@/features/casino/roulette';
@@ -25,8 +26,12 @@ const SPIN_MS = 4300;
 
 function betLabel(b: RouletteBet): string {
   if (b.kind === 'straight') return `Pleno ${b.selection}`;
+  if (b.kind === 'split') return `Split ${b.numbers?.join('/')}`;
+  if (b.kind === 'corner') return `Canto ${b.numbers?.join('/')}`;
   const labels: Record<RouletteBetKind, string> = {
     straight: 'Pleno',
+    split: 'Split',
+    corner: 'Canto',
     red: 'Vermelho',
     black: 'Preto',
     even: 'Par',
@@ -129,7 +134,7 @@ export function RoulettePage() {
   // Per-cell stake map so the board can render chip badges on placed bets.
   const stakeMap = useMemo(() => {
     const m: Record<string, number> = {};
-    for (const b of bets) m[`${b.kind}:${b.selection}`] = b.stake;
+    for (const b of bets) m[betCellKey(b.kind, b.selection, b.numbers)] = b.stake;
     return m;
   }, [bets]);
 
@@ -140,7 +145,7 @@ export function RoulettePage() {
   const jackpotWin =
     (!!result && result.payout > 0 && result.payout >= Math.max(result.stake * 6, 1)) || !!result?.bonus_hit;
 
-  function placeBet(kind: RouletteBetKind, selection: number | null) {
+  function placeBet(kind: RouletteBetKind, selection: number | null, numbers?: number[]) {
     if (spinning) return;
     setError(null);
     if (staked + chip > balance) {
@@ -152,14 +157,15 @@ export function RoulettePage() {
       setLanded(false);
       setResult(null);
     }
+    const k = betCellKey(kind, selection, numbers);
     setBets((prev) => {
-      const idx = prev.findIndex((b) => b.kind === kind && b.selection === selection);
+      const idx = prev.findIndex((b) => betCellKey(b.kind, b.selection, b.numbers) === k);
       if (idx >= 0) {
         const next = [...prev];
         next[idx] = { ...next[idx]!, stake: next[idx]!.stake + chip };
         return next;
       }
-      return [...prev, { kind, selection, stake: chip }];
+      return [...prev, { kind, selection, stake: chip, ...(numbers ? { numbers } : {}) }];
     });
   }
 
