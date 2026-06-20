@@ -32,12 +32,22 @@ function MachineCard({ m }: { m: SlotMachineMeta }) {
             className="h-[68px] w-[68px] drop-shadow-[0_2px_6px_rgba(0,0,0,0.6)] transition-transform duration-500 group-hover:-translate-y-0.5"
           />
         ))}
-        <span
-          className="absolute right-3 top-3 flex items-center gap-1 rounded-full border px-2.5 py-0.5 font-sans text-[9px] uppercase tracking-[0.18em]"
-          style={{ borderColor: `${hex}66`, color: hex, background: 'rgba(10,9,7,0.6)' }}
-        >
-          ✦ Jackpot mistério
-        </span>
+        {m.progressive && m.jackpot_pool != null ? (
+          <span
+            className="absolute right-3 top-3 flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 font-mono text-[10px] font-semibold"
+            style={{ borderColor: `${hex}88`, color: hex, background: 'rgba(10,9,7,0.72)' }}
+          >
+            <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full" style={{ background: hex }} />
+            🏆 {formatAmount(m.jackpot_pool)} tós
+          </span>
+        ) : (
+          <span
+            className="absolute right-3 top-3 flex items-center gap-1 rounded-full border px-2.5 py-0.5 font-sans text-[9px] uppercase tracking-[0.18em]"
+            style={{ borderColor: `${hex}66`, color: hex, background: 'rgba(10,9,7,0.6)' }}
+          >
+            ✦ Jackpot mistério
+          </span>
+        )}
       </div>
 
       <div className="flex flex-1 flex-col p-5">

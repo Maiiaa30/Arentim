@@ -17,6 +17,7 @@ import {
   viewFor,
   type TableState,
 } from '../_shared/pokerTable.ts';
+import type { StepRecorder } from '../_shared/pokerTable.ts';
 import type { BotDifficulty, PokerAction } from '../_shared/poker.ts';
 import { corsHeaders } from '../_shared/cors.ts';
 
@@ -24,6 +25,10 @@ const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!;
 const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const TURN_MS = 30_000;
+const MAX_SEATS = 9; // table capacity (mirrors addPlayer's cap)
+
+const isDifficulty = (d: unknown): d is BotDifficulty =>
+  d === 'easy' || d === 'medium' || d === 'hard';
 
 const rand = () => crypto.getRandomValues(new Uint32Array(1))[0]! / 4294967296;
 const json = (b: unknown, status = 200) =>
@@ -50,7 +55,7 @@ Deno.serve(async (req) => {
   if (!user) return json({ error: 'unauthorized' }, 401);
 
   const db = createClient(SUPABASE_URL, SERVICE_KEY);
-  let body: { op?: string; code?: string; buyIn?: number; difficulty?: string; action?: string; raiseTo?: number; tableId?: number };
+  let body: { op?: string; code?: string; buyIn?: number; botCount?: number; difficulty?: string; action?: string; raiseTo?: number; tableId?: number };
   try { body = await req.json(); } catch { return json({ error: 'bad request' }, 400); }
 
   const name = async () =>
@@ -100,8 +105,18 @@ Deno.serve(async (req) => {
       });
       if (debit) return json({ error: 'insufficient balance' }, 400);
 
+      // Seat the host, then fill the requested number of bot seats up front so
+      // the host isn't forced to add them one at a time. When botCount is omitted
+      // (older clients) we seat none and keep the manual "add bot" flow.
+      const difficulty: BotDifficulty = isDifficulty(body.difficulty) ? body.difficulty : 'medium';
+      const requested = Number.isFinite(Number(body.botCount)) ? Math.floor(Number(body.botCount)) : 0;
+      const botCount = Math.min(MAX_SEATS - 1, Math.max(0, requested));
+
       const state = createMultiTable();
       addPlayer(state, { id: user.id, name: await name(), isBot: false, difficulty: 'medium', stack: buyIn });
+      for (let i = 0; i < botCount; i++) {
+        addPlayer(state, { id: `bot_${crypto.randomUUID().slice(0, 6)}`, name: `Bot ${i + 1}`, isBot: true, difficulty, stack: buyIn });
+      }
       const code = genCode();
       const { data: row, error } = await db.from('poker_tables')
         .insert({ code, host_id: user.id, buy_in: buyIn, state }).select('id').single();
@@ -148,9 +163,11 @@ Deno.serve(async (req) => {
       if (!row) return json({ error: 'no table' }, 404);
       if (row.host_id !== user.id) return json({ error: 'host only' }, 403);
       if (row.state.players.length < 2) return json({ error: 'need at least 2 players' }, 409);
-      const state = startHand(row.state, rand);
+      const trail: unknown[] = [];
+      const rec: StepRecorder = (st) => trail.push(viewFor(st, user.id));
+      const state = startHand(row.state, rand, rec);
       await persist(row.id, state, 'active');
-      return json({ view: viewFor(state, user.id) });
+      return json({ view: viewFor(state, user.id), trail, turnDeadline: deadlineFor(state) });
     }
 
     case 'act': {
@@ -158,20 +175,24 @@ Deno.serve(async (req) => {
       if (!row) return json({ error: 'no table' }, 404);
       let state = enforceTimeout(row);
       const action = String(body.action) as PokerAction;
+      const trail: unknown[] = [];
+      const rec: StepRecorder = (st) => trail.push(viewFor(st, user.id));
       if (['fold', 'check', 'call', 'raise'].includes(action)) {
-        state = applyActionFor(state, user.id, action, Math.floor(Number(body.raiseTo) || 0), rand);
+        state = applyActionFor(state, user.id, action, Math.floor(Number(body.raiseTo) || 0), rand, rec);
       }
       await persist(row.id, state);
-      return json({ view: viewFor(state, user.id) });
+      return json({ view: viewFor(state, user.id), trail, turnDeadline: deadlineFor(state) });
     }
 
     case 'deal': {
       const row = await loadByMembership(body.tableId);
       if (!row) return json({ error: 'no table' }, 404);
       if (!row.state.handOver) return json({ error: 'hand in progress' }, 409);
-      const state = startHand(row.state, rand);
+      const trail: unknown[] = [];
+      const rec: StepRecorder = (st) => trail.push(viewFor(st, user.id));
+      const state = startHand(row.state, rand, rec);
       await persist(row.id, state, 'active');
-      return json({ view: viewFor(state, user.id) });
+      return json({ view: viewFor(state, user.id), trail, turnDeadline: deadlineFor(state) });
     }
 
     case 'leave': {
@@ -200,8 +221,14 @@ Deno.serve(async (req) => {
       const row = await loadByMembership(body.tableId);
       if (!row) return json({ view: null });
       const state = enforceTimeout(row);
-      if (state !== row.state) await persist(row.id, state);
-      return json({ view: viewFor(state, user.id), host: row.host_id === user.id });
+      // Keep the stored deadline so the client countdown stays stable across
+      // polls; only recompute when the timeout sweep actually changed the turn.
+      let deadline = row.turn_deadline;
+      if (state !== row.state) {
+        await persist(row.id, state);
+        deadline = deadlineFor(state);
+      }
+      return json({ view: viewFor(state, user.id), host: row.host_id === user.id, turnDeadline: deadline });
     }
 
     default:

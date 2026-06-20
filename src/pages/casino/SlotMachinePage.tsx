@@ -18,6 +18,37 @@ type ReelMode = 'idle' | 'spin' | 'land';
 const ITEM = 'flex h-36 items-center justify-center sm:h-44';
 const SYMBOL = 'h-[78px] w-[78px] sm:h-24 sm:w-24';
 
+/** Tween a number towards `value`, so the progressive pool visibly ticks up. */
+function useCountUp(value: number | null, duration = 700): number | null {
+  const [display, setDisplay] = useState<number | null>(value);
+  const fromRef = useRef<number | null>(value);
+  useEffect(() => {
+    if (value == null) {
+      setDisplay(null);
+      fromRef.current = null;
+      return;
+    }
+    const from = fromRef.current ?? value;
+    if (from === value) {
+      setDisplay(value);
+      fromRef.current = value;
+      return;
+    }
+    let raf = 0;
+    const start = performance.now();
+    const step = (now: number) => {
+      const t = Math.min(1, (now - start) / duration);
+      const eased = 1 - Math.pow(1 - t, 3);
+      setDisplay(Math.round(from + (value - from) * eased));
+      if (t < 1) raf = requestAnimationFrame(step);
+      else fromRef.current = value;
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [value, duration]);
+  return display;
+}
+
 /** Build the landing strip: a run of random symbols ending on the target. */
 function makeLandStrip(ids: string[], target: string): string[] {
   const strip: string[] = [];
@@ -126,6 +157,7 @@ function MachineScreen({ m }: { m: SlotMachineMeta }) {
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<{ payout: number; jackpot: boolean; mult: number; id: number } | null>(null);
   const [pool, setPool] = useState<number | null>(m.progressive ? m.jackpot_pool ?? null : null);
+  const displayPool = useCountUp(pool);
   const [error, setError] = useState<string | null>(null);
   const timers = useRef<number[]>([]);
   const spinId = useRef(0);
@@ -147,7 +179,6 @@ function MachineScreen({ m }: { m: SlotMachineMeta }) {
     const startedAt = performance.now();
     try {
       const res = await play.mutateAsync({ machine: m.key, stake });
-      if (m.progressive && res.jackpot_pool != null) setPool(res.jackpot_pool);
       setTargets(res.reels);
       const id = ++spinId.current;
       // Keep all reels spinning in sync for at least ~750ms, then stop them
@@ -162,6 +193,9 @@ function MachineScreen({ m }: { m: SlotMachineMeta }) {
         window.setTimeout(() => {
           setBusy(false);
           setResult({ payout: res.payout, jackpot: res.jackpot, mult: res.multiplier, id });
+          // Reveal the new pool with the outcome: a losing spin visibly fattens
+          // the pot, a jackpot win drains it back to the seed.
+          if (m.progressive && res.jackpot_pool != null) setPool(res.jackpot_pool);
         }, base + GAP * 2 + SETTLE),
       );
     } catch (e) {
@@ -208,7 +242,7 @@ function MachineScreen({ m }: { m: SlotMachineMeta }) {
               </h1>
               <p className="mt-1.5 font-sans text-[12px] uppercase tracking-[0.24em] text-gold-light">
                 Prémios até {maxVisible}× · Jackpot{' '}
-                <span className="font-bold">{m.progressive && pool != null ? `${formatAmount(pool)} tós` : '???'}</span>
+                <span className="font-bold">{m.progressive && displayPool != null ? `${formatAmount(displayPool)} tós` : '???'}</span>
               </p>
             </div>
 
@@ -227,12 +261,18 @@ function MachineScreen({ m }: { m: SlotMachineMeta }) {
                 <p className="font-display text-2xl font-bold" style={{ color: hex }}>
                   {result?.jackpot
                     ? `${formatAmount(result.payout)} tós!`
-                    : m.progressive && pool != null
-                      ? `${formatAmount(pool)} tós`
+                    : m.progressive && displayPool != null
+                      ? `${formatAmount(displayPool)} tós`
                       : '? ? ?'}
                 </p>
               </div>
             </div>
+            {m.progressive && (
+              <p className="-mt-4 mb-7 text-center font-sans text-[11px] text-muted-2">
+                Cresce a cada jogada — cada aposta perdida engorda o pote, que sai por inteiro quem acertar nos três{' '}
+                <SymbolArt id={m.jackpot_symbol} glyph={jackpotGlyph} className="inline-block h-3.5 w-3.5 align-text-bottom" />.
+              </p>
+            )}
 
             {/* Reel housing with a gilded centre payline */}
             <div

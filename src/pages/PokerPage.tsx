@@ -4,6 +4,7 @@ import { useProfile } from '@/features/profile/useProfile';
 import { usePoker, usePokerState, type PokerResult } from '@/features/poker/usePoker';
 import { PokerTable, ResultBanner } from '@/features/poker/PokerTable';
 import { PokerActionBar } from '@/features/poker/PokerActionBar';
+import { TurnTimer } from '@/features/poker/TurnTimer';
 import type { PokerView } from '@/features/poker/types';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -18,8 +19,11 @@ const DIFFICULTY_LABEL: Record<'easy' | 'medium' | 'hard', string> = {
 
 const BUYIN_PRESETS = [100, 200, 500, 1000, 2500];
 
-/** Pause between each bot's move when replaying a hand's trail. */
-const BOT_STEP_MS = 650;
+/** Randomised pause between each bot's replayed move, so they don't all act at
+ *  once (and the table feels like real opponents thinking). */
+const botDelay = () => 480 + Math.random() * 1120;
+/** Seconds the player gets to act before the table auto-checks/folds for them. */
+const TURN_MS = 30_000;
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 export function PokerPage() {
@@ -65,6 +69,26 @@ export function PokerPage() {
     setRaiseTo(0);
   }, [view?.toActId, view?.street, view?.currentBet]);
 
+  // A countdown to act: start the clock each time it lands on the player, and
+  // auto-check (or fold facing a bet) if it runs out, so a hand can't stall.
+  const [turnDeadline, setTurnDeadline] = useState<string | null>(null);
+  useEffect(() => {
+    setTurnDeadline(myTurn && !animating ? new Date(Date.now() + TURN_MS).toISOString() : null);
+  }, [myTurn, animating, view?.toActId, view?.street, view?.currentBet]);
+
+  // Keep the latest auto-action in a ref so the timeout effect can depend only
+  // on the deadline (and not reset every render via fresh closures).
+  const autoActRef = useRef<() => void>(() => {});
+  autoActRef.current = () => {
+    if (!myTurn || busy) return;
+    void run(() => act.mutateAsync(owe > 0 ? { action: 'fold', raiseTo: 0 } : { action: 'check', raiseTo: 0 }));
+  };
+  useEffect(() => {
+    if (!turnDeadline) return;
+    const id = window.setTimeout(() => autoActRef.current(), Math.max(0, Date.parse(turnDeadline) - Date.now()));
+    return () => window.clearTimeout(id);
+  }, [turnDeadline]);
+
   // Quick bet-sizing presets, clamped to the legal range and de-duplicated.
   const quickBets = (() => {
     if (!view || !canRaise) return [];
@@ -93,7 +117,7 @@ export function PokerPage() {
       setAnimating(true);
       for (const step of trail) {
         setView(step);
-        await sleep(BOT_STEP_MS);
+        await sleep(botDelay());
       }
       setView(res.view);
       setAnimating(false);
@@ -212,21 +236,24 @@ export function PokerPage() {
       {/* Actions */}
       <div className="card space-y-3 p-4">
         {myTurn ? (
-          <PokerActionBar
-            owe={owe}
-            callAmount={Math.min(owe, you?.stack ?? 0)}
-            raiseTo={effRaiseTo}
-            minRaiseTo={minRaiseTo}
-            maxRaiseTo={maxRaiseTo}
-            canRaise={canRaise}
-            busy={busy}
-            quickBets={quickBets}
-            onFold={() => run(() => act.mutateAsync({ action: 'fold', raiseTo: 0 }))}
-            onCheck={() => run(() => act.mutateAsync({ action: 'check', raiseTo: 0 }))}
-            onCall={() => run(() => act.mutateAsync({ action: 'call', raiseTo: 0 }))}
-            onRaise={() => run(() => act.mutateAsync({ action: 'raise', raiseTo: effRaiseTo }))}
-            onRaiseChange={setRaiseTo}
-          />
+          <div className="space-y-3">
+            {turnDeadline && !busy && <TurnTimer deadline={turnDeadline} />}
+            <PokerActionBar
+              owe={owe}
+              callAmount={Math.min(owe, you?.stack ?? 0)}
+              raiseTo={effRaiseTo}
+              minRaiseTo={minRaiseTo}
+              maxRaiseTo={maxRaiseTo}
+              canRaise={canRaise}
+              busy={busy}
+              quickBets={quickBets}
+              onFold={() => run(() => act.mutateAsync({ action: 'fold', raiseTo: 0 }))}
+              onCheck={() => run(() => act.mutateAsync({ action: 'check', raiseTo: 0 }))}
+              onCall={() => run(() => act.mutateAsync({ action: 'call', raiseTo: 0 }))}
+              onRaise={() => run(() => act.mutateAsync({ action: 'raise', raiseTo: effRaiseTo }))}
+              onRaiseChange={setRaiseTo}
+            />
+          </div>
         ) : view.handOver ? (
           <div className="flex justify-center gap-2">
             {(you?.stack ?? 0) > 0 ? (
