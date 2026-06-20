@@ -8,13 +8,16 @@ import {
   type LeaderboardScope,
 } from '@/features/friends/useLeaderboard';
 import { PlayerCard } from '@/features/friends/PlayerCard';
+import { useDuels, useDuelActions } from '@/features/friends/useDuels';
+import { DuelsPanel } from '@/features/friends/DuelsPanel';
+import { useAuth } from '@/features/auth/AuthProvider';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { formatAmount } from '@/lib/format';
 import { Eyebrow, RingAvatar } from '@/components/ui/primitives';
 import type { FriendRow } from '@/types/db';
 
-type Tab = 'friends' | 'requests' | 'find' | 'leaderboard';
+type Tab = 'friends' | 'requests' | 'duels' | 'find' | 'leaderboard';
 
 const initialsOf = (name: string) => name.slice(0, 2).toUpperCase();
 
@@ -37,8 +40,10 @@ function FriendCard({ f, online, showBalance, myBalance, onRemove }: {
   const net = f.total_won - f.total_lost;
   const winRate = f.games_played > 0 ? Math.round((f.games_won / f.games_played) * 100) : 0;
   const gift = useGiftTos();
+  const { create: createDuel } = useDuelActions();
   const [giftOpen, setGiftOpen] = useState(false);
-  const [sentMsg, setSentMsg] = useState<string | null>(null);
+  const [duelOpen, setDuelOpen] = useState(false);
+  const [actionMsg, setActionMsg] = useState<string | null>(null);
   const [giftErr, setGiftErr] = useState<string | null>(null);
 
   async function sendGift(amount: number) {
@@ -49,10 +54,25 @@ function FriendCard({ f, online, showBalance, myBalance, onRemove }: {
     }
     try {
       await gift.mutateAsync({ to: f.id, amount });
-      setSentMsg(`Enviaste ${formatAmount(amount)} tós a ${f.display_name}.`);
+      setActionMsg(`Enviaste ${formatAmount(amount)} tós a ${f.display_name}.`);
       setGiftOpen(false);
     } catch {
       setGiftErr('Não foi possível enviar o presente.');
+    }
+  }
+
+  async function sendDuel(amount: number) {
+    setGiftErr(null);
+    if (amount > myBalance) {
+      setGiftErr('Saldo insuficiente.');
+      return;
+    }
+    try {
+      await createDuel.mutateAsync({ opponent: f.id, stake: amount });
+      setActionMsg(`Desafiaste ${f.display_name} por ${formatAmount(amount)} tós.`);
+      setDuelOpen(false);
+    } catch (e) {
+      setGiftErr(e instanceof Error && e.message.includes('pendente') ? 'Já tens um duelo pendente com este amigo.' : 'Não foi possível enviar o desafio.');
     }
   }
 
@@ -91,37 +111,60 @@ function FriendCard({ f, online, showBalance, myBalance, onRemove }: {
         </div>
       </div>
       {giftOpen && (
-        <div className="mt-3 rounded-lg border border-gold/30 bg-gold/[0.05] p-2.5">
-          <p className="mb-2 font-sans text-[11px] text-muted">Oferecer tós a {f.display_name}</p>
-          <div className="flex flex-wrap gap-1.5">
-            {GIFT_AMOUNTS.map((a) => (
-              <button
-                key={a}
-                disabled={gift.isPending || a > myBalance}
-                onClick={() => sendGift(a)}
-                className="focus-ring rounded-full border border-gold/40 px-3 py-1 font-mono text-xs text-gold transition-colors hover:bg-gold hover:text-bg disabled:opacity-40"
-              >
-                {a}
-              </button>
-            ))}
-          </div>
-          {giftErr && <p className="mt-1.5 font-sans text-[11px] text-negative">{giftErr}</p>}
-        </div>
+        <AmountPicker
+          label={`Oferecer tós a ${f.display_name}`}
+          disabled={gift.isPending}
+          myBalance={myBalance}
+          onPick={sendGift}
+          err={giftErr}
+        />
+      )}
+      {duelOpen && (
+        <AmountPicker
+          label={`Desafiar ${f.display_name} (vencedor leva o pote)`}
+          disabled={createDuel.isPending}
+          myBalance={myBalance}
+          onPick={sendDuel}
+          err={giftErr}
+        />
       )}
 
-      {sentMsg ? (
-        <p className="mt-3 font-sans text-xs text-positive">🎁 {sentMsg}</p>
+      {actionMsg ? (
+        <p className="mt-3 font-sans text-xs text-positive">{actionMsg}</p>
       ) : (
-        <div className="mt-3 flex items-center justify-between">
-          <button
-            onClick={() => { setGiftOpen((v) => !v); setGiftErr(null); }}
-            className="font-sans text-xs text-gold hover:text-gold-light"
-          >
-            🎁 Oferecer tós
+        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1">
+          <button onClick={() => { setGiftOpen((v) => !v); setDuelOpen(false); setGiftErr(null); }} className="font-sans text-xs text-gold hover:text-gold-light">
+            🎁 Oferecer
           </button>
-          <button onClick={onRemove} className="font-sans text-xs text-muted-2 hover:text-negative">Remover</button>
+          <button onClick={() => { setDuelOpen((v) => !v); setGiftOpen(false); setGiftErr(null); }} className="font-sans text-xs text-gold hover:text-gold-light">
+            ⚔️ Desafiar
+          </button>
+          <button onClick={onRemove} className="ml-auto font-sans text-xs text-muted-2 hover:text-negative">Remover</button>
         </div>
       )}
+    </div>
+  );
+}
+
+function AmountPicker({ label, disabled, myBalance, onPick, err }: {
+  label: string; disabled: boolean; myBalance: number; onPick: (a: number) => void; err: string | null;
+}) {
+  return (
+    <div className="mt-3 rounded-lg border border-gold/30 bg-gold/[0.05] p-2.5">
+      <p className="mb-2 font-sans text-[11px] text-muted">{label}</p>
+      <div className="flex flex-wrap gap-1.5">
+        {GIFT_AMOUNTS.map((a) => (
+          <button
+            key={a}
+            disabled={disabled || a > myBalance}
+            onClick={() => onPick(a)}
+            className="focus-ring rounded-full border border-gold/40 px-3 py-1 font-mono text-xs text-gold transition-colors hover:bg-gold hover:text-bg disabled:opacity-40"
+          >
+            {a}
+          </button>
+        ))}
+      </div>
+      {err && <p className="mt-1.5 font-sans text-[11px] text-negative">{err}</p>}
     </div>
   );
 }
@@ -131,9 +174,11 @@ export function FriendsPage() {
   const [showBalance, setShowBalance] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
   const online = usePresence();
+  const { user } = useAuth();
   const { data: profile } = useProfile();
   const { data: friends } = useFriends();
   const { data: requests } = useFriendRequests();
+  const { data: duels } = useDuels();
   const { sendRequest, respond, remove } = useFriendActions();
 
   const [query, setQuery] = useState('');
@@ -147,9 +192,12 @@ export function FriendsPage() {
   const incoming = requests?.filter((r) => r.direction === 'incoming') ?? [];
   const outgoing = requests?.filter((r) => r.direction === 'outgoing') ?? [];
 
+  const duelInvites = (duels ?? []).filter((d) => d.status === 'pending' && d.role === 'opponent').length;
+
   const tabs: { id: Tab; label: string }[] = [
     { id: 'friends', label: `Amigos${friends ? ` (${friends.length})` : ''}` },
     { id: 'requests', label: `Pedidos${incoming.length ? ` (${incoming.length})` : ''}` },
+    { id: 'duels', label: `Duelos${duelInvites ? ` (${duelInvites})` : ''}` },
     { id: 'find', label: 'Procurar' },
     { id: 'leaderboard', label: 'Classificação' },
   ];
@@ -219,6 +267,8 @@ export function FriendsPage() {
           </div>
         </div>
       )}
+
+      {tab === 'duels' && <DuelsPanel meId={user?.id} />}
 
       {tab === 'find' && (
         <div className="space-y-3">

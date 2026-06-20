@@ -462,6 +462,32 @@ export type RouletteRoomState = {
 
 export type RouletteRoomBetResult = { ok?: boolean; balance: number; stake: number };
 
+/** A head-to-head duel row (duel_list RPC). */
+export type DuelRow = {
+  id: number;
+  role: 'challenger' | 'opponent';
+  other_id: string;
+  other_name: string;
+  stake: number;
+  game: string;
+  status: 'pending' | 'settled' | 'declined' | 'cancelled';
+  challenger_roll: number | null;
+  opponent_roll: number | null;
+  winner: string | null;
+  my_roll: number | null;
+  their_roll: number | null;
+  created_at: string;
+};
+
+export type DuelRespondResult = {
+  status: 'declined' | 'settled';
+  challenger_roll?: number;
+  opponent_roll?: number;
+  winner?: string;
+  won?: boolean;
+  balance?: number;
+};
+
 /** Live casino-lobby activity (casino_activity RPC). */
 export type CasinoActivity = {
   crash: { players: number; friends: number };
@@ -770,6 +796,22 @@ export type Database = {
       gift_tos: {
         Args: { p_to: string; p_amount: number };
         Returns: { balance: number; amount: number };
+      };
+      duel_create: {
+        Args: { p_opponent: string; p_stake: number; p_game?: string };
+        Returns: { duel_id: number; balance: number };
+      };
+      duel_respond: {
+        Args: { p_duel_id: number; p_accept: boolean };
+        Returns: DuelRespondResult;
+      };
+      duel_cancel: {
+        Args: { p_duel_id: number };
+        Returns: { balance: number };
+      };
+      duel_list: {
+        Args: Record<string, never>;
+        Returns: DuelRow[];
       };
       bj_deal: {
         Args: { p_stake: number };
