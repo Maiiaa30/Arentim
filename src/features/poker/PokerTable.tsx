@@ -181,16 +181,17 @@ function PotPill({ pot }: { pot: number }) {
 }
 
 /** Community cards row (with five dashed placeholders before the flop). */
-function Board({ community, dealKey }: { community: number[]; dealKey: number }) {
+function Board({ community, dealKey, compact }: { community: number[]; dealKey: number; compact?: boolean }) {
+  const ph = compact ? 'h-[56px] w-[40px] rounded-[5px]' : 'h-[84px] w-[60px] rounded-[6px]';
   return (
-    <div className="flex min-h-[88px] items-center justify-center gap-1.5 sm:gap-2">
+    <div className="flex min-h-[60px] items-center justify-center gap-1 sm:min-h-[88px] sm:gap-2">
       {community.length === 0
         ? Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="h-[84px] w-[60px] rounded-[6px] border border-dashed border-gold/15" aria-hidden />
+            <div key={i} className={`${ph} border border-dashed border-gold/15`} aria-hidden />
           ))
         : community.map((c, i) => (
             <div key={`${dealKey}-${i}`} className="animate-deal" style={{ animationDelay: `${i * 80}ms` }}>
-              <PokerCard card={c} />
+              <PokerCard card={c} small={!!compact} />
             </div>
           ))}
     </div>
@@ -303,7 +304,7 @@ export function PokerTable({ view, youId, myTurn, resultBanner }: PokerTableProp
           <div className="flex flex-col items-center gap-2.5 py-3">
             <span className="font-sans text-[10px] uppercase tracking-[0.22em] text-gold/80">{street}</span>
             <PotPill pot={view.pot} />
-            <Board community={view.community} dealKey={dealKey} />
+            <Board community={view.community} dealKey={dealKey} compact />
             {resultBanner}
           </div>
 

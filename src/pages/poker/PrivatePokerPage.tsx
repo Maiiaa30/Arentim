@@ -77,7 +77,7 @@ export function PrivatePokerPage() {
     return (
       <div className="animate-fade-in space-y-8">
         <div>
-          <Link to="/poker" className="font-sans text-sm text-muted-2 hover:text-text">← Póquer</Link>
+          <Link to="/poker" className="font-sans text-sm text-muted-2 hover:text-text">← Poker</Link>
           <div className="mt-4">
             <Eyebrow>Só para convidados</Eyebrow>
             <h1 className="mt-2 font-display text-[40px] font-medium leading-[1.04] text-text">Mesa privada</h1>

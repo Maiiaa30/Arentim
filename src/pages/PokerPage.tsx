@@ -123,10 +123,10 @@ export function PokerPage() {
     return (
       <div className="animate-fade-in space-y-8">
         <div>
-          <Link to="/poker" className="font-sans text-sm text-muted-2 hover:text-text">← Póquer</Link>
+          <Link to="/poker" className="font-sans text-sm text-muted-2 hover:text-text">← Poker</Link>
           <div className="mt-4">
             <Eyebrow>Contra bots</Eyebrow>
-            <h1 className="mt-2 font-display text-[40px] font-medium leading-[1.04] text-text">Póquer</h1>
+            <h1 className="mt-2 font-display text-[40px] font-medium leading-[1.04] text-text">Poker</h1>
             <p className="mt-3 font-sans text-[15px] leading-relaxed text-muted">
               Texas Hold'em contra bots. O servidor distribui; os bots não podem ser espreitados.
             </p>
@@ -201,7 +201,7 @@ export function PokerPage() {
   return (
     <div className="animate-fade-in space-y-5">
       <div className="flex items-center justify-between gap-3">
-        <h1 className="font-display text-[28px] font-medium text-text sm:text-[32px]">Póquer</h1>
+        <h1 className="font-display text-[28px] font-medium text-text sm:text-[32px]">Poker</h1>
         <Button variant="secondary" onClick={onLeave} disabled={busy}>
           {leave.isPending ? 'A sair…' : 'Sair da mesa'}
         </Button>

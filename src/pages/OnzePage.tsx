@@ -348,7 +348,14 @@ export function OnzePage() {
                       )}
 
                       <div className="grid max-h-[460px] gap-2 overflow-y-auto sm:grid-cols-2">
-                        {roster.map((p) => {
+                        {[...roster]
+                          .sort((a, b) => {
+                            const ua = openEligible(a).length > 0 ? 1 : 0;
+                            const ub = openEligible(b).length > 0 ? 1 : 0;
+                            if (ua !== ub) return ub - ua;
+                            return b.rating - a.rating;
+                          })
+                          .map((p) => {
                           const usable = openEligible(p).length > 0;
                           const isArmed = armed?.id === p.id;
                           return (

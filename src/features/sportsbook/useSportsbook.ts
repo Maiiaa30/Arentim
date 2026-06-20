@@ -84,7 +84,9 @@ export function useFixtures() {
 }
 
 export interface BetWithLegs extends Bet {
-  legs: (BetSelectionRow & { fixture?: Pick<Fixture, 'home' | 'away' | 'status'> })[];
+  legs: (BetSelectionRow & {
+    fixture?: Pick<Fixture, 'home' | 'away' | 'status' | 'home_score' | 'away_score'>;
+  })[];
 }
 
 /** The signed-in user's bets with their legs and fixture names. */
@@ -111,7 +113,7 @@ export function useMyBets() {
       const fixtureIds = [...new Set(legs.map((l) => l.fixture_id))];
       const { data: fixtures, error: fxErr } = await supabase
         .from('fixtures')
-        .select('id, home, away, status')
+        .select('id, home, away, status, home_score, away_score')
         .in('id', fixtureIds);
       if (fxErr) throw fxErr;
 
@@ -122,7 +124,18 @@ export function useMyBets() {
           .filter((l) => l.bet_id === b.id)
           .map((l) => {
             const fx = fxById.get(l.fixture_id);
-            return fx ? { ...l, fixture: { home: fx.home, away: fx.away, status: fx.status } } : l;
+            return fx
+              ? {
+                  ...l,
+                  fixture: {
+                    home: fx.home,
+                    away: fx.away,
+                    status: fx.status,
+                    home_score: fx.home_score,
+                    away_score: fx.away_score,
+                  },
+                }
+              : l;
           }),
       }));
     },

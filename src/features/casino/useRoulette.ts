@@ -1,9 +1,33 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/features/auth/AuthProvider';
 import { profileKey } from '@/features/profile/useProfile';
 import type { RouletteBet } from './roulette';
 import type { Profile, RouletteSpinResult } from '@/types/db';
+
+/** The most recent landed numbers (persisted in game_rounds) — "últimos
+ *  resultados", so the history survives a page reload. */
+export function useRecentRoulette() {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ['roulette', 'recent', user?.id] as const,
+    enabled: !!user,
+    staleTime: 10_000,
+    queryFn: async (): Promise<number[]> => {
+      const { data, error } = await supabase
+        .from('game_rounds')
+        .select('outcome')
+        .eq('game', 'roulette')
+        .order('created_at', { ascending: false })
+        .limit(18)
+        .returns<{ outcome: { number?: number } | null }[]>();
+      if (error) throw error;
+      return (data ?? [])
+        .map((r) => r.outcome?.number)
+        .filter((n): n is number => typeof n === 'number');
+    },
+  });
+}
 
 /**
  * Places a slip of roulette bets. The server (play_roulette RPC) validates,
@@ -33,6 +57,7 @@ export function useRoulette() {
         old ? { ...old, balance: res.balance } : old,
       );
       void qc.invalidateQueries({ queryKey: ['transactions', user?.id] });
+      void qc.invalidateQueries({ queryKey: ['roulette', 'recent', user?.id] });
     },
   });
 }

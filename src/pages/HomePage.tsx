@@ -10,6 +10,7 @@ import { LandingPage } from '@/pages/LandingPage';
 import { Button } from '@/components/ui/Button';
 import { Eyebrow, FramedPanel, RingAvatar, SectionHeader } from '@/components/ui/primitives';
 import { GameArt, type GameArtKind } from '@/features/casino/GameArt';
+import { WinPopup } from '@/features/sportsbook/WinPopup';
 import { formatTos } from '@/lib/format';
 
 interface GameTile {
@@ -120,6 +121,7 @@ export function HomePage() {
   return (
     <div className="animate-fade-in space-y-10">
       {selected && <PlayerCard userId={selected} onClose={() => setSelected(null)} />}
+      <WinPopup />
       {user && <DailyBonusCard />}
 
       <FramedPanel>
@@ -143,16 +145,16 @@ export function HomePage() {
       </FramedPanel>
 
       <div className="flex flex-wrap gap-8">
-        <div className="min-w-[300px] flex-[3_1_600px] space-y-5">
+        <div className="min-w-0 flex-[3_1_600px] space-y-5">
           <SectionHeader title="As Mesas" right="Salão" />
-          <div className="grid grid-cols-[repeat(auto-fill,minmax(238px,1fr))] gap-[18px]">
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,238px),1fr))] gap-[18px]">
             {GAMES.map((g) => (
               <GameCard key={g.to} g={g} />
             ))}
           </div>
         </div>
         {user && (
-          <aside className="min-w-[296px] flex-[1_1_300px] space-y-8">
+          <aside className="min-w-0 flex-[1_1_300px] space-y-8">
             <HighRollers onSelect={setSelected} />
             <Circle onSelect={setSelected} />
           </aside>

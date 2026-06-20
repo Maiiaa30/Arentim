@@ -139,8 +139,8 @@ export function ProfilePage() {
         />
       </div>
 
-      <div className="flex flex-wrap gap-[30px]">
-        <div className="min-w-[300px] flex-[3_1_560px] space-y-3">
+      <div className="flex flex-wrap gap-5 sm:gap-[30px]">
+        <div className="min-w-0 flex-[3_1_560px] space-y-3">
           <SectionHeader title="Atividade Recente" />
           <div className="card divide-y divide-border">
             {(activity ?? []).length === 0 ? (
@@ -166,7 +166,7 @@ export function ProfilePage() {
           </div>
         </div>
 
-        <aside className="min-w-[280px] flex-[1_1_280px] space-y-3">
+        <aside className="min-w-0 flex-[1_1_280px] space-y-3">
           <SectionHeader title="Distinções" />
           <div className="space-y-2">
             {(challenges ?? []).map((c) => (
