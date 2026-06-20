@@ -23,7 +23,7 @@ import {
   standingsAfter,
   yourMatch,
 } from '@/features/onze/onze';
-import { MAX_YEAR, MIN_YEAR, YEARS } from '@/features/onze/onzeData';
+import { MAX_YEAR, MIN_YEAR, YEARS, seasonLabel } from '@/features/onze/onzeData';
 import { useOnzeLeaderboard, useSubmitOnzeScore, type OnzeScope } from '@/features/onze/useOnze';
 
 type Phase = 'setup' | 'draft' | 'result';
@@ -97,7 +97,7 @@ function Leaderboard() {
 export function OnzePage() {
   const [mode, setMode] = useState<Mode>('epoca');
   const [formation, setFormation] = useState<Formation>('4-3-3');
-  const [startY, setStartY] = useState(Math.max(MIN_YEAR, MAX_YEAR - 6));
+  const [startY, setStartY] = useState(MIN_YEAR); // default: use all available seasons
   const [endY, setEndY] = useState(MAX_YEAR);
   const [almanac, setAlmanac] = useState(false);
 
@@ -233,7 +233,7 @@ export function OnzePage() {
         </p>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_300px]">
+      <div className="space-y-6">
         <div className="space-y-5">
           {phase === 'setup' && (
             <div className="card space-y-5 p-6">
@@ -249,13 +249,13 @@ export function OnzePage() {
                 <label className="block">
                   <span className="mb-1.5 block font-sans text-[10.5px] font-medium uppercase tracking-[0.18em] text-muted-2">De</span>
                   <select value={startY} onChange={(e) => setStartY(Number(e.target.value))} className="focus-ring w-full rounded border border-border bg-surface px-3 py-2 font-mono text-sm text-text">
-                    {YEARS.map((y) => <option key={y} value={y}>{y}</option>)}
+                    {YEARS.map((y) => <option key={y} value={y}>{seasonLabel(y)}</option>)}
                   </select>
                 </label>
                 <label className="block">
                   <span className="mb-1.5 block font-sans text-[10.5px] font-medium uppercase tracking-[0.18em] text-muted-2">Até</span>
                   <select value={endY} onChange={(e) => setEndY(Number(e.target.value))} className="focus-ring w-full rounded border border-border bg-surface px-3 py-2 font-mono text-sm text-text">
-                    {YEARS.map((y) => <option key={y} value={y}>{y}</option>)}
+                    {YEARS.map((y) => <option key={y} value={y}>{seasonLabel(y)}</option>)}
                   </select>
                 </label>
               </div>
@@ -278,7 +278,7 @@ export function OnzePage() {
           )}
 
           {phase !== 'setup' && (
-            <div className="grid gap-5 lg:grid-cols-[320px_minmax(0,1fr)] lg:items-start">
+            <div className="grid gap-5 lg:grid-cols-[minmax(360px,440px)_minmax(0,1fr)] lg:items-start">
               {/* Pitch (left) — each slot sits at its real position on the field. */}
               <div className="felt felt-rail w-full rounded-lg p-3 sm:p-4">
                 <div className="mb-2 flex items-center justify-between">
@@ -316,7 +316,7 @@ export function OnzePage() {
                         {p ? (
                           <span className="mt-0.5 w-full rounded bg-black/55 px-1 text-center">
                             <span className="block truncate font-sans text-[10px] leading-tight text-text">{p.name}</span>
-                            {!almanac && <span className="font-mono text-[9px] font-semibold text-gold">{p.rating}{p.year ? ` · ${String(p.year).slice(2)}` : ''}</span>}
+                            {!almanac && <span className="font-mono text-[9px] font-semibold text-gold">{p.rating}{p.year ? ` · ${seasonLabel(p.year)}` : ''}</span>}
                           </span>
                         ) : (
                           <span className="mt-0.5 font-mono text-[8px] font-semibold uppercase tracking-wider text-gold/70">{pos}</span>
@@ -333,7 +333,7 @@ export function OnzePage() {
                     <>
                       <div className="flex items-center justify-between gap-2">
                         <p className="min-w-0 truncate font-sans text-sm font-medium text-text">
-                          A tua equipa: {offer.club} <span className="font-mono text-gold">· {offer.year}</span>
+                          A tua equipa: {offer.club} <span className="font-mono text-gold">· {seasonLabel(offer.year)}</span>
                         </p>
                         <span className="shrink-0 font-sans text-[10px] uppercase tracking-wider text-muted-2">{xi.length}/11</span>
                       </div>
@@ -423,7 +423,8 @@ export function OnzePage() {
           )}
         </div>
 
-        <aside className="lg:pt-2"><Leaderboard /></aside>
+        {/* Leaderboard moved to the bottom, full-width. */}
+        <div className="mx-auto w-full max-w-2xl border-t border-border pt-5"><Leaderboard /></div>
       </div>
     </div>
   );
@@ -438,9 +439,9 @@ function SeasonView({
   onNext: () => void; onAuto: () => void; onSkip: () => void; onAgain: () => void;
 }) {
   const total = season.jornadas.length;
-  const notStarted = step === 0 && !over;
   const myPos = over ? table.findIndex((r) => r.team === YOUR_TEAM) + 1 : 0;
   const myExpected = predicted.find((r) => r.team === YOUR_TEAM)?.pos ?? 0;
+  const [view, setView] = useState<'tabela' | 'prog'>('tabela');
   return (
     <div className="card space-y-4 p-4 sm:p-5">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -474,40 +475,58 @@ function SeasonView({
         </p>
       )}
 
-      {notStarted ? (
-        /* Pre-season prediction: clubs ranked by squad strength + expected place. */
-        <div className="overflow-hidden rounded border border-border">
-          <div className="grid grid-cols-[24px_1fr_56px] gap-2 border-b border-border bg-surface px-3 py-1.5 font-sans text-[9px] uppercase tracking-wider text-muted-2">
-            <span>#</span><span>Classificação esperada</span><span className="text-center">Força</span>
-          </div>
-          <div className="max-h-[420px] overflow-y-auto">
-            {predicted.map((r) => (
-              <div key={r.team} className={`grid grid-cols-[24px_1fr_56px] items-center gap-2 border-b border-border/50 px-3 py-1.5 text-sm ${r.team === YOUR_TEAM ? 'bg-gold/[0.1]' : ''}`}>
-                <span className={`font-display ${r.pos <= 4 ? 'text-positive' : r.pos > predicted.length - 3 ? 'text-negative' : 'text-muted-2'}`}>{r.pos}</span>
-                <span className={`truncate font-sans ${r.team === YOUR_TEAM ? 'font-semibold text-gold' : 'text-body'}`}>{r.team}</span>
-                <span className="text-center font-mono text-xs text-gold">{r.rating}</span>
-              </div>
-            ))}
-          </div>
+      {/* Ranking — available at any time: live table or the pre-season prediction. */}
+      <div>
+        <div className="mb-2 flex gap-1.5">
+          {([['tabela', 'Classificação'], ['prog', 'Prognóstico']] as const).map(([k, label]) => (
+            <button
+              key={k}
+              onClick={() => setView(k)}
+              className={`focus-ring rounded-full px-3 py-1 font-sans text-[11px] font-medium uppercase tracking-wider transition-colors ${
+                view === k ? 'bg-gold text-bg' : 'border border-border text-muted-2 hover:text-text'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
         </div>
-      ) : (
+
         <div className="overflow-hidden rounded border border-border">
-          <div className="grid grid-cols-[24px_1fr_28px_28px_32px] gap-2 border-b border-border bg-surface px-3 py-1.5 font-sans text-[9px] uppercase tracking-wider text-muted-2">
-            <span>#</span><span>Clube</span><span className="text-center">DG</span><span className="text-center">J</span><span className="text-center">Pts</span>
-          </div>
-          <div className="max-h-[420px] overflow-y-auto">
-            {table.map((r, i) => (
-              <div key={r.team} className={`grid grid-cols-[24px_1fr_28px_28px_32px] items-center gap-2 border-b border-border/50 px-3 py-1.5 text-sm ${r.team === YOUR_TEAM ? 'bg-gold/[0.1]' : ''}`}>
-                <span className={`font-display ${i < 4 ? 'text-positive' : i >= table.length - 3 ? 'text-negative' : 'text-muted-2'}`}>{i + 1}</span>
-                <span className={`truncate font-sans ${r.team === YOUR_TEAM ? 'font-semibold text-gold' : 'text-body'}`}>{r.team}</span>
-                <span className="text-center font-mono text-xs text-muted-2">{r.GD > 0 ? `+${r.GD}` : r.GD}</span>
-                <span className="text-center font-mono text-xs text-muted-2">{r.P}</span>
-                <span className="text-center font-mono font-semibold text-text">{r.PTS}</span>
+          {view === 'tabela' ? (
+            <>
+              <div className="grid grid-cols-[26px_1fr_40px_30px_38px] gap-1.5 border-b border-border bg-surface px-3 py-1.5 font-sans text-[9px] uppercase tracking-wider text-muted-2">
+                <span>#</span><span>Clube</span><span className="text-right">DG</span><span className="text-right">J</span><span className="text-right">Pts</span>
               </div>
-            ))}
-          </div>
+              <div className="max-h-[440px] overflow-y-auto">
+                {table.map((r, i) => (
+                  <div key={r.team} className={`grid grid-cols-[26px_1fr_40px_30px_38px] items-center gap-1.5 border-b border-border/50 px-3 py-1.5 text-sm ${r.team === YOUR_TEAM ? 'bg-gold/[0.1]' : ''}`}>
+                    <span className={`font-display ${i < 4 ? 'text-positive' : i >= table.length - 3 ? 'text-negative' : 'text-muted-2'}`}>{i + 1}</span>
+                    <span className={`truncate font-sans ${r.team === YOUR_TEAM ? 'font-semibold text-gold' : 'text-body'}`}>{r.team}</span>
+                    <span className="text-right font-mono text-xs text-muted-2">{r.GD > 0 ? `+${r.GD}` : r.GD}</span>
+                    <span className="text-right font-mono text-xs text-muted-2">{r.P}</span>
+                    <span className="text-right font-mono font-semibold text-text">{r.PTS}</span>
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="grid grid-cols-[26px_1fr_48px] gap-1.5 border-b border-border bg-surface px-3 py-1.5 font-sans text-[9px] uppercase tracking-wider text-muted-2">
+                <span>#</span><span>Classificação esperada</span><span className="text-right">Força</span>
+              </div>
+              <div className="max-h-[440px] overflow-y-auto">
+                {predicted.map((r) => (
+                  <div key={r.team} className={`grid grid-cols-[26px_1fr_48px] items-center gap-1.5 border-b border-border/50 px-3 py-1.5 text-sm ${r.team === YOUR_TEAM ? 'bg-gold/[0.1]' : ''}`}>
+                    <span className={`font-display ${r.pos <= 4 ? 'text-positive' : r.pos > predicted.length - 3 ? 'text-negative' : 'text-muted-2'}`}>{r.pos}</span>
+                    <span className={`truncate font-sans ${r.team === YOUR_TEAM ? 'font-semibold text-gold' : 'text-body'}`}>{r.team}</span>
+                    <span className="text-right font-mono text-xs text-gold">{r.rating}</span>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }
