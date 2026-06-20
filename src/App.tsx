@@ -20,6 +20,10 @@ const SlotsLobby = lazy(() => named(import('@/pages/casino/SlotsLobby'), 'SlotsL
 const SlotMachinePage = lazy(() => named(import('@/pages/casino/SlotMachinePage'), 'SlotMachinePage'));
 const CoinflipPage = lazy(() => named(import('@/pages/casino/CoinflipPage'), 'CoinflipPage'));
 const BlackjackPage = lazy(() => named(import('@/pages/casino/BlackjackPage'), 'BlackjackPage'));
+const DicePage = lazy(() => named(import('@/pages/casino/DicePage'), 'DicePage'));
+const SobeDescePage = lazy(() => named(import('@/pages/casino/SobeDescePage'), 'SobeDescePage'));
+const WheelPage = lazy(() => named(import('@/pages/casino/WheelPage'), 'WheelPage'));
+const CrashPage = lazy(() => named(import('@/pages/casino/CrashPage'), 'CrashPage'));
 const SportsbookPage = lazy(() => named(import('@/pages/SportsbookPage'), 'SportsbookPage'));
 const ScoresPage = lazy(() => named(import('@/pages/ScoresPage'), 'ScoresPage'));
 const OnzePage = lazy(() => named(import('@/pages/OnzePage'), 'OnzePage'));
@@ -53,6 +57,10 @@ export default function App() {
             <Route path="casino/slots/:key" element={<SlotMachinePage />} />
             <Route path="casino/coinflip" element={<CoinflipPage />} />
             <Route path="casino/blackjack" element={<BlackjackPage />} />
+            <Route path="casino/dice" element={<DicePage />} />
+            <Route path="casino/sobe-e-desce" element={<SobeDescePage />} />
+            <Route path="casino/wheel" element={<WheelPage />} />
+            <Route path="casino/crash" element={<CrashPage />} />
             <Route path="sportsbook" element={<SportsbookPage />} />
             <Route path="resultados" element={<ScoresPage />} />
             <Route path="onze" element={<OnzePage />} />

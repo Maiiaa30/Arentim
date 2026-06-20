@@ -156,6 +156,7 @@ function MachineScreen({ m }: { m: SlotMachineMeta }) {
   const [modes, setModes] = useState<[ReelMode, ReelMode, ReelMode]>(['idle', 'idle', 'idle']);
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<{ payout: number; jackpot: boolean; mult: number; id: number } | null>(null);
+  const [winAlert, setWinAlert] = useState<{ amount: number; jackpot: boolean; id: number } | null>(null);
   const [pool, setPool] = useState<number | null>(m.progressive ? m.jackpot_pool ?? null : null);
   const displayPool = useCountUp(pool);
   const [error, setError] = useState<string | null>(null);
@@ -174,6 +175,7 @@ function MachineScreen({ m }: { m: SlotMachineMeta }) {
     if (busy || stake > balance || stake < m.min_bet) return;
     setError(null);
     setResult(null);
+    setWinAlert(null);
     setBusy(true);
     setModes(['spin', 'spin', 'spin']); // all three spin together while the server rolls
     const startedAt = performance.now();
@@ -193,6 +195,11 @@ function MachineScreen({ m }: { m: SlotMachineMeta }) {
         window.setTimeout(() => {
           setBusy(false);
           setResult({ payout: res.payout, jackpot: res.jackpot, mult: res.multiplier, id });
+          // A win pops a big animated alert over the cabinet; it self-dismisses.
+          if (res.payout > 0) {
+            setWinAlert({ amount: res.payout, jackpot: res.jackpot, id });
+            timers.current.push(window.setTimeout(() => setWinAlert((w) => (w?.id === id ? null : w)), 2800));
+          }
           // Reveal the new pool with the outcome: a losing spin visibly fattens
           // the pot, a jackpot win drains it back to the seed.
           if (m.progressive && res.jackpot_pool != null) setPool(res.jackpot_pool);
@@ -230,6 +237,21 @@ function MachineScreen({ m }: { m: SlotMachineMeta }) {
           }}
         >
           <SlotBackdrop machineKey={m.key} />
+          {winAlert && (
+            <div className="pointer-events-none absolute inset-x-0 top-0 z-30 flex justify-center pt-5 sm:pt-8" aria-live="polite">
+              <div
+                className="animate-win-burst rounded-2xl border-2 px-7 py-3.5 text-center shadow-[0_12px_55px_rgba(201,162,75,0.55)] backdrop-blur-sm"
+                style={{ borderColor: hex, background: 'rgba(10,9,7,0.82)' }}
+              >
+                <p className="font-sans text-[10px] uppercase tracking-[0.34em] text-gold-light">
+                  {winAlert.jackpot ? '✦ Jackpot ✦' : 'Ganhou'}
+                </p>
+                <p className="font-display text-[34px] font-bold leading-none sm:text-[40px]" style={{ color: hex }}>
+                  +{formatAmount(winAlert.amount)} tós
+                </p>
+              </div>
+            </div>
+          )}
           <div className="relative z-10">
             {/* Marquee */}
             <div className="mb-6 text-center">

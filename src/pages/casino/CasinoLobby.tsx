@@ -12,51 +12,31 @@ interface GameTile {
   range: string; // bet range
 }
 
-const GAMES: GameTile[] = [
-  {
-    to: '/casino/roulette',
-    name: 'Roleta',
-    desc: 'Roleta europeia, zero único. Aposte em números, cores ou dúzias.',
-    art: 'roulette',
-    badge: 'Em alta',
-    tone: 'from-chip-ruby/40 to-bg',
-    range: '5 – 500 tós',
-  },
-  {
-    to: '/casino/slots',
-    name: 'Slots',
-    desc: 'Cinco máquinas temáticas, cada uma com o seu jackpot secreto.',
-    art: 'slots',
-    badge: '5 máquinas',
-    tone: 'from-gold/30 to-bg',
-    range: '5 – 250 tós',
-  },
-  {
-    to: '/casino/blackjack',
-    name: 'Blackjack',
-    desc: 'Pedir, ficar, dobrar, dividir. O croupier pára nos 17.',
-    art: 'blackjack',
-    tone: 'from-positive-felt/40 to-bg',
-    range: '10 – 500 tós',
-  },
-  {
-    to: '/casino/coinflip',
-    name: 'Moeda',
-    desc: 'Cara ou coroa — dobro ou nada, prémio par.',
-    art: 'coinflip',
-    badge: 'Rápido',
-    tone: 'from-gold-light/30 to-bg',
-    range: '5 – 500 tós',
-  },
+const NEW: GameTile[] = [
+  { to: '/casino/crash', name: 'Crash', desc: 'Saia antes do foguetão rebentar. Multiplicador sem limite.', art: 'crash', badge: 'Novo', tone: 'from-chip-ruby/40 to-bg', range: '5 – 100 tós' },
+  { to: '/casino/wheel', name: 'Roda da Sorte', desc: 'Rode e leve o multiplicador onde a seta parar — até 10×.', art: 'wheel', badge: 'Novo', tone: 'from-gold/30 to-bg', range: '5 – 100 tós' },
+  { to: '/casino/sobe-e-desce', name: 'Sobe e Desce', desc: 'A marca sobe a escada. Aposte se passa dos sete — ou para onde vai.', art: 'sobedesce', badge: 'Novo', tone: 'from-positive-felt/40 to-bg', range: '5 – 100 tós' },
+  { to: '/casino/dice', name: 'Dados', desc: 'Dois dados. Mais de 7, menos de 7, ou certo no sete.', art: 'dice', badge: 'Novo', tone: 'from-chip-navy/40 to-bg', range: '5 – 100 tós' },
 ];
 
-function GameCard({ g }: { g: GameTile }) {
+const TABLES: GameTile[] = [
+  { to: '/casino/roulette', name: 'Roleta', desc: 'Roleta europeia, zero único. Números, cores ou dúzias.', art: 'roulette', badge: 'Em alta', tone: 'from-chip-ruby/40 to-bg', range: '5 – 500 tós' },
+  { to: '/casino/blackjack', name: 'Blackjack', desc: 'Pedir, ficar, dobrar, dividir. O croupier pára nos 17.', art: 'blackjack', tone: 'from-positive-felt/40 to-bg', range: '10 – 500 tós' },
+  { to: '/poker', name: 'Poker', desc: 'Texas Hold’em contra bots ou amigos numa mesa privada.', art: 'poker', tone: 'from-chip-navy/40 to-bg', range: '100+ tós' },
+];
+
+const QUICK: GameTile[] = [
+  { to: '/casino/slots', name: 'Slots', desc: 'Cinco máquinas temáticas e um pote progressivo.', art: 'slots', badge: '5 máquinas', tone: 'from-gold/30 to-bg', range: '5 – 1000 tós' },
+  { to: '/casino/coinflip', name: 'Moeda', desc: 'Cara ou coroa — dobro ou nada, prémio par.', art: 'coinflip', badge: 'Rápido', tone: 'from-gold-light/30 to-bg', range: '5 – 500 tós' },
+];
+
+function GameCard({ g, featured }: { g: GameTile; featured?: boolean }) {
   return (
     <Link
       to={g.to}
       className="card card-hover focus-ring group flex flex-col overflow-hidden transition-transform duration-300 ease-aretim hover:-translate-y-1"
     >
-      <div className={`relative h-[140px] bg-gradient-to-br ${g.tone}`}>
+      <div className={`relative ${featured ? 'h-[156px]' : 'h-[132px]'} bg-gradient-to-br ${g.tone}`}>
         <GameArt kind={g.art} />
         <div
           className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
@@ -85,9 +65,22 @@ function GameCard({ g }: { g: GameTile }) {
   );
 }
 
+function Section({ title, right, games, featured }: { title: string; right?: string; games: GameTile[]; featured?: boolean }) {
+  return (
+    <div className="space-y-5">
+      <SectionHeader title={title} right={right} />
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,250px),1fr))] gap-4 sm:gap-[18px]">
+        {games.map((g) => (
+          <GameCard key={g.to} g={g} featured={!!featured} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function CasinoLobby() {
   return (
-    <div className="animate-fade-in space-y-10">
+    <div className="animate-fade-in space-y-12">
       <FramedPanel>
         <div className="max-w-xl">
           <Eyebrow>O Salão</Eyebrow>
@@ -101,14 +94,9 @@ export function CasinoLobby() {
         </div>
       </FramedPanel>
 
-      <div className="space-y-5">
-        <SectionHeader title="As Mesas" right="Salão" />
-        <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,250px),1fr))] gap-4 sm:gap-[18px]">
-          {GAMES.map((g) => (
-            <GameCard key={g.to} g={g} />
-          ))}
-        </div>
-      </div>
+      <Section title="Novidades" right="Acabadas de chegar" games={NEW} featured />
+      <Section title="As Mesas" right="Clássicos" games={TABLES} />
+      <Section title="Rápidos" right="Uma jogada" games={QUICK} />
     </div>
   );
 }

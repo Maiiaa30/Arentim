@@ -86,7 +86,7 @@ function OvalSeat({ p, isTurn, isYou, isButton, dealKey }: SeatProps) {
     <div className={`relative flex w-[112px] flex-col items-center ${folded ? 'opacity-50' : ''}`}>
       {isButton && <DealerButton className="absolute -right-1 -top-1 z-10 h-5 w-5 text-[10px]" />}
       {/* Hole cards sit just behind the plate (mucked when folded) */}
-      <div className="mb-[-10px] flex gap-0.5">
+      <div className="mb-[-6px] flex gap-0.5">
         {folded || p.hole.length === 0
           ? null
           : p.hole.map((c, i) => (
@@ -213,11 +213,11 @@ interface PokerTableProps {
  * to spread evenly around the top arc, leaving the bottom for the hero.
  */
 const RAIL: Record<number, { left: number; top: number }[]> = {
-  1: [{ left: 50, top: 9 }],
-  2: [{ left: 21, top: 16 }, { left: 79, top: 16 }],
-  3: [{ left: 15, top: 30 }, { left: 50, top: 8 }, { left: 85, top: 30 }],
-  4: [{ left: 12, top: 36 }, { left: 35, top: 10 }, { left: 65, top: 10 }, { left: 88, top: 36 }],
-  5: [{ left: 10, top: 40 }, { left: 29, top: 12 }, { left: 50, top: 7 }, { left: 71, top: 12 }, { left: 90, top: 40 }],
+  1: [{ left: 50, top: 17 }],
+  2: [{ left: 22, top: 21 }, { left: 78, top: 21 }],
+  3: [{ left: 16, top: 33 }, { left: 50, top: 16 }, { left: 84, top: 33 }],
+  4: [{ left: 13, top: 39 }, { left: 35, top: 18 }, { left: 65, top: 18 }, { left: 87, top: 39 }],
+  5: [{ left: 11, top: 43 }, { left: 30, top: 20 }, { left: 50, top: 15 }, { left: 70, top: 20 }, { left: 89, top: 43 }],
 };
 
 export function PokerTable({ view, youId, myTurn, resultBanner }: PokerTableProps) {
@@ -239,7 +239,7 @@ export function PokerTable({ view, youId, myTurn, resultBanner }: PokerTableProp
     <div>
       {/* ---- Oval table (tablet / desktop) ---- */}
       <div className="hidden sm:block">
-        <div className="felt felt-rail relative mx-auto aspect-[16/10] w-full max-w-3xl overflow-hidden rounded-[48%/60%] p-6">
+        <div className="felt felt-rail relative mx-auto aspect-[16/11] w-full max-w-3xl overflow-hidden rounded-[48%/60%] p-6">
           {/* Inner rail line for depth */}
           <div className="pointer-events-none absolute inset-4 rounded-[48%/60%] border border-gold/10" aria-hidden />
           <div className="pointer-events-none absolute inset-8 rounded-[48%/60%] border border-black/20" aria-hidden />

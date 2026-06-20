@@ -24,11 +24,13 @@ interface GameTile {
 }
 
 const GAMES: GameTile[] = [
+  { to: '/casino/crash', name: 'Crash', desc: 'Saia antes de rebentar.', art: 'crash', badge: 'Novo', tone: 'from-chip-ruby/40 to-bg' },
+  { to: '/casino/wheel', name: 'Roda da Sorte', desc: 'Gire e leve o multiplicador.', art: 'wheel', badge: 'Novo', tone: 'from-gold/30 to-bg' },
   { to: '/casino/roulette', name: 'Roleta', desc: 'Roleta europeia, zero único.', art: 'roulette', badge: 'Em alta', tone: 'from-chip-ruby/40 to-bg' },
   { to: '/casino/blackjack', name: 'Blackjack', desc: 'O croupier pára nos 17.', art: 'blackjack', tone: 'from-positive-felt/40 to-bg' },
-  { to: '/casino/slots', name: 'Slots', desc: 'Cinco máquinas, jackpots secretos.', art: 'slots', badge: '5 máquinas', tone: 'from-gold/30 to-bg' },
-  { to: '/casino/coinflip', name: 'Moeda', desc: 'Cara ou coroa — dobro ou nada.', art: 'coinflip', badge: 'Novo', tone: 'from-gold-light/30 to-bg' },
-  { to: '/poker', name: "Hold'em", desc: 'Contra bots ou amigos.', art: 'poker', tone: 'from-chip-navy/40 to-bg' },
+  { to: '/casino/slots', name: 'Slots', desc: 'Cinco máquinas, pote progressivo.', art: 'slots', badge: '5 máquinas', tone: 'from-gold/30 to-bg' },
+  { to: '/poker', name: 'Poker', desc: 'Contra bots ou amigos.', art: 'poker', tone: 'from-chip-navy/40 to-bg' },
+  { to: '/casino/sobe-e-desce', name: 'Sobe e Desce', desc: 'Sobe, desce, ou sete.', art: 'sobedesce', badge: 'Novo', tone: 'from-positive-felt/40 to-bg' },
   { to: '/sportsbook', name: 'Futebol', desc: 'Primeira Liga e mais.', art: 'football', badge: 'Ao vivo', tone: 'from-positive-felt/30 to-bg', cta: 'Abrir' },
 ];
 

@@ -5,7 +5,17 @@
  * (see index.css). Each scene fills the card's ~120px artwork band.
  */
 
-export type GameArtKind = 'roulette' | 'blackjack' | 'slots' | 'coinflip' | 'poker' | 'football';
+export type GameArtKind =
+  | 'roulette'
+  | 'blackjack'
+  | 'slots'
+  | 'coinflip'
+  | 'poker'
+  | 'football'
+  | 'dice'
+  | 'sobedesce'
+  | 'wheel'
+  | 'crash';
 
 function Roulette() {
   return (
@@ -101,6 +111,65 @@ function Football() {
   );
 }
 
+function Dice() {
+  const pip = 'absolute h-1.5 w-1.5 rounded-full bg-[#1a1712]';
+  return (
+    <div className="flex h-full items-center justify-center gap-2">
+      {[0, 1].map((d) => (
+        <div
+          key={d}
+          className="animate-floaty relative h-12 w-12 rounded-[10px] border border-gold/30 bg-gradient-to-br from-[#f7efe0] to-[#d9cdb4]"
+          style={{ animationDelay: `${d * -0.7}s` }}
+        >
+          <span className={`${pip} left-2 top-2`} />
+          <span className={`${pip} bottom-2 right-2`} />
+          {d === 1 && <span className={`${pip} left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2`} />}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function SobeDesce() {
+  return (
+    <div className="flex h-full items-end justify-center gap-1.5 pb-4">
+      {[28, 44, 60, 44, 72, 56, 84].map((h, i) => (
+        <span
+          key={i}
+          className="w-2.5 rounded-t bg-gradient-to-t from-gold/30 to-gold animate-floaty"
+          style={{ height: h, animationDelay: `${i * -0.3}s` }}
+        />
+      ))}
+    </div>
+  );
+}
+
+function Wheel() {
+  return (
+    <div className="flex h-full items-center justify-center">
+      <div
+        className="h-[92px] w-[92px] animate-spin-slow rounded-full border-2 border-gold/50"
+        style={{
+          background:
+            'repeating-conic-gradient(#C9A24B 0 30deg, #1a1712 30deg 60deg, #b0303a 60deg 90deg, #1a1712 90deg 120deg)',
+          boxShadow: 'inset 0 0 0 5px #0a0907',
+        }}
+      />
+    </div>
+  );
+}
+
+function Crash() {
+  return (
+    <div className="relative h-full overflow-hidden">
+      <svg viewBox="0 0 120 80" className="h-full w-full" preserveAspectRatio="none">
+        <path d="M6 74 C40 70 70 50 110 8" fill="none" stroke="#C9A24B" strokeWidth="2.5" strokeLinecap="round" opacity="0.85" />
+      </svg>
+      <span className="animate-floaty absolute right-3 top-2 text-2xl">🚀</span>
+    </div>
+  );
+}
+
 const SCENES: Record<GameArtKind, () => JSX.Element> = {
   roulette: Roulette,
   blackjack: Blackjack,
@@ -108,6 +177,10 @@ const SCENES: Record<GameArtKind, () => JSX.Element> = {
   coinflip: Coinflip,
   poker: Poker,
   football: Football,
+  dice: Dice,
+  sobedesce: SobeDesce,
+  wheel: Wheel,
+  crash: Crash,
 };
 
 export function GameArt({ kind }: { kind: GameArtKind }) {

@@ -87,6 +87,31 @@ export function PokerActionBar({
             </div>
           )}
 
+          {/* Type an exact amount, clamped to the legal raise range. */}
+          <div className="mb-3 flex items-center gap-2">
+            <label htmlFor="raise-amount" className="font-sans text-[10px] uppercase tracking-[0.14em] text-muted-2">
+              Valor
+            </label>
+            <div className="relative flex-1">
+              <CoinIcon className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2" />
+              <input
+                id="raise-amount"
+                type="number"
+                inputMode="numeric"
+                min={minRaiseTo}
+                max={maxRaiseTo}
+                value={raiseTo}
+                disabled={busy || !canRaise}
+                onChange={(e) => {
+                  const v = Math.floor(Number(e.target.value) || 0);
+                  onRaiseChange(Math.max(minRaiseTo, Math.min(v, maxRaiseTo)));
+                }}
+                className="focus-ring w-full rounded border border-border bg-bg py-1.5 pl-8 pr-2 text-right font-mono text-sm tabular-nums text-text disabled:opacity-50"
+                aria-label="Valor exato da subida"
+              />
+            </div>
+          </div>
+
           <div className="mb-2 flex items-center justify-between font-mono text-[11px] tabular-nums text-muted">
             <span>{formatAmount(minRaiseTo)}</span>
             <span className="flex items-center gap-1 text-gold-light">

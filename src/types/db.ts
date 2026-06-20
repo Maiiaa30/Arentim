@@ -280,6 +280,44 @@ export type SlotSpinResult = {
   replayed: boolean;
 };
 
+/** Result returned by the play_dice RPC. */
+export type DiceResult = {
+  dice: [number, number];
+  sum: number;
+  won: boolean;
+  payout: number;
+  balance: number;
+  replayed: boolean;
+};
+
+/** Result returned by the play_hilo (Sobe e Desce) RPC. */
+export type HiLoResult = {
+  number: number;
+  won: boolean;
+  payout: number;
+  balance: number;
+  replayed: boolean;
+};
+
+/** Result returned by the play_wheel RPC. */
+export type WheelResult = {
+  index: number;
+  multiplier: number;
+  payout: number;
+  balance: number;
+  replayed: boolean;
+};
+
+/** Result returned by the play_crash RPC. */
+export type CrashResult = {
+  crash: number;
+  target: number;
+  won: boolean;
+  payout: number;
+  balance: number;
+  replayed: boolean;
+};
+
 /** Result returned by the claim_daily_bonus RPC. */
 export type DailyBonusResult = {
   status: 'claimed' | 'already_claimed' | 'play_required';
@@ -454,6 +492,22 @@ export type Database = {
       play_slot: {
         Args: { p_machine: string; p_stake: number; p_idempotency_key: string | null };
         Returns: SlotSpinResult;
+      };
+      play_dice: {
+        Args: { p_stake: number; p_pick: string; p_idempotency_key: string | null };
+        Returns: DiceResult;
+      };
+      play_hilo: {
+        Args: { p_stake: number; p_pick: string; p_idempotency_key: string | null };
+        Returns: HiLoResult;
+      };
+      play_wheel: {
+        Args: { p_stake: number; p_idempotency_key: string | null };
+        Returns: WheelResult;
+      };
+      play_crash: {
+        Args: { p_stake: number; p_target: number; p_idempotency_key: string | null };
+        Returns: CrashResult;
       };
       bj_deal: {
         Args: { p_stake: number };
