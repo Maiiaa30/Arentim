@@ -104,7 +104,7 @@ export function WheelPage() {
       </div>
 
       <div className="felt felt-rail relative mx-auto max-w-md overflow-hidden rounded-lg px-5 py-8 text-center sm:px-8">
-        {result && result.payout > 0 && <WinCelebration key={winId} jackpot={result.mult >= 10} />}
+        {result && result.payout > 0 && <WinCelebration key={winId} jackpot={result.mult >= 5} />}
         <div className="relative mx-auto h-[280px] w-[280px]">
           {/* Pointer */}
           <div className="absolute left-1/2 top-[-6px] z-10 -translate-x-1/2" aria-hidden>
@@ -124,7 +124,7 @@ export function WheelPage() {
                       fontWeight="700"
                       textAnchor="middle"
                       dominantBaseline="central"
-                      fill={s.mult >= 10 ? '#1a1712' : '#f3edde'}
+                      fill={s.mult >= 5 ? '#1a1712' : '#f3edde'}
                       transform={`rotate(${i * SEG + SEG / 2} ${s.lx} ${s.ly})`}
                     >
                       {s.mult}×

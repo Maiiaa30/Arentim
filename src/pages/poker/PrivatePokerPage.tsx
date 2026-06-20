@@ -255,7 +255,9 @@ export function PrivatePokerPage() {
           <h1 className="font-display text-[28px] font-medium text-text sm:text-[32px]">Mesa privada</h1>
           {code && <p className="font-sans text-sm text-muted">Código da mesa: <span className="font-mono font-semibold text-gold">{code}</span></p>}
         </div>
-        <Button variant="secondary" onClick={onLeave} disabled={busy}>Sair da mesa</Button>
+        <Button variant="secondary" onClick={onLeave} disabled={busy}>
+          {leave.isPending ? 'A sair…' : `Sair · ${formatAmount(me?.stack ?? 0)} tós`}
+        </Button>
       </div>
 
       <PokerTable

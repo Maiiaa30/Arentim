@@ -308,11 +308,28 @@ export type WheelResult = {
   replayed: boolean;
 };
 
-/** Result returned by the play_crash RPC. */
-export type CrashResult = {
-  crash: number;
-  target: number;
+/** Result of crash_start: a launched round the client then animates. */
+export type CrashStartResult = {
+  round_id: number;
+  started_at: string;
+  auto_target: number | null;
+  balance: number;
+};
+
+/** Live read of a flying crash round (polled for the animation). */
+export type CrashStateResult = {
+  phase: 'none' | 'flying' | 'busted' | 'settled';
+  mult?: number;
+  crash?: number;
+  won?: boolean;
+  payout?: number;
+};
+
+/** Authoritative settle of a crash round (manual or auto cash-out / bust). */
+export type CrashSettleResult = {
   won: boolean;
+  mult: number;
+  crash: number;
   payout: number;
   balance: number;
   replayed: boolean;
@@ -505,9 +522,21 @@ export type Database = {
         Args: { p_stake: number; p_idempotency_key: string | null };
         Returns: WheelResult;
       };
-      play_crash: {
-        Args: { p_stake: number; p_target: number; p_idempotency_key: string | null };
-        Returns: CrashResult;
+      crash_start: {
+        Args: { p_stake: number; p_auto_target: number | null };
+        Returns: CrashStartResult;
+      };
+      crash_state: {
+        Args: { p_round_id: number };
+        Returns: CrashStateResult;
+      };
+      crash_cashout: {
+        Args: { p_round_id: number };
+        Returns: CrashSettleResult;
+      };
+      crash_history: {
+        Args: Record<string, never>;
+        Returns: number[];
       };
       bj_deal: {
         Args: { p_stake: number };

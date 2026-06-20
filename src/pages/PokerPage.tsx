@@ -232,7 +232,7 @@ export function PokerPage() {
       <div className="flex items-center justify-between gap-3">
         <h1 className="font-display text-[28px] font-medium text-text sm:text-[32px]">Poker</h1>
         <Button variant="secondary" onClick={onLeave} disabled={busy}>
-          {leave.isPending ? 'A sair…' : 'Sair da mesa'}
+          {leave.isPending ? 'A sair…' : `Sair · levantar ${formatAmount(you?.stack ?? 0)} tós`}
         </Button>
       </div>
 

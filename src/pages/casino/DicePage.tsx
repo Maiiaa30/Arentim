@@ -24,12 +24,13 @@ const PIPS: Record<number, [number, number][]> = {
   6: [[28, 26], [72, 26], [28, 50], [72, 50], [28, 74], [72, 74]],
 };
 
-function Die({ value, rolling }: { value: number; rolling: boolean }) {
+function Die({ value, rolling, delay = 0 }: { value: number; rolling: boolean; delay?: number }) {
   return (
     <div
       className={`relative h-20 w-20 rounded-[16px] border border-gold/30 bg-gradient-to-br from-[#f7efe0] to-[#d9cdb4] shadow-[0_6px_16px_rgba(0,0,0,0.5)] ${
         rolling ? 'animate-dice-tumble' : 'animate-pop'
       }`}
+      style={rolling ? { animationDelay: `${delay}s` } : undefined}
     >
       <svg viewBox="0 0 100 100" className="h-full w-full">
         {(PIPS[value] ?? PIPS[1]!).map(([cx, cy], i) => (
@@ -98,7 +99,7 @@ export function DicePage() {
         {result?.won && <WinCelebration key={spinId} />}
         <div className="flex items-center justify-center gap-5">
           <Die value={faces[0]} rolling={rolling} />
-          <Die value={faces[1]} rolling={rolling} />
+          <Die value={faces[1]} rolling={rolling} delay={-0.18} />
         </div>
         <div className="mt-6 flex min-h-[2.75rem] items-center justify-center px-2">
           {rolling ? (

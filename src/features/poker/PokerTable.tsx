@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { PokerCard } from './PokerCard';
+import type { CardSize } from '@/components/PlayingCardFace';
 import type { PokerView, PokerPlayerView } from './types';
 import { CoinIcon } from '@/components/CoinIcon';
 import { formatAmount } from '@/lib/format';
@@ -77,21 +78,23 @@ interface SeatProps {
   isButton: boolean;
   /** Bumped each new hand so dealt cards re-mount and animate in. */
   dealKey: number;
+  /** Hole-card size; the hero gets bigger, easier-to-read cards. */
+  cardSize?: CardSize;
 }
 
 /** Compact seat used on the oval (avatar + name/stack + hole cards). */
-function OvalSeat({ p, isTurn, isYou, isButton, dealKey }: SeatProps) {
+function OvalSeat({ p, isTurn, isYou, isButton, dealKey, cardSize = 'sm' }: SeatProps) {
   const folded = p.status === 'folded' || p.status === 'out';
   return (
-    <div className={`relative flex w-[112px] flex-col items-center ${folded ? 'opacity-50' : ''}`}>
+    <div className={`relative flex ${isYou ? 'w-[136px]' : 'w-[112px]'} flex-col items-center ${folded ? 'opacity-50' : ''}`}>
       {isButton && <DealerButton className="absolute -right-1 -top-1 z-10 h-5 w-5 text-[10px]" />}
       {/* Hole cards sit just behind the plate (mucked when folded) */}
-      <div className="mb-[-6px] flex gap-0.5">
+      <div className="mb-[-6px] flex gap-1">
         {folded || p.hole.length === 0
           ? null
           : p.hole.map((c, i) => (
               <span key={`${dealKey}-${i}`} className="animate-deal" style={{ animationDelay: `${i * 90}ms` }}>
-                <PokerCard card={c} small />
+                <PokerCard card={c} size={cardSize} />
               </span>
             ))}
       </div>
@@ -123,7 +126,7 @@ function OvalSeat({ p, isTurn, isYou, isButton, dealKey }: SeatProps) {
 }
 
 /** Fuller seat used in the mobile stacked layout. */
-function StackedSeat({ p, isTurn, isYou, isButton, dealKey }: SeatProps) {
+function StackedSeat({ p, isTurn, isYou, isButton, dealKey, cardSize = 'sm' }: SeatProps) {
   const folded = p.status === 'folded' || p.status === 'out';
   return (
     <div
@@ -159,7 +162,7 @@ function StackedSeat({ p, isTurn, isYou, isButton, dealKey }: SeatProps) {
           ) : (
             p.hole.map((c, i) => (
               <span key={`${dealKey}-${i}`} className="animate-deal" style={{ animationDelay: `${i * 90}ms` }}>
-                <PokerCard card={c} small />
+                <PokerCard card={c} size={cardSize} />
               </span>
             ))
           )}
@@ -279,7 +282,7 @@ export function PokerTable({ view, youId, myTurn, resultBanner }: PokerTableProp
                   <ChipStack amount={you.committed} />
                 </div>
               )}
-              <OvalSeat p={you} isTurn={myTurn} isYou isButton={view.button === youId} dealKey={dealKey} />
+              <OvalSeat p={you} isTurn={myTurn} isYou isButton={view.button === youId} dealKey={dealKey} cardSize="lg" />
             </div>
           )}
         </div>
@@ -308,7 +311,7 @@ export function PokerTable({ view, youId, myTurn, resultBanner }: PokerTableProp
             {resultBanner}
           </div>
 
-          {you && <StackedSeat p={you} isTurn={myTurn} isYou isButton={view.button === youId} dealKey={dealKey} />}
+          {you && <StackedSeat p={you} isTurn={myTurn} isYou isButton={view.button === youId} dealKey={dealKey} cardSize="md" />}
         </div>
       </div>
     </div>

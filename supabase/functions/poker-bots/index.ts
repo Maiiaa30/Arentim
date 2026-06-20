@@ -15,6 +15,7 @@ import {
 } from '../_shared/pokerTable.ts';
 import type { BotDifficulty, PokerAction } from '../_shared/poker.ts';
 import { corsHeaders } from '../_shared/cors.ts';
+import { randomBotName } from '../_shared/botNames.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!;
@@ -83,7 +84,12 @@ Deno.serve(async (req) => {
 
       const { data: profile } = await db.from('profiles').select('display_name').eq('id', user.id).single();
       const seatName = profile?.display_name ?? 'You';
-      const botList = Array.from({ length: botCount }, (_, i) => ({ name: `Bot ${i + 1}`, difficulty }));
+      const taken = [seatName];
+      const botList = Array.from({ length: botCount }, () => {
+        const name = randomBotName(taken);
+        taken.push(name);
+        return { name, difficulty };
+      });
       let state = createTable(seatName, buyIn, botList);
       state.players[0]!.id = 'you';
       const sitTrail: unknown[] = [];

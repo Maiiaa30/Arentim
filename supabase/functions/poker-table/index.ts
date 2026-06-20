@@ -20,6 +20,7 @@ import {
 import type { StepRecorder } from '../_shared/pokerTable.ts';
 import type { BotDifficulty, PokerAction } from '../_shared/poker.ts';
 import { corsHeaders } from '../_shared/cors.ts';
+import { randomBotName } from '../_shared/botNames.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!;
@@ -113,9 +114,13 @@ Deno.serve(async (req) => {
       const botCount = Math.min(MAX_SEATS - 1, Math.max(0, requested));
 
       const state = createMultiTable();
-      addPlayer(state, { id: user.id, name: await name(), isBot: false, difficulty: 'medium', stack: buyIn });
+      const hostName = await name();
+      addPlayer(state, { id: user.id, name: hostName, isBot: false, difficulty: 'medium', stack: buyIn });
+      const taken = [hostName];
       for (let i = 0; i < botCount; i++) {
-        addPlayer(state, { id: `bot_${crypto.randomUUID().slice(0, 6)}`, name: `Bot ${i + 1}`, isBot: true, difficulty, stack: buyIn });
+        const botName = randomBotName(taken);
+        taken.push(botName);
+        addPlayer(state, { id: `bot_${crypto.randomUUID().slice(0, 6)}`, name: botName, isBot: true, difficulty, stack: buyIn });
       }
       const code = genCode();
       const { data: row, error } = await db.from('poker_tables')
@@ -151,8 +156,8 @@ Deno.serve(async (req) => {
       if (row.host_id !== user.id) return json({ error: 'host only' }, 403);
       const difficulty = (['easy', 'medium', 'hard'].includes(String(body.difficulty)) ? body.difficulty : 'medium') as BotDifficulty;
       const botId = `bot_${crypto.randomUUID().slice(0, 6)}`;
-      const n = row.state.players.filter((p) => p.isBot).length + 1;
-      const ok = addPlayer(row.state, { id: botId, name: `Bot ${n}`, isBot: true, difficulty, stack: row.buy_in });
+      const botName = randomBotName(row.state.players.map((p) => p.name));
+      const ok = addPlayer(row.state, { id: botId, name: botName, isBot: true, difficulty, stack: row.buy_in });
       if (!ok) return json({ error: 'cannot add bot now' }, 409);
       await persist(row.id, row.state);
       return json({ view: viewFor(row.state, user.id) });
@@ -200,21 +205,25 @@ Deno.serve(async (req) => {
       if (!row) return json({ error: 'no table' }, 404);
       const state = row.state;
       const me = state.players.find((p) => p.id === user.id);
-      if (me && !state.handOver) {
-        const cashOut = me.stack;
+      let cashOut = 0;
+      if (me) {
+        // You can only leave between hands; mid-hand you must finish first (else
+        // removePlayer is a no-op and your cashed-out chips would be paid twice).
+        if (!state.handOver) {
+          return json({ error: 'Termine a mão antes de sair da mesa.' }, 409);
+        }
+        cashOut = me.stack;
         if (cashOut > 0) {
           await db.rpc('apply_ledger_entry', {
             p_user_id: user.id, p_type: 'win', p_amount: cashOut, p_game: 'poker', p_note: 'poker table cash-out', p_idempotency_key: null, p_wager: 0,
           });
         }
         removePlayer(state, user.id);
-      } else if (me) {
-        return json({ error: 'finish the hand before leaving' }, 409);
       }
       await db.from('poker_table_members').delete().eq('table_id', row.id).eq('user_id', user.id);
       const remaining = state.players.filter((p) => !p.isBot).length;
       await persist(row.id, state, remaining === 0 ? 'closed' : undefined);
-      return json({ left: true });
+      return json({ left: true, cashOut });
     }
 
     case 'state': {

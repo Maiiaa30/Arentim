@@ -69,33 +69,45 @@ export function SobeDescePage() {
 
       <div className="felt felt-rail relative mx-auto max-w-md overflow-hidden rounded-lg px-5 py-8 sm:px-8">
         {result?.won && <WinCelebration key={spinId} />}
-        <div className="mx-auto flex max-w-[260px] flex-col gap-1">
-          {RUNGS.map((n) => {
-            const here = marker === n;
-            const isSeven = n === 7;
-            const zone = n > 7 ? 'sobe' : n < 7 ? 'desce' : 'sete';
-            return (
-              <div
-                key={n}
-                className={`flex items-center justify-between rounded border px-3 py-1.5 transition-all duration-150 ${
-                  here
-                    ? 'scale-[1.04] border-gold bg-gold/20 shadow-[0_0_18px_rgba(201,162,75,0.4)]'
-                    : isSeven
-                      ? 'border-gold/30 bg-gold/[0.06]'
-                      : 'border-border/60 bg-black/20'
-                }`}
-              >
-                <span className={`font-mono text-sm font-semibold ${here ? 'text-gold' : isSeven ? 'text-gold-light' : 'text-muted'}`}>{n}</span>
-                <span className="font-sans text-[9px] uppercase tracking-[0.16em] text-muted-2">
-                  {here ? '◀ marca' : zone === 'sobe' ? 'sobe' : zone === 'desce' ? 'desce' : 'sete'}
-                </span>
-              </div>
-            );
-          })}
+        <div className="flex items-stretch justify-center gap-5">
+          {/* The ladder */}
+          <div className="flex w-[120px] flex-col gap-[3px]">
+            {RUNGS.map((n) => {
+              const here = marker === n;
+              const isSeven = n === 7;
+              const zoneTint = isSeven ? 'rgba(201,162,75,0.10)' : n > 7 ? 'rgba(43,111,78,0.12)' : 'rgba(176,48,58,0.12)';
+              return (
+                <div
+                  key={n}
+                  className={`flex items-center gap-2 rounded px-2.5 py-[3px] transition-all duration-150 ${
+                    here ? 'scale-[1.06] shadow-[0_0_20px_rgba(201,162,75,0.45)] ring-1 ring-gold' : ''
+                  }`}
+                  style={{ background: here ? 'rgba(201,162,75,0.22)' : zoneTint }}
+                >
+                  <span className={`w-5 text-right font-mono text-sm font-bold ${here ? 'text-gold' : isSeven ? 'text-gold-light' : 'text-body'}`}>{n}</span>
+                  <span
+                    className="h-1.5 flex-1 rounded-full"
+                    style={{ background: here ? '#C9A24B' : isSeven ? 'rgba(201,162,75,0.4)' : n > 7 ? 'rgba(43,111,78,0.5)' : 'rgba(176,48,58,0.5)' }}
+                  />
+                  {here && <span className="text-xs">🪙</span>}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Big readout + zone */}
+          <div className="flex w-[110px] flex-col items-center justify-center rounded-lg border border-gold/20 bg-black/30 px-3 py-4">
+            <span className="font-sans text-[9px] uppercase tracking-[0.2em] text-muted-2">{rolling ? 'a subir' : 'parou em'}</span>
+            <span className={`font-display text-5xl font-bold ${marker > 7 ? 'text-positive' : marker < 7 ? 'text-negative' : 'text-gold'}`}>{marker}</span>
+            <span className="mt-1 font-sans text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
+              {marker > 7 ? '▲ Sobe' : marker < 7 ? '▼ Desce' : '● Sete'}
+            </span>
+          </div>
         </div>
+
         <div className="mt-5 flex min-h-[2.5rem] items-center justify-center px-2 text-center">
           {rolling ? (
-            <p className="animate-pulse font-display text-lg italic text-gold-light">A subir…</p>
+            <p className="animate-pulse font-display text-lg italic text-gold-light">A subir a escada…</p>
           ) : result ? (
             result.won ? (
               <p className="animate-pop font-display text-xl font-bold text-positive">

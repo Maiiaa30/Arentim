@@ -10,7 +10,8 @@ import type {
   DiceResult,
   HiLoResult,
   WheelResult,
-  CrashResult,
+  CrashStartResult,
+  CrashSettleResult,
 } from '@/types/db';
 
 function useInvalidateWallet() {
@@ -105,16 +106,28 @@ export function useWheel() {
   });
 }
 
-/** Crash: set an auto-cash-out target; server draws the hidden crash point. */
-export function useCrash() {
+/** Crash: launch a round (debits the stake; server draws the hidden crash point). */
+export function useCrashStart() {
   const invalidate = useInvalidateWallet();
   return useMutation({
-    mutationFn: async (input: { stake: number; target: number }): Promise<CrashResult> => {
-      const { data, error } = await supabase.rpc('play_crash', {
+    mutationFn: async (input: { stake: number; autoTarget: number | null }): Promise<CrashStartResult> => {
+      const { data, error } = await supabase.rpc('crash_start', {
         p_stake: input.stake,
-        p_target: input.target,
-        p_idempotency_key: crypto.randomUUID(),
+        p_auto_target: input.autoTarget,
       });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: invalidate,
+  });
+}
+
+/** Crash: cash out (or settle a bust). Authoritative — pays out if still flying. */
+export function useCrashCashout() {
+  const invalidate = useInvalidateWallet();
+  return useMutation({
+    mutationFn: async (roundId: number): Promise<CrashSettleResult> => {
+      const { data, error } = await supabase.rpc('crash_cashout', { p_round_id: roundId });
       if (error) throw error;
       return data;
     },

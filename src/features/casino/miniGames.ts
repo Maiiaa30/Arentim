@@ -24,11 +24,13 @@ export function hiloMultiplier(pick: HiLoPick, n: number): number {
 }
 
 /**
- * The 24-segment lucky wheel (each segment equally likely). 0 = lose.
- * MUST match the v_wheel array in 20260620500000_mini_games.sql.
+ * The 24-segment lucky wheel (each segment equally likely). 0 = lose, but most
+ * segments pay something so the wheel doesn't feel empty: 9 half-backs, 6×1.5,
+ * 2×2, one 5× jackpot, only 6 blanks. RTP ≈ 0.94.
+ * MUST match the v_wheel array in 20260620600000_wheel_rebalance.sql.
  */
 export const WHEEL: readonly number[] = [
-  0, 1.2, 0, 1.5, 0, 1.2, 0, 3, 0, 1.5, 0, 1.2, 0, 10, 0, 1.5, 0, 1.2, 0, 0, 0, 0, 0, 0,
+  0.5, 1.5, 0, 0.5, 2, 0.5, 1.5, 0, 0.5, 1.5, 0.5, 5, 0.5, 1.5, 0, 0.5, 2, 1.5, 0.5, 0, 1.5, 0.5, 0, 0,
 ];
 
 export function wheelMultiplier(index: number): number {
@@ -53,9 +55,9 @@ export function crashWon(target: number, crash: number): boolean {
 
 /** Distinct accent colour per wheel multiplier, for the wheel rendering. */
 export function wheelColor(mult: number): string {
-  if (mult === 0) return '#1a1712';
-  if (mult >= 10) return '#C9A24B';
-  if (mult >= 3) return '#b0303a';
-  if (mult >= 1.5) return '#2b6f4e';
-  return '#3a5a8c';
+  if (mult === 0) return '#1a1712'; // blank
+  if (mult >= 5) return '#C9A24B'; // jackpot — gold
+  if (mult >= 2) return '#b0303a'; // ruby
+  if (mult >= 1.5) return '#2b6f4e'; // green
+  return '#4a3b22'; // half-back — dim bronze
 }

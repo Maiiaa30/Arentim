@@ -1,67 +1,147 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { supabase } from '@/lib/supabase';
 import { useProfile } from '@/features/profile/useProfile';
-import { useCrash } from '@/features/casino/useQuickGames';
+import { useCrashStart, useCrashCashout } from '@/features/casino/useQuickGames';
 import { StakeChips } from '@/features/casino/StakeChips';
 import { WinCelebration } from '@/features/casino/WinCelebration';
 import { Button } from '@/components/ui/Button';
 import { Eyebrow } from '@/components/ui/primitives';
 import { formatAmount } from '@/lib/format';
 
-const TARGETS = [1.5, 2, 3, 5, 10];
-const GROWTH = 0.6; // multiplier = e^(GROWTH * seconds)
+const W = 100;
+const H = 60;
+
+/** Colour a (past) crash multiplier for the history strip. */
+function crashColor(m: number): string {
+  if (m < 2) return '#e0555f';
+  if (m < 5) return '#2b6f4e';
+  return '#C9A24B';
+}
+
+/** SVG path for the rising curve up to `mult` (rescales to fill the box). */
+function curvePath(mult: number): string {
+  const yMax = Math.log(Math.max(mult, 2));
+  const N = 40;
+  let d = '';
+  for (let i = 0; i <= N; i++) {
+    const frac = i / N;
+    const m = Math.pow(mult, frac);
+    const x = frac * W;
+    const y = H - (Math.log(m) / yMax) * H;
+    d += `${i === 0 ? 'M' : 'L'} ${x.toFixed(2)} ${y.toFixed(2)} `;
+  }
+  return d.trim();
+}
 
 export function CrashPage() {
   const { data: profile } = useProfile();
-  const crash = useCrash();
+  const start = useCrashStart();
+  const cashout = useCrashCashout();
   const [stake, setStake] = useState(25);
-  const [target, setTarget] = useState(2);
+  const [autoOn, setAutoOn] = useState(false);
+  const [autoTarget, setAutoTarget] = useState(2);
+  const [phase, setPhase] = useState<'idle' | 'flying' | 'done'>('idle');
   const [mult, setMult] = useState(1);
-  const [flying, setFlying] = useState(false);
-  const [result, setResult] = useState<{ won: boolean; payout: number; crash: number; target: number } | null>(null);
+  const [result, setResult] = useState<{ won: boolean; mult: number; crash: number; payout: number } | null>(null);
+  const [history, setHistory] = useState<number[]>([]);
   const [winId, setWinId] = useState(0);
   const [error, setError] = useState<string | null>(null);
-  const raf = useRef<number | null>(null);
 
-  useEffect(() => () => { if (raf.current) cancelAnimationFrame(raf.current); }, []);
+  const roundId = useRef<number | null>(null);
+  const startedPerf = useRef(0);
+  const raf = useRef<number | null>(null);
+  const poll = useRef<number | null>(null);
+  const settling = useRef(false);
+  const flyingRef = useRef(false);
+
+  const loadHistory = useCallback(() => {
+    void supabase.rpc('crash_history').then(({ data }) => {
+      if (Array.isArray(data)) setHistory(data.map(Number));
+    });
+  }, []);
+  useEffect(() => { loadHistory(); }, [loadHistory]);
+
+  const stopLoops = useCallback(() => {
+    if (raf.current) cancelAnimationFrame(raf.current);
+    if (poll.current) window.clearInterval(poll.current);
+    raf.current = null;
+    poll.current = null;
+  }, []);
+  useEffect(() => stopLoops, [stopLoops]);
+
+  const finish = useCallback(
+    async (id: number) => {
+      if (settling.current) return;
+      settling.current = true;
+      flyingRef.current = false;
+      stopLoops();
+      try {
+        const res = await cashout.mutateAsync(id);
+        setMult(res.won ? res.mult : res.crash);
+        setResult(res);
+        setPhase('done');
+        if (res.won) setWinId((n) => n + 1);
+        loadHistory();
+      } catch (e) {
+        setError(e instanceof Error ? e.message : 'A retirada falhou.');
+        setPhase('done');
+      }
+    },
+    [cashout, loadHistory, stopLoops],
+  );
 
   const balance = profile?.balance ?? 0;
   const tooPoor = stake > balance;
-  const potential = Math.floor(stake * target);
 
   async function launch() {
-    if (flying || tooPoor) return;
+    if (phase === 'flying' || tooPoor) return;
     setError(null);
     setResult(null);
     setMult(1);
-    setFlying(true);
+    settling.current = false;
     try {
-      const res = await crash.mutateAsync({ stake, target });
-      const endpoint = res.won ? res.target : res.crash;
-      const startedAt = performance.now();
-      const durationMs = Math.min(6000, (Math.log(Math.max(1.01, endpoint)) / GROWTH) * 1000);
+      const res = await start.mutateAsync({ stake, autoTarget: autoOn ? autoTarget : null });
+      roundId.current = res.round_id;
+      startedPerf.current = performance.now();
+      flyingRef.current = true;
+      setPhase('flying');
 
-      const tick = (now: number) => {
-        const t = Math.min(1, (now - startedAt) / durationMs);
-        // Ease the climb from 1.00 up to the endpoint (endpoint^t: 1 → endpoint).
-        setMult(Math.pow(endpoint, t));
-        if (t < 1) {
-          raf.current = requestAnimationFrame(tick);
-        } else {
-          setMult(endpoint);
-          setFlying(false);
-          setResult({ won: res.won, payout: res.payout, crash: res.crash, target: res.target });
-          if (res.won) setWinId((n) => n + 1);
+      const tick = () => {
+        if (!flyingRef.current) return;
+        const elapsed = (performance.now() - startedPerf.current) / 1000;
+        const m = Math.max(1, Math.floor(Math.exp(0.2 * elapsed) * 100) / 100);
+        setMult(m);
+        if (autoOn && m >= autoTarget && roundId.current != null) {
+          void finish(roundId.current);
+          return;
         }
+        raf.current = requestAnimationFrame(tick);
       };
       raf.current = requestAnimationFrame(tick);
+
+      // Poll the server for the authoritative bust (the client never sees the
+      // hidden crash point, so it can't know when to stop on its own).
+      poll.current = window.setInterval(() => {
+        const id = roundId.current;
+        if (id == null || !flyingRef.current) return;
+        void supabase.rpc('crash_state', { p_round_id: id }).then(({ data }) => {
+          if (data?.phase === 'busted' || data?.phase === 'settled') void finish(id);
+        });
+      }, 250);
     } catch (e) {
-      setFlying(false);
+      setPhase('idle');
       setError(e instanceof Error ? e.message : 'O lançamento falhou.');
     }
   }
 
-  const busted = result && !result.won;
+  function manualCashout() {
+    if (phase === 'flying' && roundId.current != null) void finish(roundId.current);
+  }
+
+  const flying = phase === 'flying';
+  const busted = phase === 'done' && result && !result.won;
+  const endY = H - (Math.log(Math.max(mult, 1.0001)) / Math.log(Math.max(mult, 2))) * H;
 
   return (
     <div className="animate-fade-in space-y-6">
@@ -69,85 +149,104 @@ export function CrashPage() {
         <Link to="/casino" className="font-sans text-sm text-muted-2 hover:text-text">← Casino</Link>
         <Eyebrow className="mt-3">O Salão</Eyebrow>
         <h1 className="mt-2 font-display text-[34px] font-medium leading-tight text-text sm:text-[38px]">Crash</h1>
-        <p className="mt-2 font-sans text-sm text-muted">Escolha quando sair. Se o foguetão chegar ao seu alvo antes de rebentar, ganha.</p>
+        <p className="mt-2 font-sans text-sm text-muted">O foguetão sobe. Carregue em Retirar antes de rebentar — quanto mais espera, maior o prémio.</p>
       </div>
 
-      <div className="felt felt-rail relative mx-auto flex max-w-md flex-col items-center overflow-hidden rounded-lg px-5 py-12 text-center sm:px-8">
-        {result?.won && <WinCelebration key={winId} jackpot={result.target >= 10} />}
-        <div className="relative flex h-40 w-full items-center justify-center">
+      {/* Recent crashes */}
+      {history.length > 0 && (
+        <div className="mx-auto flex max-w-md flex-wrap items-center gap-1.5">
+          <span className="font-sans text-[10px] uppercase tracking-[0.18em] text-muted-2">Anteriores</span>
+          {history.map((h, i) => (
+            <span key={i} className="rounded-full px-2 py-0.5 font-mono text-[11px] font-semibold" style={{ color: crashColor(h), background: `${crashColor(h)}1a` }}>
+              {h.toFixed(2)}×
+            </span>
+          ))}
+        </div>
+      )}
+
+      <div className="felt felt-rail relative mx-auto max-w-md overflow-hidden rounded-lg px-5 py-7 text-center sm:px-8">
+        {result?.won && <WinCelebration key={winId} jackpot={result.mult >= 10} />}
+        <div className="relative mx-auto h-44 w-full">
+          <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="absolute inset-0 h-full w-full">
+            <line x1="0" y1={H} x2={W} y2={H} stroke="rgba(201,162,75,0.2)" strokeWidth="0.5" />
+            <path
+              d={`${curvePath(mult)} L ${W} ${H} L 0 ${H} Z`}
+              fill={busted ? 'rgba(224,85,95,0.14)' : 'rgba(201,162,75,0.14)'}
+            />
+            <path
+              d={curvePath(mult)}
+              fill="none"
+              stroke={busted ? '#e0555f' : '#C9A24B'}
+              strokeWidth="1.6"
+              strokeLinecap="round"
+            />
+          </svg>
           <span
-            className={`font-mono text-6xl font-bold tabular-nums transition-colors ${
-              busted ? 'text-negative' : flying ? 'text-gold-light' : result?.won ? 'text-positive' : 'text-text'
-            } ${flying ? 'animate-pulse' : 'animate-pop'}`}
-            style={{ textShadow: busted ? '0 0 28px rgba(224,85,95,0.5)' : '0 0 28px rgba(201,162,75,0.4)' }}
+            className="absolute text-2xl transition-none"
+            style={{ left: `calc(${W - 6}% )`, top: `calc(${(endY / H) * 100}% - 12px)`, transform: 'translate(-50%,-50%)' }}
+            aria-hidden
           >
-            {mult.toFixed(2)}×
-          </span>
-          <span className="absolute right-2 top-1 text-3xl" aria-hidden style={{ opacity: flying ? 1 : busted ? 0 : 0.4 }}>
             {busted ? '💥' : '🚀'}
           </span>
+          <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+            <span
+              className={`font-mono text-5xl font-bold tabular-nums ${
+                busted ? 'text-negative' : flying ? 'text-gold-light' : result?.won ? 'text-positive' : 'text-text'
+              }`}
+              style={{ textShadow: '0 0 26px rgba(0,0,0,0.6)' }}
+            >
+              {mult.toFixed(2)}×
+            </span>
+          </div>
         </div>
-        <div className="mt-2 flex min-h-[2.5rem] items-center justify-center px-2">
+
+        <div className="mt-4 flex min-h-[2.5rem] items-center justify-center px-2">
           {flying ? (
-            <p className="font-sans text-sm text-muted">Alvo {target.toFixed(2)}× · a subir…</p>
+            <p className="font-sans text-sm text-muted">{autoOn ? `Saída automática a ${autoTarget.toFixed(2)}×` : 'A subir — retire quando quiser.'}</p>
           ) : result ? (
             result.won ? (
               <p className="animate-pop font-display text-xl font-bold text-positive">
-                Saiu a {result.target.toFixed(2)}× — ganhou {formatAmount(result.payout)} tós!
+                Saiu a {result.mult.toFixed(2)}× — ganhou {formatAmount(result.payout)} tós!
               </p>
             ) : (
-              <p className="font-display text-lg font-bold text-negative">Rebentou a {result.crash.toFixed(2)}× — não saiu a tempo.</p>
+              <p className="font-display text-lg font-bold text-negative">Rebentou a {result.crash.toFixed(2)}×.</p>
             )
           ) : (
-            <p className="font-sans text-sm text-muted-2">Defina o alvo e lance.</p>
+            <p className="font-sans text-sm text-muted-2">Defina a aposta e lance o foguetão.</p>
           )}
         </div>
+
+        {flying && (
+          <Button variant="primary" onClick={manualCashout} disabled={cashout.isPending} className="mx-auto w-full max-w-xs">
+            Retirar {formatAmount(Math.floor(stake * mult))} tós
+          </Button>
+        )}
       </div>
 
-      <div className="card mx-auto max-w-md space-y-5 p-5 sm:p-6">
-        <div>
-          <div className="mb-2 flex items-center justify-between">
-            <p className="font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-2">Sair automaticamente em</p>
-            <span className="font-mono text-sm font-semibold text-gold">{target.toFixed(2)}×</span>
+      <div className="card mx-auto max-w-md space-y-4 p-5 sm:p-6">
+        <label className="flex cursor-pointer items-center justify-between">
+          <span className="font-sans text-[12px] text-muted">Saída automática</span>
+          <input type="checkbox" checked={autoOn} disabled={flying} onChange={(e) => setAutoOn(e.target.checked)} className="h-4 w-4 accent-gold" />
+        </label>
+        {autoOn && (
+          <div>
+            <div className="mb-1.5 flex items-center justify-between">
+              <span className="font-sans text-[11px] text-muted-2">Sair em</span>
+              <span className="font-mono text-sm text-gold">{autoTarget.toFixed(2)}×</span>
+            </div>
+            <input
+              type="range" min={1.1} max={20} step={0.1} value={autoTarget} disabled={flying}
+              onChange={(e) => setAutoTarget(Number(e.target.value))}
+              className="h-2 w-full cursor-pointer rounded-full accent-gold disabled:opacity-50"
+              aria-label="Alvo de saída automática"
+            />
           </div>
-          <div className="mb-3 flex flex-wrap gap-1.5">
-            {TARGETS.map((t) => (
-              <button
-                key={t}
-                type="button"
-                onClick={() => setTarget(t)}
-                disabled={flying}
-                aria-pressed={target === t}
-                className={`focus-ring rounded-full border px-3 py-1 font-mono text-xs transition-colors disabled:opacity-40 ${
-                  target === t ? 'border-gold bg-gold/10 text-gold' : 'border-border text-muted hover:text-text'
-                }`}
-              >
-                {t}×
-              </button>
-            ))}
-          </div>
-          <input
-            type="range"
-            min={1.1}
-            max={20}
-            step={0.1}
-            value={target}
-            disabled={flying}
-            onChange={(e) => setTarget(Number(e.target.value))}
-            className="h-2 w-full cursor-pointer rounded-full accent-gold disabled:opacity-50"
-            aria-label="Alvo de saída"
-          />
-          <p className="mt-1.5 font-sans text-[11px] text-muted-2">
-            Prémio se sair: <span className="font-mono text-gold-light">{formatAmount(potential)} tós</span>
-          </p>
-        </div>
-        <div className="space-y-3">
-          <StakeChips stake={stake} onChange={setStake} balance={balance} disabled={flying} />
-          <Button variant="primary" onClick={launch} disabled={flying || tooPoor} className="w-full">
-            {flying ? 'A voar…' : tooPoor ? 'Saldo insuficiente' : `Lançar · ${formatAmount(stake)} tós`}
-          </Button>
-          {error && <p className="font-sans text-sm text-negative">{error}</p>}
-        </div>
+        )}
+        <StakeChips stake={stake} onChange={setStake} balance={balance} disabled={flying} />
+        <Button variant="primary" onClick={launch} disabled={flying || tooPoor} className="w-full">
+          {flying ? 'Em voo…' : tooPoor ? 'Saldo insuficiente' : `Lançar · ${formatAmount(stake)} tós`}
+        </Button>
+        {error && <p className="font-sans text-sm text-negative">{error}</p>}
       </div>
     </div>
   );
