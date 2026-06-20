@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { WHEEL_SEQUENCE, colorOf } from './roulette';
 
 const N = WHEEL_SEQUENCE.length; // 37 pockets
@@ -53,34 +53,41 @@ interface RouletteWheelProps {
 }
 
 /** Rotating European single-zero wheel with a ball that lands the winner. */
-export function RouletteWheel({ spinToken, result, spinning, landed }: RouletteWheelProps) {
-  const [rotation, setRotation] = useState(0); // wheel rotation
-  const [ballRotation, setBallRotation] = useState(0); // ball rotation (counter-spin)
+export function RouletteWheel({ spinToken, result, landed }: RouletteWheelProps) {
+  const wheelRef = useRef<SVGGElement>(null);
+  const ballGroupRef = useRef<SVGGElement>(null);
   const rotationRef = useRef(0);
-  const ballRef = useRef(0);
+  const ballRotRef = useRef(0);
 
+  // Animate with the Web Animations API — a CSS transition between two rotate()
+  // values interpolates matrices, so a multi-turn spin collapses to no motion
+  // (the same trap the coin flip hit). WAAPI interpolates the angle itself.
   useEffect(() => {
     if (result === null || spinToken === 0) return;
     const pos = WHEEL_SEQUENCE.indexOf(result);
     if (pos < 0) return;
 
-    // Wheel spins clockwise several turns and parks the winning pocket centre
-    // under the top pointer (angle 0 = top).
     const pocketAngle = pos * SEG + SEG / 2;
-    const wheelBase = Math.ceil(rotationRef.current / 360) * 360;
-    const wheelNext = wheelBase + 360 * 5 - pocketAngle;
+    const wheelPrev = rotationRef.current;
+    const wheelNext = Math.ceil(wheelPrev / 360) * 360 + 360 * 5 - pocketAngle;
     rotationRef.current = wheelNext;
-    setRotation(wheelNext);
 
-    // Ball travels the opposite way (counter-clockwise) more turns, ending at
-    // the top so it visually rests in the winning pocket once both settle.
-    const ballBase = Math.floor(ballRef.current / 360) * 360;
-    const ballNext = ballBase - 360 * 8;
-    ballRef.current = ballNext;
-    setBallRotation(ballNext);
+    const ballPrev = ballRotRef.current;
+    const ballNext = Math.floor(ballPrev / 360) * 360 - 360 * 8;
+    ballRotRef.current = ballNext;
+
+    const opts: KeyframeAnimationOptions = {
+      duration: 4200,
+      easing: 'cubic-bezier(0.18,0.72,0.16,1)',
+      fill: 'forwards',
+    };
+    const spin = (el: SVGGElement | null, from: number, to: number) => {
+      el?.getAnimations().forEach((a) => a.cancel());
+      el?.animate([{ transform: `rotate(${from}deg)` }, { transform: `rotate(${to}deg)` }], opts);
+    };
+    spin(wheelRef.current, wheelPrev, wheelNext);
+    spin(ballGroupRef.current, ballPrev, ballNext);
   }, [spinToken, result]);
-
-  const spinTransition = 'transform 4.1s cubic-bezier(0.18, 0.72, 0.16, 1)';
 
   return (
     <div className="relative mx-auto aspect-square w-full max-w-[320px]">
@@ -121,13 +128,7 @@ export function RouletteWheel({ spinToken, result, spinning, landed }: RouletteW
         <circle cx={CX} cy={CY} r={R_RIM} fill="#0c0a06" />
 
         {/* Rotating wheel */}
-        <g
-          style={{
-            transform: `rotate(${rotation}deg)`,
-            transformOrigin: '150px 150px',
-            transition: spinning ? spinTransition : 'none',
-          }}
-        >
+        <g ref={wheelRef} style={{ transformOrigin: '150px 150px' }}>
           {WHEEL_SEQUENCE.map((n, i) => {
             const mid = i * SEG + SEG / 2;
             const [tx, ty] = polar(mid, (R_POCKET + R_INNER) / 2 + 4);
@@ -178,13 +179,7 @@ export function RouletteWheel({ spinToken, result, spinning, landed }: RouletteW
         </g>
 
         {/* Ball — rotates on its own track so it appears to circle the rim. */}
-        <g
-          style={{
-            transform: `rotate(${ballRotation}deg)`,
-            transformOrigin: '150px 150px',
-            transition: spinning ? spinTransition : 'none',
-          }}
-        >
+        <g ref={ballGroupRef} style={{ transformOrigin: '150px 150px' }}>
           <circle cx={CX} cy={CY - R_BALL_TRACK} r={BALL_R} fill="url(#rw-ball)" stroke="rgba(0,0,0,0.3)" strokeWidth="0.5" />
         </g>
 

@@ -11,6 +11,7 @@ const SIZES = {
   sm: { w: 40, h: 56, rank: 'text-[12px]', suit: 'text-[9px]', center: 'text-[20px]' },
   md: { w: 60, h: 84, rank: 'text-[16px]', suit: 'text-[12px]', center: 'text-[34px]' },
   lg: { w: 74, h: 104, rank: 'text-[20px]', suit: 'text-[15px]', center: 'text-[42px]' },
+  xl: { w: 92, h: 130, rank: 'text-[25px]', suit: 'text-[18px]', center: 'text-[54px]' },
 } as const;
 
 export type CardSize = keyof typeof SIZES;

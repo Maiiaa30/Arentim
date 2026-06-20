@@ -17,6 +17,7 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "db:migrate": "node scripts/migrate.mjs",
+    "deploy:functions": "node scripts/deploy-functions.mjs",
     "check:secrets": "node scripts/check-bundle-secrets.mjs"
   },
   "dependencies": {

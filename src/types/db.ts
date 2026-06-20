@@ -280,6 +280,109 @@ export type SlotSpinResult = {
   replayed: boolean;
 };
 
+/** Result returned by the play_dice RPC. */
+export type DiceResult = {
+  dice: [number, number];
+  sum: number;
+  won: boolean;
+  payout: number;
+  balance: number;
+  replayed: boolean;
+};
+
+/** A dealt Sobe e Desce round: the current rung + the two adapted multipliers. */
+export type HiloDealResult = {
+  current: number;
+  sobe_count: number;
+  desce_count: number;
+  sobe_mult: number;
+  desce_mult: number;
+};
+
+/** cups_start: where the ball goes + the exact swap sequence to animate. */
+export type CupsStartResult = {
+  start: number;
+  swaps: [number, number][];
+  multiplier: number;
+  balance: number;
+};
+
+/** cups_pick: settle which cup you chose. */
+export type CupsPickResult = {
+  prize: number;
+  picked: number;
+  won: boolean;
+  multiplier: number;
+  payout: number;
+  balance: number;
+};
+
+/** One row of the football betting leaderboard. */
+export type FootballLeaderRow = {
+  id: string;
+  name: string;
+  wagered: number;
+  won: number;
+  lost: number;
+  net: number;
+  bets: number;
+};
+
+/** Result of the play_highlow RPC (single-die High/Low). */
+export type HighLowResult = {
+  die: number;
+  won: boolean;
+  payout: number;
+  balance: number;
+  replayed: boolean;
+};
+
+/** Result of a settled Sobe e Desce bet. */
+export type HiloBetResult = {
+  current: number;
+  next: number;
+  won: boolean;
+  mult: number;
+  payout: number;
+  balance: number;
+};
+
+/** Result returned by the play_wheel RPC. */
+export type WheelResult = {
+  index: number;
+  multiplier: number;
+  payout: number;
+  balance: number;
+  replayed: boolean;
+};
+
+/** Result of crash_start: a launched round the client then animates. */
+export type CrashStartResult = {
+  round_id: number;
+  started_at: string;
+  auto_target: number | null;
+  balance: number;
+};
+
+/** Live read of a flying crash round (polled for the animation). */
+export type CrashStateResult = {
+  phase: 'none' | 'flying' | 'busted' | 'settled';
+  mult?: number;
+  crash?: number;
+  won?: boolean;
+  payout?: number;
+};
+
+/** Authoritative settle of a crash round (manual or auto cash-out / bust). */
+export type CrashSettleResult = {
+  won: boolean;
+  mult: number;
+  crash: number;
+  payout: number;
+  balance: number;
+  replayed: boolean;
+};
+
 /** Result returned by the claim_daily_bonus RPC. */
 export type DailyBonusResult = {
   status: 'claimed' | 'already_claimed' | 'play_required';
@@ -455,6 +558,54 @@ export type Database = {
         Args: { p_machine: string; p_stake: number; p_idempotency_key: string | null };
         Returns: SlotSpinResult;
       };
+      play_dice: {
+        Args: { p_stake: number; p_pick: string; p_idempotency_key: string | null };
+        Returns: DiceResult;
+      };
+      cups_start: {
+        Args: { p_stake: number };
+        Returns: CupsStartResult;
+      };
+      cups_pick: {
+        Args: { p_picked: number };
+        Returns: CupsPickResult;
+      };
+      play_highlow: {
+        Args: { p_stake: number; p_pick: string; p_idempotency_key: string | null };
+        Returns: HighLowResult;
+      };
+      football_leaderboard: {
+        Args: Record<string, never>;
+        Returns: FootballLeaderRow[];
+      };
+      hilo_deal: {
+        Args: Record<string, never>;
+        Returns: HiloDealResult;
+      };
+      hilo_bet: {
+        Args: { p_stake: number; p_pick: string };
+        Returns: HiloBetResult;
+      };
+      play_wheel: {
+        Args: { p_stake: number; p_idempotency_key: string | null };
+        Returns: WheelResult;
+      };
+      crash_start: {
+        Args: { p_stake: number; p_auto_target: number | null };
+        Returns: CrashStartResult;
+      };
+      crash_state: {
+        Args: { p_round_id: number };
+        Returns: CrashStateResult;
+      };
+      crash_cashout: {
+        Args: { p_round_id: number };
+        Returns: CrashSettleResult;
+      };
+      crash_history: {
+        Args: Record<string, never>;
+        Returns: number[];
+      };
       bj_deal: {
         Args: { p_stake: number };
         Returns: BlackjackView;
@@ -517,6 +668,10 @@ export type Database = {
       list_my_poker_tables: {
         Args: Record<string, never>;
         Returns: MyPokerTable[];
+      };
+      list_my_sueca_tables: {
+        Args: Record<string, never>;
+        Returns: { table_id: number; code: string; status: string; player_count: number; is_host: boolean }[];
       };
       username_available: {
         Args: { p_name: string };

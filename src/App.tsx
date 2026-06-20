@@ -20,11 +20,20 @@ const SlotsLobby = lazy(() => named(import('@/pages/casino/SlotsLobby'), 'SlotsL
 const SlotMachinePage = lazy(() => named(import('@/pages/casino/SlotMachinePage'), 'SlotMachinePage'));
 const CoinflipPage = lazy(() => named(import('@/pages/casino/CoinflipPage'), 'CoinflipPage'));
 const BlackjackPage = lazy(() => named(import('@/pages/casino/BlackjackPage'), 'BlackjackPage'));
+const DicePage = lazy(() => named(import('@/pages/casino/DicePage'), 'DicePage'));
+const SobeDescePage = lazy(() => named(import('@/pages/casino/SobeDescePage'), 'SobeDescePage'));
+const WheelPage = lazy(() => named(import('@/pages/casino/WheelPage'), 'WheelPage'));
+const CrashPage = lazy(() => named(import('@/pages/casino/CrashPage'), 'CrashPage'));
+const ChestPage = lazy(() => named(import('@/pages/casino/ChestPage'), 'ChestPage'));
+const HighLowPage = lazy(() => named(import('@/pages/casino/HighLowPage'), 'HighLowPage'));
 const SportsbookPage = lazy(() => named(import('@/pages/SportsbookPage'), 'SportsbookPage'));
 const ScoresPage = lazy(() => named(import('@/pages/ScoresPage'), 'ScoresPage'));
 const OnzePage = lazy(() => named(import('@/pages/OnzePage'), 'OnzePage'));
 const PokerPage = lazy(() => named(import('@/pages/PokerPage'), 'PokerPage'));
 const PokerHome = lazy(() => named(import('@/pages/poker/PokerHome'), 'PokerHome'));
+const SuecaHome = lazy(() => named(import('@/pages/sueca/SuecaHome'), 'SuecaHome'));
+const SuecaPage = lazy(() => named(import('@/pages/sueca/SuecaPage'), 'SuecaPage'));
+const SuecaTablePage = lazy(() => named(import('@/pages/sueca/SuecaTablePage'), 'SuecaTablePage'));
 const PrivatePokerPage = lazy(() => named(import('@/pages/poker/PrivatePokerPage'), 'PrivatePokerPage'));
 const FriendsPage = lazy(() => named(import('@/pages/FriendsPage'), 'FriendsPage'));
 const ChallengesPage = lazy(() => named(import('@/pages/ChallengesPage'), 'ChallengesPage'));
@@ -53,10 +62,19 @@ export default function App() {
             <Route path="casino/slots/:key" element={<SlotMachinePage />} />
             <Route path="casino/coinflip" element={<CoinflipPage />} />
             <Route path="casino/blackjack" element={<BlackjackPage />} />
+            <Route path="casino/dice" element={<DicePage />} />
+            <Route path="casino/sobe-e-desce" element={<SobeDescePage />} />
+            <Route path="casino/wheel" element={<WheelPage />} />
+            <Route path="casino/crash" element={<CrashPage />} />
+            <Route path="casino/chest" element={<ChestPage />} />
+            <Route path="casino/maior-menor" element={<HighLowPage />} />
             <Route path="sportsbook" element={<SportsbookPage />} />
             <Route path="resultados" element={<ScoresPage />} />
             <Route path="onze" element={<OnzePage />} />
             <Route path="poker" element={<PokerHome />} />
+            <Route path="sueca" element={<SuecaHome />} />
+            <Route path="sueca/bots" element={<SuecaPage />} />
+            <Route path="sueca/mesa" element={<SuecaTablePage />} />
             <Route path="poker/bots" element={<PokerPage />} />
             <Route path="poker/private" element={<PrivatePokerPage />} />
             <Route path="friends" element={<FriendsPage />} />

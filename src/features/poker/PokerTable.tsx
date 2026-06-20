@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { PokerCard } from './PokerCard';
+import type { CardSize } from '@/components/PlayingCardFace';
 import type { PokerView, PokerPlayerView } from './types';
 import { CoinIcon } from '@/components/CoinIcon';
 import { formatAmount } from '@/lib/format';
@@ -28,6 +29,20 @@ const STREET_LABEL: Record<string, string> = {
   river: 'River',
   showdown: 'Showdown',
 };
+
+/** English hand names (from the engine) → Português. */
+const HAND_PT: Record<string, string> = {
+  'High card': 'Carta alta',
+  Pair: 'Par',
+  'Two pair': 'Dois pares',
+  'Three of a kind': 'Trio',
+  Straight: 'Sequência',
+  Flush: 'Cor',
+  'Full house': 'Full',
+  'Four of a kind': 'Póquer',
+  'Straight flush': 'Straight flush',
+};
+const handPt = (h: string | undefined) => (h ? HAND_PT[h] ?? h : undefined);
 
 /** Two-letter monogram from a display name. */
 function initials(name: string): string {
@@ -77,21 +92,25 @@ interface SeatProps {
   isButton: boolean;
   /** Bumped each new hand so dealt cards re-mount and animate in. */
   dealKey: number;
+  /** Hole-card size; the hero gets bigger, easier-to-read cards. */
+  cardSize?: CardSize;
+  /** Made hand shown at showdown (already translated), e.g. "Full". */
+  handLabel?: string | undefined;
 }
 
 /** Compact seat used on the oval (avatar + name/stack + hole cards). */
-function OvalSeat({ p, isTurn, isYou, isButton, dealKey }: SeatProps) {
+function OvalSeat({ p, isTurn, isYou, isButton, dealKey, cardSize = 'sm', handLabel }: SeatProps) {
   const folded = p.status === 'folded' || p.status === 'out';
   return (
-    <div className={`relative flex w-[112px] flex-col items-center ${folded ? 'opacity-50' : ''}`}>
+    <div className={`relative flex ${isYou ? 'w-[136px]' : 'w-[112px]'} flex-col items-center ${folded ? 'opacity-50' : ''}`}>
       {isButton && <DealerButton className="absolute -right-1 -top-1 z-10 h-5 w-5 text-[10px]" />}
       {/* Hole cards sit just behind the plate (mucked when folded) */}
-      <div className="mb-[-10px] flex gap-0.5">
+      <div className="mb-[-6px] flex gap-1">
         {folded || p.hole.length === 0
           ? null
           : p.hole.map((c, i) => (
               <span key={`${dealKey}-${i}`} className="animate-deal" style={{ animationDelay: `${i * 90}ms` }}>
-                <PokerCard card={c} small />
+                <PokerCard card={c} size={cardSize} />
               </span>
             ))}
       </div>
@@ -115,15 +134,21 @@ function OvalSeat({ p, isTurn, isYou, isButton, dealKey }: SeatProps) {
           </span>
         </span>
       </div>
-      <span className="mt-0.5 font-sans text-[9px] uppercase tracking-[0.14em] text-muted-2">
-        {STATUS_LABEL[p.status] ?? p.status}
-      </span>
+      {handLabel ? (
+        <span className="mt-0.5 rounded-full bg-gold/15 px-2 py-0.5 font-sans text-[10px] font-semibold uppercase tracking-[0.1em] text-gold">
+          {handLabel}
+        </span>
+      ) : (
+        <span className="mt-0.5 font-sans text-[9px] uppercase tracking-[0.14em] text-muted-2">
+          {STATUS_LABEL[p.status] ?? p.status}
+        </span>
+      )}
     </div>
   );
 }
 
 /** Fuller seat used in the mobile stacked layout. */
-function StackedSeat({ p, isTurn, isYou, isButton, dealKey }: SeatProps) {
+function StackedSeat({ p, isTurn, isYou, isButton, dealKey, cardSize = 'sm', handLabel }: SeatProps) {
   const folded = p.status === 'folded' || p.status === 'out';
   return (
     <div
@@ -148,7 +173,11 @@ function StackedSeat({ p, isTurn, isYou, isButton, dealKey }: SeatProps) {
         </div>
         <span className="flex items-center gap-1 font-mono text-[11px] text-muted">
           <CoinIcon className="h-3 w-3" /> {formatAmount(p.stack)}
-          <span className="ml-1 text-muted-2">· {STATUS_LABEL[p.status] ?? p.status}</span>
+          {handLabel ? (
+            <span className="ml-1 font-sans font-semibold uppercase tracking-wide text-gold">· {handLabel}</span>
+          ) : (
+            <span className="ml-1 text-muted-2">· {STATUS_LABEL[p.status] ?? p.status}</span>
+          )}
         </span>
       </div>
       <div className="flex items-center gap-2">
@@ -159,7 +188,7 @@ function StackedSeat({ p, isTurn, isYou, isButton, dealKey }: SeatProps) {
           ) : (
             p.hole.map((c, i) => (
               <span key={`${dealKey}-${i}`} className="animate-deal" style={{ animationDelay: `${i * 90}ms` }}>
-                <PokerCard card={c} small />
+                <PokerCard card={c} size={cardSize} />
               </span>
             ))
           )}
@@ -213,11 +242,11 @@ interface PokerTableProps {
  * to spread evenly around the top arc, leaving the bottom for the hero.
  */
 const RAIL: Record<number, { left: number; top: number }[]> = {
-  1: [{ left: 50, top: 9 }],
-  2: [{ left: 21, top: 16 }, { left: 79, top: 16 }],
-  3: [{ left: 15, top: 30 }, { left: 50, top: 8 }, { left: 85, top: 30 }],
-  4: [{ left: 12, top: 36 }, { left: 35, top: 10 }, { left: 65, top: 10 }, { left: 88, top: 36 }],
-  5: [{ left: 10, top: 40 }, { left: 29, top: 12 }, { left: 50, top: 7 }, { left: 71, top: 12 }, { left: 90, top: 40 }],
+  1: [{ left: 50, top: 17 }],
+  2: [{ left: 22, top: 21 }, { left: 78, top: 21 }],
+  3: [{ left: 16, top: 33 }, { left: 50, top: 16 }, { left: 84, top: 33 }],
+  4: [{ left: 13, top: 39 }, { left: 35, top: 18 }, { left: 65, top: 18 }, { left: 87, top: 39 }],
+  5: [{ left: 11, top: 43 }, { left: 30, top: 20 }, { left: 50, top: 15 }, { left: 70, top: 20 }, { left: 89, top: 43 }],
 };
 
 export function PokerTable({ view, youId, myTurn, resultBanner }: PokerTableProps) {
@@ -225,6 +254,9 @@ export function PokerTable({ view, youId, myTurn, resultBanner }: PokerTableProp
   const you = view.players.find((p) => p.id === youId);
   const street = STREET_LABEL[view.street] ?? view.street;
   const rail = RAIL[Math.min(5, Math.max(1, opponents.length))] ?? RAIL[5]!;
+
+  // At showdown the engine reveals each contender's made hand — show its name.
+  const handById = new Map((view.result?.reveal ?? []).map((r) => [r.id, handPt(r.hand)]));
 
   // Bump a deal id whenever a fresh hand begins, so dealt cards re-mount and
   // animate in (keyed by index alone they would never re-run the animation).
@@ -239,7 +271,7 @@ export function PokerTable({ view, youId, myTurn, resultBanner }: PokerTableProp
     <div>
       {/* ---- Oval table (tablet / desktop) ---- */}
       <div className="hidden sm:block">
-        <div className="felt felt-rail relative mx-auto aspect-[16/10] w-full max-w-3xl overflow-hidden rounded-[48%/60%] p-6">
+        <div className="felt felt-rail relative mx-auto aspect-[16/11] w-full max-w-3xl overflow-hidden rounded-[48%/60%] p-6">
           {/* Inner rail line for depth */}
           <div className="pointer-events-none absolute inset-4 rounded-[48%/60%] border border-gold/10" aria-hidden />
           <div className="pointer-events-none absolute inset-8 rounded-[48%/60%] border border-black/20" aria-hidden />
@@ -261,7 +293,7 @@ export function PokerTable({ view, youId, myTurn, resultBanner }: PokerTableProp
                 className="absolute -translate-x-1/2 -translate-y-1/2"
                 style={{ left: `${pos.left}%`, top: `${pos.top}%` }}
               >
-                <OvalSeat p={p} isTurn={view.toActId === p.id && !view.handOver} isYou={false} isButton={view.button === p.id} dealKey={dealKey} />
+                <OvalSeat p={p} isTurn={view.toActId === p.id && !view.handOver} isYou={false} isButton={view.button === p.id} dealKey={dealKey} handLabel={handById.get(p.id)} />
                 {p.committed > 0 && (
                   <div className="absolute left-1/2 top-full mt-1 -translate-x-1/2">
                     <ChipStack amount={p.committed} />
@@ -279,7 +311,7 @@ export function PokerTable({ view, youId, myTurn, resultBanner }: PokerTableProp
                   <ChipStack amount={you.committed} />
                 </div>
               )}
-              <OvalSeat p={you} isTurn={myTurn} isYou isButton={view.button === youId} dealKey={dealKey} />
+              <OvalSeat p={you} isTurn={myTurn} isYou isButton={view.button === youId} dealKey={dealKey} cardSize="lg" handLabel={handById.get(you.id)} />
             </div>
           )}
         </div>
@@ -297,6 +329,7 @@ export function PokerTable({ view, youId, myTurn, resultBanner }: PokerTableProp
                 isYou={false}
                 isButton={view.button === p.id}
                 dealKey={dealKey}
+                handLabel={handById.get(p.id)}
               />
             ))}
           </div>
@@ -308,7 +341,7 @@ export function PokerTable({ view, youId, myTurn, resultBanner }: PokerTableProp
             {resultBanner}
           </div>
 
-          {you && <StackedSeat p={you} isTurn={myTurn} isYou isButton={view.button === youId} dealKey={dealKey} />}
+          {you && <StackedSeat p={you} isTurn={myTurn} isYou isButton={view.button === youId} dealKey={dealKey} cardSize="md" handLabel={handById.get(you.id)} />}
         </div>
       </div>
     </div>

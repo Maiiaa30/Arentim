@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { colorOf, betCellKey, type RouletteBetKind } from './roulette';
+import { Chip } from './Chip';
 
 interface BettingBoardProps {
   onPlace: (kind: RouletteBetKind, selection: number | null, numbers?: number[]) => void;
@@ -24,14 +25,14 @@ const numberBg: Record<string, string> = {
 };
 
 export function BettingBoard({ onPlace, stakes = {}, bonus, disabled }: BettingBoardProps) {
-  const badge = (keyStr: string, pos = '-right-1 -top-1') => {
+  // A placed bet shows as a chip disc sitting on the cell (like a real table),
+  // rather than a number. Centred by default; handles pass their own position.
+  const badge = (keyStr: string, pos = 'left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2') => {
     const v = stakes[keyStr];
     if (!v) return null;
     return (
-      <span
-        className={`pointer-events-none absolute z-40 flex min-w-[16px] items-center justify-center rounded-full border border-gold-light bg-gold px-1 font-mono text-[8px] font-bold leading-none text-bg shadow-[0_1px_3px_rgba(0,0,0,0.5)] ${pos}`}
-      >
-        {v}
+      <span className={`pointer-events-none absolute z-40 drop-shadow-[0_2px_4px_rgba(0,0,0,0.6)] ${pos}`}>
+        <Chip value={v} size={26} />
       </span>
     );
   };

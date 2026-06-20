@@ -106,13 +106,13 @@ export function BlackjackTable({ view, inPlay, pendingStake, children }: Blackja
             <TotalBadge total={view.dealer_total} />
           )}
         </div>
-        <div className="flex min-h-[112px] items-center justify-center gap-2 sm:gap-2.5">
+        <div className="flex min-h-[140px] items-center justify-center gap-2 sm:gap-2.5">
           {view ? (
             <>
               {dealerCards.map((c, i) => (
-                <TableCard key={i} card={c} i={i} size="lg" />
+                <TableCard key={i} card={c} i={i} size="xl" />
               ))}
-              {view.dealer_hidden && <TableCard card={null} i={dealerCards.length} size="lg" />}
+              {view.dealer_hidden && <TableCard card={null} i={dealerCards.length} size="xl" />}
             </>
           ) : (
             <span className="font-sans text-sm text-emerald-100/30">À espera da jogada</span>
@@ -145,7 +145,7 @@ export function BlackjackTable({ view, inPlay, pendingStake, children }: Blackja
             {view.hands.map((hand, i) => {
               const isActive = inPlay && i === view.active;
               const oc = complete ? outcome[hand.status] : undefined;
-              const cardSize: CardSize = view.hands.length > 1 ? 'md' : 'lg';
+              const cardSize: CardSize = view.hands.length > 1 ? 'lg' : 'xl';
               return (
                 <div
                   key={i}
@@ -165,7 +165,7 @@ export function BlackjackTable({ view, inPlay, pendingStake, children }: Blackja
                     )}
                     <TotalBadge total={hand.total} status={complete ? hand.status : undefined} />
                   </div>
-                  <div className="flex min-h-[100px] items-center justify-center gap-2">
+                  <div className="flex min-h-[136px] items-center justify-center gap-2">
                     {hand.cards.map((c, j) => (
                       <TableCard key={j} card={c} i={j} size={cardSize} />
                     ))}

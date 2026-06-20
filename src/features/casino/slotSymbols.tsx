@@ -155,6 +155,23 @@ export const SYMBOL_SVG: Record<string, string> = {
     <circle cx="50" cy="26" r="5" fill="#e0555f"/>
     <circle cx="24" cy="32" r="4" fill="#5aa9e6"/><circle cx="76" cy="32" r="4" fill="#5aa9e6"/>
     <circle cx="34" cy="76" r="3" fill="#cc2b3c"/><circle cx="50" cy="76" r="3" fill="#3fd07a"/><circle cx="66" cy="76" r="3" fill="#cc2b3c"/>`,
+  pote: `
+    <defs><linearGradient id="trf" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff0b8"/><stop offset="55%" stop-color="#e7b73d"/><stop offset="100%" stop-color="#a9802a"/></linearGradient></defs>
+    <path d="M30 22 C16 22 14 40 28 44" fill="none" stroke="#C9A24B" stroke-width="5" stroke-linecap="round"/>
+    <path d="M70 22 C84 22 86 40 72 44" fill="none" stroke="#C9A24B" stroke-width="5" stroke-linecap="round"/>
+    <path d="M30 18 L70 18 L70 34 C70 51 61 60 50 60 C39 60 30 51 30 34 Z" fill="url(#trf)" stroke="#7a5e1f" stroke-width="2"/>
+    <rect x="45" y="60" width="10" height="14" fill="#a9802a"/>
+    <path d="M34 80 L66 80 L61 73 L39 73 Z" fill="url(#trf)" stroke="#7a5e1f" stroke-width="2"/>
+    <rect x="31" y="80" width="38" height="7" rx="2" fill="#C9A24B" stroke="#7a5e1f" stroke-width="1.5"/>
+    <path d="M43 30 L51 46 L42 41 Z" fill="#fff6d8" opacity="0.6"/>`,
+  clover: `
+    <defs><radialGradient id="clv" cx="40%" cy="35%" r="78%"><stop offset="0" stop-color="#86e592"/><stop offset="60%" stop-color="#2fae5a"/><stop offset="100%" stop-color="#177a3a"/></radialGradient></defs>
+    <path d="M50 56 C53 70 55 80 60 90 L40 90 C45 80 47 70 50 56 Z" fill="#177a3a"/>
+    <g fill="url(#clv)" stroke="#136634" stroke-width="1.5">
+      <circle cx="38" cy="40" r="15"/><circle cx="62" cy="40" r="15"/>
+      <circle cx="38" cy="60" r="15"/><circle cx="62" cy="60" r="15"/>
+    </g>
+    <ellipse cx="40" cy="38" rx="4" ry="6" fill="#d6f5d8" opacity="0.6"/>`,
 };
 
 /**
@@ -174,10 +191,14 @@ export function SymbolArt({
   const uid = useId().replace(/[^a-zA-Z0-9]/g, '');
   const raw = SYMBOL_SVG[id];
   if (!raw) {
+    // Render the emoji inside the same 0 0 100 100 viewBox as the real symbols
+    // so it scales to its box (a fixed font-size overflowed small cells).
     return (
-      <span className={className} style={{ display: 'grid', placeItems: 'center', fontSize: '2.5em' }} aria-hidden>
-        {glyph ?? '❔'}
-      </span>
+      <svg viewBox="0 0 100 100" className={className} xmlns="http://www.w3.org/2000/svg" aria-hidden>
+        <text x="50" y="54" textAnchor="middle" dominantBaseline="central" fontSize="68">
+          {glyph ?? '❔'}
+        </text>
+      </svg>
     );
   }
   const inner = raw
