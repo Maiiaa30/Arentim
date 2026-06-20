@@ -33,21 +33,16 @@ export function PokerPage() {
 
   const [view, setView] = useState<PokerView | null>(null);
   const [buyIn, setBuyIn] = useState(200);
-  const [botCount, setBotCount] = useState(2);
+  const [botCount, setBotCount] = useState(5); // default: a full table
   const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
   const [raiseTo, setRaiseTo] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [animating, setAnimating] = useState(false);
 
-  // Resume an in-progress table exactly once (on first load). Without the guard
-  // the resume would re-populate the table the instant you leave it.
-  const resumeApplied = useRef(false);
-  useEffect(() => {
-    if (!resumeApplied.current && resumed?.view) {
-      resumeApplied.current = true;
-      setView(resumed.view);
-    }
-  }, [resumed]);
+  // An in-progress table from a previous visit, if any. We DON'T auto-jump into
+  // it — the lobby offers a "Retomar" button instead, so opening this page always
+  // lets you set up a fresh game rather than silently dropping you into a hand.
+  const resumable = view ? null : resumed?.view ?? null;
 
   const balance = profile?.balance ?? 0;
   const you = view?.players.find((p) => p.id === 'you');
@@ -107,7 +102,6 @@ export function PokerPage() {
     setError(null);
     try {
       const res = await fn();
-      resumeApplied.current = true; // we now own the live view; don't let resume override it
       const trail = res.trail ?? [];
       if (trail.length === 0) {
         setView(res.view);
@@ -130,6 +124,11 @@ export function PokerPage() {
   async function onSit() {
     if (buyIn > balance) return setError('Saldo insuficiente para essa entrada.');
     if (buyIn < 100) return setError('A entrada mínima é 100.');
+    // Discard any table left over from a previous visit (cashing its chips back)
+    // so the server lets us sit at a fresh one.
+    if (resumable) {
+      try { await leave.mutateAsync(); } catch { /* nothing to leave */ }
+    }
     await run(() => sit.mutateAsync({ buyIn, botCount, difficulty }));
   }
   async function onLeave() {
@@ -156,6 +155,12 @@ export function PokerPage() {
             </p>
           </div>
         </div>
+        {resumable && (
+          <div className="card mx-auto flex max-w-md items-center justify-between gap-3 p-4">
+            <p className="font-sans text-sm text-muted">Tem uma mesa por terminar.</p>
+            <Button variant="secondary" onClick={() => setView(resumable)} disabled={busy}>Retomar mesa</Button>
+          </div>
+        )}
         <div className="card mx-auto max-w-md space-y-5 p-6">
           <div>
             <label htmlFor="buyin" className="mb-1.5 block font-sans text-[10.5px] font-medium uppercase tracking-[0.18em] text-muted-2">

@@ -52,7 +52,7 @@ export function PrivatePokerPage() {
   const [code, setCode] = useState('');
   const [joinCode, setJoinCode] = useState('');
   const [buyIn, setBuyIn] = useState(200);
-  const [botCount, setBotCount] = useState(5);
+  const [botCount, setBotCount] = useState(MAX_BOTS); // default: a full table
   const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
   const [raiseTo, setRaiseTo] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -174,7 +174,8 @@ export function PrivatePokerPage() {
                 ))}
               </div>
               <p className="mt-1.5 font-sans text-[11px] text-muted-2">
-                {botCount} bot{botCount === 1 ? '' : 's'} + você = mesa de {botCount + 1}. Os amigos entram nos lugares livres.
+                {botCount} bot{botCount === 1 ? '' : 's'} + você = mesa de {botCount + 1}.{' '}
+                {botCount >= MAX_BOTS ? 'Mesa cheia — reduza os bots para deixar lugares a amigos.' : 'Os amigos entram nos lugares livres.'}
               </p>
             </div>
 

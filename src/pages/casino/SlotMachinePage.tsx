@@ -413,7 +413,9 @@ function MachineScreen({ m }: { m: SlotMachineMeta }) {
                   <SymbolArt id={row.id} glyph={row.glyph} className="h-6 w-6" />
                 </span>
                 {isJackpot ? (
-                  <span className="font-display text-xs font-bold" style={{ color: hex }}>JACKPOT ?</span>
+                  <span className="font-display text-xs font-bold" style={{ color: hex }}>
+                    {m.progressive ? 'JACKPOT' : 'JACKPOT ?'}
+                  </span>
                 ) : (
                   <span className="font-mono text-xs text-text">{row.mult}×</span>
                 )}
@@ -422,7 +424,9 @@ function MachineScreen({ m }: { m: SlotMachineMeta }) {
           })}
         </div>
         <p className="mt-3 font-sans text-[11px] leading-relaxed text-muted-2">
-          Três iguais pagam o prémio cheio; alguns pares também pagam. O jackpot é o segredo da casa.
+          {m.progressive
+            ? 'Três iguais pagam o prémio cheio; alguns pares também pagam. Os três símbolos do jackpot levam o pote inteiro.'
+            : 'Três iguais pagam o prémio cheio; alguns pares também pagam. O jackpot é o segredo da casa.'}
         </p>
       </div>
     </div>
