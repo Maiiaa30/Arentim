@@ -15,7 +15,9 @@ export type GameArtKind =
   | 'dice'
   | 'sobedesce'
   | 'wheel'
-  | 'crash';
+  | 'crash'
+  | 'chest'
+  | 'highlow';
 
 function Roulette() {
   return (
@@ -170,6 +172,28 @@ function Crash() {
   );
 }
 
+function Chest() {
+  return (
+    <div className="grid h-full grid-cols-3 place-items-center gap-1 px-6">
+      {[0, 1, 2, 3, 4, 5].map((i) => (
+        <span key={i} className="animate-floaty text-xl" style={{ animationDelay: `${i * -0.3}s` }}>
+          {i === 2 ? '💰' : '🧰'}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function HighLow() {
+  return (
+    <div className="flex h-full items-center justify-center gap-2">
+      <span className="font-display text-2xl font-bold text-positive">▲</span>
+      <div className="animate-floaty flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-[#f7efe0] to-[#cdbf9f] text-2xl">🎲</div>
+      <span className="font-display text-2xl font-bold text-negative">▼</span>
+    </div>
+  );
+}
+
 const SCENES: Record<GameArtKind, () => JSX.Element> = {
   roulette: Roulette,
   blackjack: Blackjack,
@@ -181,6 +205,8 @@ const SCENES: Record<GameArtKind, () => JSX.Element> = {
   sobedesce: SobeDesce,
   wheel: Wheel,
   crash: Crash,
+  chest: Chest,
+  highlow: HighLow,
 };
 
 export function GameArt({ kind }: { kind: GameArtKind }) {

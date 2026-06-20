@@ -4,12 +4,23 @@ import { useProfile } from '@/features/profile/useProfile';
 import { useHiloDeal, useHiloBet } from '@/features/casino/useQuickGames';
 import { StakeChips } from '@/features/casino/StakeChips';
 import { WinCelebration } from '@/features/casino/WinCelebration';
-import type { HiLoPick } from '@/features/casino/miniGames';
+import { hiloAdaptedMult, type HiLoPick } from '@/features/casino/miniGames';
 import type { HiloDealResult } from '@/types/db';
 import { Eyebrow } from '@/components/ui/primitives';
 import { formatAmount } from '@/lib/format';
 
 const RUNGS = [13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1];
+
+/** Round meta (current rung + its adapted odds) for a starting number. */
+function roundFor(n: number): HiloDealResult {
+  return {
+    current: n,
+    sobe_count: 13 - n,
+    desce_count: n - 1,
+    sobe_mult: hiloAdaptedMult(13 - n),
+    desce_mult: hiloAdaptedMult(n - 1),
+  };
+}
 
 export function SobeDescePage() {
   const { data: profile } = useProfile();
@@ -73,8 +84,9 @@ export function SobeDescePage() {
           setRolling(false);
           setResult({ won: res.won, payout: res.payout, next: res.next, mult: res.mult });
           if (res.won) setSpinId((n) => n + 1);
-          // Deal the next random number after a beat.
-          timers.current.push(window.setTimeout(() => void dealNew(), 1700));
+          // Chain: the drawn number becomes the next round's starting number, so
+          // the next bet is always against a live number (no re-deal gap).
+          setRound(roundFor(res.next));
         }
       }, 130);
     } catch (e) {

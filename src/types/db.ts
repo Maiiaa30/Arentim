@@ -299,6 +299,25 @@ export type HiloDealResult = {
   desce_mult: number;
 };
 
+/** Result of the play_chest RPC (treasure chest picker). */
+export type ChestResult = {
+  index: number;
+  multiplier: number;
+  layout: number[];
+  payout: number;
+  balance: number;
+  replayed: boolean;
+};
+
+/** Result of the play_highlow RPC (single-die High/Low). */
+export type HighLowResult = {
+  die: number;
+  won: boolean;
+  payout: number;
+  balance: number;
+  replayed: boolean;
+};
+
 /** Result of a settled Sobe e Desce bet. */
 export type HiloBetResult = {
   current: number;
@@ -523,6 +542,14 @@ export type Database = {
       play_dice: {
         Args: { p_stake: number; p_pick: string; p_idempotency_key: string | null };
         Returns: DiceResult;
+      };
+      play_chest: {
+        Args: { p_stake: number; p_pick: number; p_idempotency_key: string | null };
+        Returns: ChestResult;
+      };
+      play_highlow: {
+        Args: { p_stake: number; p_pick: string; p_idempotency_key: string | null };
+        Returns: HighLowResult;
       };
       hilo_deal: {
         Args: Record<string, never>;

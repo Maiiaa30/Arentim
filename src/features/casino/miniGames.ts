@@ -55,6 +55,26 @@ export function crashWon(target: number, crash: number): boolean {
   return target <= crash;
 }
 
+export type HighLowPick = 'high' | 'low' | '1' | '2' | '3' | '4' | '5' | '6';
+
+/** Single-die High/Low multiplier. High = 4-6, Low = 1-3 (1.9×); exact = 5.7×. */
+export function highlowMultiplier(pick: HighLowPick, die: number): number {
+  if (pick === 'high' && die >= 4) return 1.9;
+  if (pick === 'low' && die <= 3) return 1.9;
+  if (/^[1-6]$/.test(pick) && die === Number(pick)) return 5.7;
+  return 0;
+}
+
+/**
+ * The 9 treasure-chest values, shuffled server-side each round. Mostly empty
+ * with one 5×. Mirrors v_vals in 20260621100000_chest_highlow.sql. RTP ≈ 0.94.
+ */
+export const CHEST_VALUES: readonly number[] = [0, 0, 0, 0, 0.5, 0.5, 1, 1.5, 5];
+
+export function chestRtp(): number {
+  return CHEST_VALUES.reduce((a, b) => a + b, 0) / CHEST_VALUES.length;
+}
+
 /** Distinct accent colour per wheel multiplier, for the wheel rendering. */
 export function wheelColor(mult: number): string {
   if (mult === 0) return '#1a1712'; // blank

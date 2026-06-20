@@ -14,8 +14,10 @@ interface GameTile {
 
 const NEW: GameTile[] = [
   { to: '/casino/crash', name: 'Crash', desc: 'Saia antes do foguetão rebentar. Multiplicador sem limite.', art: 'crash', badge: 'Novo', tone: 'from-chip-ruby/40 to-bg', range: '5 – 100 tós' },
-  { to: '/casino/wheel', name: 'Roda da Sorte', desc: 'Rode e leve o multiplicador onde a seta parar — até 10×.', art: 'wheel', badge: 'Novo', tone: 'from-gold/30 to-bg', range: '5 – 100 tós' },
-  { to: '/casino/sobe-e-desce', name: 'Sobe e Desce', desc: 'A marca sobe a escada. Aposte se passa dos sete — ou para onde vai.', art: 'sobedesce', badge: 'Novo', tone: 'from-positive-felt/40 to-bg', range: '5 – 100 tós' },
+  { to: '/casino/wheel', name: 'Roda da Sorte', desc: 'Rode e leve o multiplicador onde a seta parar — até 5×.', art: 'wheel', badge: 'Novo', tone: 'from-gold/30 to-bg', range: '5 – 100 tós' },
+  { to: '/casino/chest', name: 'Baú do Tesouro', desc: 'Nove baús, um esconde 5×. Escolha e abra.', art: 'chest', badge: 'Novo', tone: 'from-gold/30 to-bg', range: '5 – 100 tós' },
+  { to: '/casino/maior-menor', name: 'Maior ou Menor', desc: 'Um dado. Maior, menor, ou acerte no número a 5.7×.', art: 'highlow', badge: 'Novo', tone: 'from-chip-navy/40 to-bg', range: '5 – 100 tós' },
+  { to: '/casino/sobe-e-desce', name: 'Sobe e Desce', desc: 'Maior ou menor que o número — as probabilidades adaptam-se.', art: 'sobedesce', badge: 'Novo', tone: 'from-positive-felt/40 to-bg', range: '5 – 100 tós' },
   { to: '/casino/dice', name: 'Dados', desc: 'Dois dados. Mais de 7, menos de 7, ou certo no sete.', art: 'dice', badge: 'Novo', tone: 'from-chip-navy/40 to-bg', range: '5 – 100 tós' },
 ];
 

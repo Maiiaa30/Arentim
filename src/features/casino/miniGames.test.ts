@@ -2,6 +2,9 @@ import { describe, it, expect } from 'vitest';
 import {
   diceMultiplier,
   hiloAdaptedMult,
+  highlowMultiplier,
+  CHEST_VALUES,
+  chestRtp,
   WHEEL,
   wheelMultiplier,
   wheelRtp,
@@ -55,6 +58,29 @@ describe('roda da sorte (wheel)', () => {
     const rtp = wheelRtp();
     expect(rtp).toBeGreaterThan(0.9);
     expect(rtp).toBeLessThan(0.97);
+  });
+});
+
+describe('maior ou menor (high/low die)', () => {
+  it('High wins 4-6, Low wins 1-3 at 1.9x; exact pays 5.7x', () => {
+    expect(highlowMultiplier('high', 4)).toBe(1.9);
+    expect(highlowMultiplier('high', 3)).toBe(0);
+    expect(highlowMultiplier('low', 3)).toBe(1.9);
+    expect(highlowMultiplier('low', 4)).toBe(0);
+    expect(highlowMultiplier('5', 5)).toBe(5.7);
+    expect(highlowMultiplier('5', 4)).toBe(0);
+  });
+  it('keeps a house edge', () => {
+    expect(0.5 * 1.9).toBeLessThan(1); // high/low EV
+    expect((1 / 6) * 5.7).toBeLessThan(1); // exact EV
+  });
+});
+
+describe('baú do tesouro (chest)', () => {
+  it('has 9 chests and a house edge (RTP 0.9–0.97)', () => {
+    expect(CHEST_VALUES).toHaveLength(9);
+    expect(chestRtp()).toBeGreaterThan(0.9);
+    expect(chestRtp()).toBeLessThan(0.97);
   });
 });
 

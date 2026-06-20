@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/features/auth/AuthProvider';
 import { profileKey } from '@/features/profile/useProfile';
 import type { CoinSide } from './coinflip';
-import type { DicePick, HiLoPick } from './miniGames';
+import type { DicePick, HiLoPick, HighLowPick } from './miniGames';
 import type {
   CoinflipResult,
   SlotsResult,
@@ -13,6 +13,8 @@ import type {
   WheelResult,
   CrashStartResult,
   CrashSettleResult,
+  ChestResult,
+  HighLowResult,
 } from '@/types/db';
 
 function useInvalidateWallet() {
@@ -108,6 +110,40 @@ export function useWheel() {
     mutationFn: async (stake: number): Promise<WheelResult> => {
       const { data, error } = await supabase.rpc('play_wheel', {
         p_stake: stake,
+        p_idempotency_key: crypto.randomUUID(),
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: invalidate,
+  });
+}
+
+/** Baú do Tesouro: pick a chest (0-8); server reveals its multiplier. */
+export function useChest() {
+  const invalidate = useInvalidateWallet();
+  return useMutation({
+    mutationFn: async (input: { stake: number; pick: number }): Promise<ChestResult> => {
+      const { data, error } = await supabase.rpc('play_chest', {
+        p_stake: input.stake,
+        p_pick: input.pick,
+        p_idempotency_key: crypto.randomUUID(),
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: invalidate,
+  });
+}
+
+/** Maior ou Menor: single die, bet High/Low or an exact number. */
+export function useHighLow() {
+  const invalidate = useInvalidateWallet();
+  return useMutation({
+    mutationFn: async (input: { stake: number; pick: HighLowPick }): Promise<HighLowResult> => {
+      const { data, error } = await supabase.rpc('play_highlow', {
+        p_stake: input.stake,
+        p_pick: input.pick,
         p_idempotency_key: crypto.randomUUID(),
       });
       if (error) throw error;

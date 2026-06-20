@@ -24,6 +24,8 @@ const DicePage = lazy(() => named(import('@/pages/casino/DicePage'), 'DicePage')
 const SobeDescePage = lazy(() => named(import('@/pages/casino/SobeDescePage'), 'SobeDescePage'));
 const WheelPage = lazy(() => named(import('@/pages/casino/WheelPage'), 'WheelPage'));
 const CrashPage = lazy(() => named(import('@/pages/casino/CrashPage'), 'CrashPage'));
+const ChestPage = lazy(() => named(import('@/pages/casino/ChestPage'), 'ChestPage'));
+const HighLowPage = lazy(() => named(import('@/pages/casino/HighLowPage'), 'HighLowPage'));
 const SportsbookPage = lazy(() => named(import('@/pages/SportsbookPage'), 'SportsbookPage'));
 const ScoresPage = lazy(() => named(import('@/pages/ScoresPage'), 'ScoresPage'));
 const OnzePage = lazy(() => named(import('@/pages/OnzePage'), 'OnzePage'));
@@ -61,6 +63,8 @@ export default function App() {
             <Route path="casino/sobe-e-desce" element={<SobeDescePage />} />
             <Route path="casino/wheel" element={<WheelPage />} />
             <Route path="casino/crash" element={<CrashPage />} />
+            <Route path="casino/chest" element={<ChestPage />} />
+            <Route path="casino/maior-menor" element={<HighLowPage />} />
             <Route path="sportsbook" element={<SportsbookPage />} />
             <Route path="resultados" element={<ScoresPage />} />
             <Route path="onze" element={<OnzePage />} />
