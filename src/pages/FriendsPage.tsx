@@ -4,6 +4,7 @@ import { useProfile } from '@/features/profile/useProfile';
 import { usePresence } from '@/features/friends/usePresence';
 import {
   useLeaderboard,
+  useSeasonLeaderboard,
   type LeaderboardMetric,
   type LeaderboardScope,
 } from '@/features/friends/useLeaderboard';
@@ -187,7 +188,11 @@ export function FriendsPage() {
 
   const [scope, setScope] = useState<LeaderboardScope>('global');
   const [metric, setMetric] = useState<LeaderboardMetric>('net');
-  const { data: board } = useLeaderboard(scope, metric);
+  const [period, setPeriod] = useState<'all' | 'season'>('all');
+  const { data: allBoard } = useLeaderboard(scope, metric);
+  const { data: seasonBoard } = useSeasonLeaderboard(scope, period === 'season');
+  const board = period === 'season' ? seasonBoard : allBoard;
+  const seasonLabel = new Date().toLocaleDateString('pt-PT', { month: 'long' });
 
   const incoming = requests?.filter((r) => r.direction === 'incoming') ?? [];
   const outgoing = requests?.filter((r) => r.direction === 'outgoing') ?? [];
@@ -307,37 +312,59 @@ export function FriendsPage() {
       {tab === 'leaderboard' && (
         <div className="space-y-3">
           <div className="flex flex-wrap items-center gap-2">
+            {([['all', 'Sempre'], ['season', `Temporada · ${seasonLabel}`]] as const).map(([p, label]) => (
+              <button key={p} onClick={() => setPeriod(p)}
+                className={`focus-ring inline-flex min-h-[40px] items-center rounded px-3 py-1 font-sans text-[11px] font-medium uppercase tracking-[0.12em] ${period === p ? 'bg-gold text-bg' : 'border border-border text-muted-2 hover:text-text'}`}>
+                {label}
+              </button>
+            ))}
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
             {(['global', 'friends'] as const).map((s) => (
               <button key={s} onClick={() => setScope(s)}
                 className={`focus-ring inline-flex min-h-[40px] items-center rounded px-3 py-1 font-sans text-[11px] font-medium uppercase tracking-[0.12em] ${scope === s ? 'bg-gold text-bg' : 'border border-border text-muted-2 hover:text-text'}`}>
                 {scopeLabel[s]}
               </button>
             ))}
-            <span className="mx-1 text-border">|</span>
-            {([['net', 'Resultado'], ['biggest_win', 'Maior ganho'], ['streak', 'Sequência']] as const).map(([m, label]) => (
-              <button key={m} onClick={() => setMetric(m)}
-                className={`focus-ring inline-flex min-h-[40px] items-center rounded px-3 py-1 font-sans text-[11px] font-medium uppercase tracking-[0.12em] ${metric === m ? 'bg-gold text-bg' : 'border border-border text-muted-2 hover:text-text'}`}>
-                {label}
-              </button>
-            ))}
+            {period === 'all' && (
+              <>
+                <span className="mx-1 text-border">|</span>
+                {([['net', 'Resultado'], ['biggest_win', 'Maior ganho'], ['streak', 'Sequência']] as const).map(([m, label]) => (
+                  <button key={m} onClick={() => setMetric(m)}
+                    className={`focus-ring inline-flex min-h-[40px] items-center rounded px-3 py-1 font-sans text-[11px] font-medium uppercase tracking-[0.12em] ${metric === m ? 'bg-gold text-bg' : 'border border-border text-muted-2 hover:text-text'}`}>
+                    {label}
+                  </button>
+                ))}
+              </>
+            )}
           </div>
+          {period === 'season' && (
+            <p className="font-sans text-[11px] text-muted-2">Resultado de jogo nesta temporada — reinicia no dia 1.</p>
+          )}
           <ol className="space-y-1">
-            {(board ?? []).map((row, i) => (
-              <li key={row.id}>
-                <button
-                  onClick={() => setSelected(row.id)}
-                  className={`focus-ring flex w-full items-center justify-between rounded px-3 py-2 text-left transition-colors hover:ring-1 hover:ring-gold/30 ${row.is_me ? 'bg-gold/10 ring-1 ring-gold/30' : 'bg-surface'}`}
-                >
-                  <span className="flex items-center gap-3">
-                    <span className="w-6 text-right font-mono tabular-nums text-muted-2">{i + 1}</span>
-                    <span className="font-sans text-sm text-text">{row.display_name}</span>
-                  </span>
-                  <span className="font-mono font-semibold tabular-nums text-gold">
-                    {metric === 'streak' ? `${row.value} 🔥` : formatAmount(row.value)}
-                  </span>
-                </button>
-              </li>
-            ))}
+            {(board ?? []).map((row, i) => {
+              const seasonVal = period === 'season';
+              return (
+                <li key={row.id}>
+                  <button
+                    onClick={() => setSelected(row.id)}
+                    className={`focus-ring flex w-full items-center justify-between rounded px-3 py-2 text-left transition-colors hover:ring-1 hover:ring-gold/30 ${row.is_me ? 'bg-gold/10 ring-1 ring-gold/30' : 'bg-surface'}`}
+                  >
+                    <span className="flex items-center gap-3">
+                      <span className="w-6 text-right font-mono tabular-nums text-muted-2">{i + 1}</span>
+                      <span className="font-sans text-sm text-text">{row.display_name}</span>
+                    </span>
+                    <span className={`font-mono font-semibold tabular-nums ${seasonVal ? (row.value >= 0 ? 'text-positive' : 'text-negative') : 'text-gold'}`}>
+                      {!seasonVal && metric === 'streak'
+                        ? `${row.value} 🔥`
+                        : seasonVal
+                          ? `${row.value >= 0 ? '+' : '−'}${formatAmount(Math.abs(row.value))}`
+                          : formatAmount(row.value)}
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
             {board && board.length === 0 && <p className="py-4 text-center font-sans text-sm text-muted-2">Ainda sem dados.</p>}
           </ol>
         </div>

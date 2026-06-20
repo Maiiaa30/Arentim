@@ -15,3 +15,16 @@ export function useLeaderboard(scope: LeaderboardScope, metric: LeaderboardMetri
     },
   });
 }
+
+/** Current-month gaming P&L ranking (resets on the 1st). */
+export function useSeasonLeaderboard(scope: LeaderboardScope, enabled: boolean) {
+  return useQuery({
+    queryKey: ['season-leaderboard', scope] as const,
+    enabled,
+    queryFn: async (): Promise<LeaderboardRow[]> => {
+      const { data, error } = await supabase.rpc('season_leaderboard', { p_scope: scope });
+      if (error) throw error;
+      return data;
+    },
+  });
+}

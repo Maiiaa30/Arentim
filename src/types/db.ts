@@ -861,6 +861,10 @@ export type Database = {
         Args: { p_scope: string; p_metric: string };
         Returns: LeaderboardRow[];
       };
+      season_leaderboard: {
+        Args: { p_scope: string };
+        Returns: LeaderboardRow[];
+      };
       onze_leaderboard: {
         Args: { p_scope: string };
         Returns: OnzeLeaderboardRow[];
