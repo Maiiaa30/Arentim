@@ -8,7 +8,8 @@ import type {
   CoinflipResult,
   SlotsResult,
   DiceResult,
-  HiLoResult,
+  HiloDealResult,
+  HiloBetResult,
   WheelResult,
   CrashStartResult,
   CrashSettleResult,
@@ -73,15 +74,25 @@ export function useDice() {
   });
 }
 
-/** Sobe e Desce: bet the rung climbs above / falls below / lands on 7. */
-export function useSobeDesce() {
+/** Sobe e Desce: deal a fresh random rung + its adapted odds. */
+export function useHiloDeal() {
+  return useMutation({
+    mutationFn: async (): Promise<HiloDealResult> => {
+      const { data, error } = await supabase.rpc('hilo_deal');
+      if (error) throw error;
+      return data;
+    },
+  });
+}
+
+/** Sobe e Desce: bet higher/lower than the dealt rung. */
+export function useHiloBet() {
   const invalidate = useInvalidateWallet();
   return useMutation({
-    mutationFn: async (input: { stake: number; pick: HiLoPick }): Promise<HiLoResult> => {
-      const { data, error } = await supabase.rpc('play_hilo', {
+    mutationFn: async (input: { stake: number; pick: HiLoPick }): Promise<HiloBetResult> => {
+      const { data, error } = await supabase.rpc('hilo_bet', {
         p_stake: input.stake,
         p_pick: input.pick,
-        p_idempotency_key: crypto.randomUUID(),
       });
       if (error) throw error;
       return data;

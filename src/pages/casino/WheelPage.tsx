@@ -9,8 +9,8 @@ import { Button } from '@/components/ui/Button';
 import { Eyebrow } from '@/components/ui/primitives';
 import { formatAmount } from '@/lib/format';
 
-const CARD = 88; // card width + gap, px
-const CARD_W = 80;
+const CARD = 124; // card width + gap, px
+const CARD_W = 112;
 const REPEAT = 14; // copies of the 24-segment wheel laid end to end
 const LAND_COPY = 11; // which copy the reel decelerates into
 const HOME_COPY = 6; // copy it resets to between spins (keeps it in range)
@@ -23,14 +23,14 @@ function Cell({ mult }: { mult: number }) {
   const dark = mult >= 5;
   return (
     <div
-      className="flex shrink-0 items-center justify-center rounded-md border border-black/30 font-display font-bold"
+      className="flex shrink-0 items-center justify-center rounded-lg border border-black/30 font-display font-bold shadow-[inset_0_1px_0_rgba(255,255,255,0.12)]"
       style={{
         width: CARD_W,
-        height: 88,
+        height: 120,
         marginRight: CARD - CARD_W,
         background: `linear-gradient(180deg, ${wheelColor(mult)}, ${wheelColor(mult)}cc)`,
         color: dark ? '#1a1712' : mult === 0 ? 'rgba(255,255,255,0.35)' : '#f3edde',
-        fontSize: mult >= 5 ? 22 : 18,
+        fontSize: mult >= 5 ? 32 : 26,
       }}
     >
       {mult === 0 ? '✕' : `${mult}×`}
@@ -103,16 +103,16 @@ export function WheelPage() {
         {result && result.payout > 0 && <WinCelebration key={winId} jackpot={result.mult >= 5} />}
 
         {/* Reel */}
-        <div ref={viewport} className="relative mx-auto h-[108px] w-full overflow-hidden rounded-lg border border-gold/20 bg-black/30">
+        <div ref={viewport} className="relative mx-auto h-[148px] w-full overflow-hidden rounded-lg border border-gold/20 bg-black/30">
           {/* Edge fades */}
           <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-16 bg-gradient-to-r from-bg to-transparent" />
           <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-16 bg-gradient-to-l from-bg to-transparent" />
           {/* Centre pointer + highlight */}
           <div
-            className={`pointer-events-none absolute left-1/2 top-1/2 z-20 h-[92px] -translate-x-1/2 -translate-y-1/2 rounded-md border-2 transition-colors ${
+            className={`pointer-events-none absolute left-1/2 top-1/2 z-20 h-[128px] -translate-x-1/2 -translate-y-1/2 rounded-lg border-2 transition-colors ${
               result && result.payout > 0 ? 'animate-glow border-gold' : 'border-gold/70'
             }`}
-            style={{ width: CARD_W + 6 }}
+            style={{ width: CARD_W + 8 }}
           />
           <div className="pointer-events-none absolute left-1/2 top-0 z-20 -translate-x-1/2">
             <div className="h-0 w-0 border-x-[8px] border-t-[12px] border-x-transparent border-t-gold" />

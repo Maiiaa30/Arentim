@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   diceMultiplier,
-  hiloMultiplier,
+  hiloAdaptedMult,
   WHEEL,
   wheelMultiplier,
   wheelRtp,
@@ -23,14 +23,22 @@ describe('dados (dice)', () => {
   });
 });
 
-describe('sobe e desce (hi-lo)', () => {
-  it('Sobe wins 8-13, Desce wins 1-6, Sete wins only on 7', () => {
-    expect(hiloMultiplier('sobe', 8)).toBe(2);
-    expect(hiloMultiplier('sobe', 7)).toBe(0);
-    expect(hiloMultiplier('desce', 6)).toBe(2);
-    expect(hiloMultiplier('desce', 7)).toBe(0);
-    expect(hiloMultiplier('sete', 7)).toBe(12);
-    expect(hiloMultiplier('sete', 8)).toBe(0);
+describe('sobe e desce (adaptive hi-lo)', () => {
+  it('pays more for the less likely side; impossible side pays 0', () => {
+    // On 8: 5 numbers above (Sobe), 7 below (Desce) — Sobe pays more.
+    const sobe8 = hiloAdaptedMult(13 - 8); // count 5
+    const desce8 = hiloAdaptedMult(8 - 1); // count 7
+    expect(sobe8).toBeGreaterThan(desce8);
+    expect(sobe8).toBeCloseTo(2.28, 2);
+    expect(desce8).toBeCloseTo(1.63, 2);
+    expect(hiloAdaptedMult(0)).toBe(0); // e.g. Sobe on 13
+  });
+  it('keeps a house edge (EV ≈ 0.95 on every count)', () => {
+    for (const count of [1, 3, 5, 7, 11, 12]) {
+      const ev = (count / 12) * hiloAdaptedMult(count);
+      expect(ev).toBeGreaterThan(0.93);
+      expect(ev).toBeLessThan(0.97);
+    }
   });
 });
 

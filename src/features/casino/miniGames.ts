@@ -5,7 +5,7 @@
  */
 
 export type DicePick = 'over' | 'under' | 'seven';
-export type HiLoPick = 'sobe' | 'desce' | 'sete';
+export type HiLoPick = 'sobe' | 'desce';
 
 /** Total-return multiplier for a dice bet given the rolled sum (2..12). */
 export function diceMultiplier(pick: DicePick, sum: number): number {
@@ -15,12 +15,14 @@ export function diceMultiplier(pick: DicePick, sum: number): number {
   return 0;
 }
 
-/** Total-return multiplier for a Sobe e Desce bet given the rung (1..13). */
-export function hiloMultiplier(pick: HiLoPick, n: number): number {
-  if (pick === 'sobe' && n >= 8) return 2;
-  if (pick === 'desce' && n <= 6) return 2;
-  if (pick === 'sete' && n === 7) return 12;
-  return 0;
+/**
+ * Sobe e Desce adapted multiplier: the next number is one of the 12 rungs other
+ * than the current, so a side with `count` winning rungs pays 12/count (×0.95
+ * for the house edge). Mirrors hilo_mult() in SQL. Returns 0 for an impossible
+ * side (count 0).
+ */
+export function hiloAdaptedMult(count: number): number {
+  return count > 0 ? Math.round((0.95 * 12) / count * 100) / 100 : 0;
 }
 
 /**

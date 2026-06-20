@@ -290,13 +290,23 @@ export type DiceResult = {
   replayed: boolean;
 };
 
-/** Result returned by the play_hilo (Sobe e Desce) RPC. */
-export type HiLoResult = {
-  number: number;
+/** A dealt Sobe e Desce round: the current rung + the two adapted multipliers. */
+export type HiloDealResult = {
+  current: number;
+  sobe_count: number;
+  desce_count: number;
+  sobe_mult: number;
+  desce_mult: number;
+};
+
+/** Result of a settled Sobe e Desce bet. */
+export type HiloBetResult = {
+  current: number;
+  next: number;
   won: boolean;
+  mult: number;
   payout: number;
   balance: number;
-  replayed: boolean;
 };
 
 /** Result returned by the play_wheel RPC. */
@@ -514,9 +524,13 @@ export type Database = {
         Args: { p_stake: number; p_pick: string; p_idempotency_key: string | null };
         Returns: DiceResult;
       };
-      play_hilo: {
-        Args: { p_stake: number; p_pick: string; p_idempotency_key: string | null };
-        Returns: HiLoResult;
+      hilo_deal: {
+        Args: Record<string, never>;
+        Returns: HiloDealResult;
+      };
+      hilo_bet: {
+        Args: { p_stake: number; p_pick: string };
+        Returns: HiloBetResult;
       };
       play_wheel: {
         Args: { p_stake: number; p_idempotency_key: string | null };
