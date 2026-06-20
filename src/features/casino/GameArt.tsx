@@ -173,12 +173,19 @@ function Crash() {
 
 function Chest() {
   return (
-    <div className="grid h-full grid-cols-3 place-items-center gap-1 px-6">
-      {[0, 1, 2, 3, 4, 5].map((i) => (
-        <span key={i} className="animate-floaty text-xl" style={{ animationDelay: `${i * -0.3}s` }}>
-          {i === 2 ? '💰' : '🧰'}
-        </span>
+    <div className="relative flex h-full items-end justify-center gap-3 pb-5">
+      {[0, 1, 2].map((i) => (
+        <span
+          key={i}
+          className="animate-floaty inline-block h-10 w-9"
+          style={{
+            animationDelay: `${i * -0.4}s`,
+            background: 'linear-gradient(180deg,#c9952f,#7a5320)',
+            clipPath: 'polygon(18% 0, 82% 0, 100% 100%, 0 100%)',
+          }}
+        />
       ))}
+      <span className="absolute bottom-3 text-base">💎</span>
     </div>
   );
 }

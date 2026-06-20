@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { PlayingCardFace } from '@/components/PlayingCardFace';
+import { PlayingCardFace, type CardSize } from '@/components/PlayingCardFace';
 import {
   deal,
   playTurn,
@@ -18,9 +18,9 @@ const NAMES = ['Você', 'Bruno', 'Parceiro', 'Inês'];
 const rng = () => Math.random();
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-/** A small face-up card. */
-function Card({ card, small }: { card: number; small?: boolean }) {
-  return <PlayingCardFace rank={cardLabel(card)} suit={suitOf(card)} size={small ? 'sm' : 'md'} />;
+/** A face-up card. */
+function Card({ card, size = 'md' }: { card: number; size?: CardSize }) {
+  return <PlayingCardFace rank={cardLabel(card)} suit={suitOf(card)} size={size} />;
 }
 
 /** Opponent's hidden hand as a little fan of backs. */
@@ -116,24 +116,26 @@ export function SuecaPage() {
           <Link to="/sueca" className="font-sans text-sm text-muted-2 hover:text-text">← Sueca</Link>
           <h1 className="mt-1 font-display text-[28px] font-medium text-text sm:text-[32px]">Sueca · Contra bots</h1>
         </div>
-        <div className="flex items-center gap-4 text-right">
-          <div>
-            <p className="font-sans text-[10px] uppercase tracking-[0.2em] text-muted-2">Trunfo</p>
-            <p className="font-display text-xl font-bold text-gold">{SUIT_SYMBOLS[state.trump]}</p>
-          </div>
-          <div>
-            <p className="font-sans text-[10px] uppercase tracking-[0.2em] text-muted-2">Mão · Jogo</p>
-            <p className="font-mono text-sm text-text">
-              <span className="text-positive">{state.captured[0]}</span>–<span className="text-negative">{state.captured[1]}</span>
-              <span className="mx-1 text-muted-2">·</span>
-              <span className="text-positive">{match[0]}</span>–<span className="text-negative">{match[1]}</span>
-            </p>
-          </div>
+        <div className="text-right">
+          <p className="font-sans text-[10px] uppercase tracking-[0.2em] text-muted-2">Nós–Eles · Mão · Jogo</p>
+          <p className="font-mono text-base text-text">
+            <span className="text-positive">{state.captured[0]}</span>–<span className="text-negative">{state.captured[1]}</span>
+            <span className="mx-1.5 text-muted-2">·</span>
+            <span className="text-positive">{match[0]}</span>–<span className="text-negative">{match[1]}</span> jogos
+          </p>
         </div>
       </div>
 
       {/* Table */}
-      <div className="felt felt-rail relative mx-auto h-[460px] w-full max-w-3xl overflow-hidden rounded-[28px] p-4">
+      <div className="felt felt-rail relative mx-auto h-[540px] w-full max-w-4xl overflow-hidden rounded-[28px] p-4 sm:h-[580px]">
+        {/* Trump card on the felt */}
+        <div className="absolute left-3 top-3 flex flex-col items-center gap-1">
+          <span className="font-sans text-[10px] uppercase tracking-[0.2em] text-gold-light">Trunfo {SUIT_SYMBOLS[state.trump]}</span>
+          <span className="rotate-[-8deg] drop-shadow-[0_4px_10px_rgba(0,0,0,0.5)]">
+            <Card card={state.trumpCard} size="lg" />
+          </span>
+        </div>
+
         {/* Partner (seat 2) top */}
         <div className="absolute left-1/2 top-3 -translate-x-1/2 flex flex-col items-center gap-1.5">
           <SeatTag seat={2} turn={state.turn} />
@@ -155,11 +157,11 @@ export function SuecaPage() {
         </div>
 
         {/* Trick — one slot per seat around the centre */}
-        <div className="absolute left-1/2 top-1/2 h-[210px] w-[210px] -translate-x-1/2 -translate-y-1/2">
-          <div className="absolute bottom-0 left-1/2 -translate-x-1/2">{trickCard(0) != null && <Card card={trickCard(0)!} />}</div>
-          <div className="absolute right-0 top-1/2 -translate-y-1/2">{trickCard(1) != null && <Card card={trickCard(1)!} />}</div>
-          <div className="absolute left-1/2 top-0 -translate-x-1/2">{trickCard(2) != null && <Card card={trickCard(2)!} />}</div>
-          <div className="absolute left-0 top-1/2 -translate-y-1/2">{trickCard(3) != null && <Card card={trickCard(3)!} />}</div>
+        <div className="absolute left-1/2 top-1/2 h-[260px] w-[260px] -translate-x-1/2 -translate-y-1/2">
+          <div className="absolute bottom-0 left-1/2 -translate-x-1/2">{trickCard(0) != null && <Card card={trickCard(0)!} size="lg" />}</div>
+          <div className="absolute right-0 top-1/2 -translate-y-1/2">{trickCard(1) != null && <Card card={trickCard(1)!} size="lg" />}</div>
+          <div className="absolute left-1/2 top-0 -translate-x-1/2">{trickCard(2) != null && <Card card={trickCard(2)!} size="lg" />}</div>
+          <div className="absolute left-0 top-1/2 -translate-y-1/2">{trickCard(3) != null && <Card card={trickCard(3)!} size="lg" />}</div>
         </div>
 
         {/* Result banner */}
@@ -196,7 +198,7 @@ export function SuecaPage() {
                   myTurn && legal ? 'hover:-translate-y-2 cursor-pointer' : 'cursor-not-allowed opacity-45'
                 }`}
               >
-                <Card card={card} />
+                <Card card={card} size="lg" />
               </button>
             );
           })}

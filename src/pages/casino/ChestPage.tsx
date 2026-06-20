@@ -105,7 +105,7 @@ export function ChestPage() {
       <div>
         <Link to="/casino" className="font-sans text-sm text-muted-2 hover:text-text">← Casino</Link>
         <Eyebrow className="mt-3">O Salão</Eyebrow>
-        <h1 className="mt-2 font-display text-[34px] font-medium leading-tight text-text sm:text-[38px]">Baú do Tesouro</h1>
+        <h1 className="mt-2 font-display text-[34px] font-medium leading-tight text-text sm:text-[38px]">Jogo dos Copos</h1>
         <p className="mt-2 font-sans text-sm text-muted">Veja onde fica a joia, siga o copo enquanto baralham, e encontre-a para levar 2.85×.</p>
       </div>
 
