@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { useMyBets, type BetWithLegs } from './useSportsbook';
+import { useMyBets, useCashoutBet, type BetWithLegs } from './useSportsbook';
 import { selectionLabel, type Market, type Selection } from './odds';
 import { summariseBets, filterBets, type BetFilter } from './betStats';
 import { formatAmount } from '@/lib/format';
@@ -46,8 +46,24 @@ function LegMark({ result }: { result: string }) {
 
 /** One bet, with each leg on its own clear two-line row + live state/score. */
 export function BetCard({ bet }: { bet: BetWithLegs }) {
+  const cashout = useCashoutBet();
+  const [err, setErr] = useState<string | null>(null);
   const accent =
     bet.status === 'won' ? 'border-l-positive' : bet.status === 'lost' ? 'border-l-negative' : 'border-l-gold/50';
+  // Sellable only while every leg is still pre-kickoff (server re-checks).
+  const sellable =
+    bet.status === 'pending' && bet.legs.length > 0 && bet.legs.every((l) => l.fixture?.status === 'scheduled');
+  const sellValue = Math.floor(bet.stake * 0.9);
+
+  async function sell() {
+    setErr(null);
+    try {
+      await cashout.mutateAsync(bet.id);
+    } catch {
+      setErr('Já não dá para vender esta aposta.');
+    }
+  }
+
   return (
     <li className={`card border-l-2 ${accent} p-4`}>
       <div className="mb-3 flex items-center justify-between gap-2">
@@ -107,6 +123,20 @@ export function BetCard({ bet }: { bet: BetWithLegs }) {
           </span>
         </span>
       </div>
+
+      {sellable && (
+        <div className="mt-3 flex items-center justify-between gap-2 border-t border-border pt-2.5">
+          <span className="font-sans text-[11px] text-muted-2">Vender antes do início (90%)</span>
+          <button
+            onClick={sell}
+            disabled={cashout.isPending}
+            className="focus-ring rounded border border-gold/40 px-3 py-1 font-sans text-[11px] font-medium uppercase tracking-[0.14em] text-gold transition-colors hover:bg-gold hover:text-bg disabled:opacity-50"
+          >
+            {cashout.isPending ? 'A vender…' : `Vender · ${formatAmount(sellValue)} tós`}
+          </button>
+        </div>
+      )}
+      {err && <p className="mt-2 font-sans text-[11px] text-negative">{err}</p>}
     </li>
   );
 }

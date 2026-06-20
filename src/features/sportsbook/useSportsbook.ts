@@ -167,3 +167,21 @@ export function usePlaceBet() {
     },
   });
 }
+
+/** Early cash-out: sell a still-pending, pre-kickoff bet back for 90% of stake. */
+export function useCashoutBet() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (betId: number) => {
+      const { data, error } = await supabase.rpc('cashout_bet', { p_bet_id: betId });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: profileKey(user?.id) });
+      void qc.invalidateQueries({ queryKey: ['bets', user?.id] });
+      void qc.invalidateQueries({ queryKey: ['transactions', user?.id] });
+    },
+  });
+}
