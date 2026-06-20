@@ -79,7 +79,7 @@ export function SlotsLobby() {
       )}
 
       {machines && (
-        <div className="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-5">
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,300px),1fr))] gap-5">
           {machines.map((m) => (
             <MachineCard key={m.key} m={m} />
           ))}

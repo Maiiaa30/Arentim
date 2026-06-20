@@ -36,7 +36,7 @@ const STEPS: { n: string; title: string; desc: string }[] = [
   {
     n: '03',
     title: 'Joga com os amigos',
-    desc: 'Casino, póquer e futebol. Sobe na tabela do teu círculo.',
+    desc: 'Casino, poker e futebol. Sobe na tabela do teu círculo.',
   },
 ];
 
@@ -112,7 +112,7 @@ export function LandingPage() {
       {/* Games showcase */}
       <section className="space-y-5">
         <SectionHeader title="As Mesas" right="Salão" />
-        <div className="grid grid-cols-[repeat(auto-fill,minmax(238px,1fr))] gap-[18px]">
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,238px),1fr))] gap-[18px]">
           {SHOWCASE.map((g) => (
             <ShowcaseCard key={g.name} g={g} />
           ))}

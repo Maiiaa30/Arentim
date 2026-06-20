@@ -19,10 +19,11 @@ export function useRecentRoulette() {
         .select('outcome')
         .eq('game', 'roulette')
         .order('created_at', { ascending: false })
-        .limit(18);
+        .limit(18)
+        .returns<{ outcome: { number?: number } | null }[]>();
       if (error) throw error;
       return (data ?? [])
-        .map((r) => (r.outcome as { number?: number } | null)?.number)
+        .map((r) => r.outcome?.number)
         .filter((n): n is number => typeof n === 'number');
     },
   });

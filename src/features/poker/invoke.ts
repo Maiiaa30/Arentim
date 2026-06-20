@@ -48,7 +48,7 @@ export async function invokePoker<T>(fn: string, body: Record<string, unknown>):
       }
       throw new Error(msg ?? 'A mesa recusou a jogada. Tente novamente.');
     }
-    throw new Error(error.message || 'Não foi possível contactar o servidor de póquer.');
+    throw new Error(error.message || 'Não foi possível contactar o servidor de poker.');
   }
   if (data?.error) throw new Error(translate(String(data.error)));
   return data as T;

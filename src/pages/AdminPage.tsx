@@ -76,7 +76,7 @@ export function Overview({ stats }: { stats: AdminStats | undefined }) {
         <Stat label="Apostadores" value={n(stats.bettors)} sub="já fizeram pelo menos uma aposta" />
         <Stat label="Saldo em circulação" value={formatAmount(stats.balance_total)} sub="Tostões em todas as carteiras" accent />
         <Stat label="Total apostado" value={formatAmount(stats.wagered_total)} sub={`${formatAmount(stats.won_total)} devolvidos`} />
-        <Stat label="Jogos jogados" value={n(stats.games_total)} sub="casino + póquer" />
+        <Stat label="Jogos jogados" value={n(stats.games_total)} sub="casino + poker" />
         <Stat label="Suspensos" value={n(stats.suspended)} sub={`${n(stats.admins)} administradores`} />
         <Stat label="Apostas (futebol)" value={n(stats.sports_bets_total)} sub={`+${n(stats.sports_bets_today)} hoje · ${n(stats.sports_bets_open)} abertas`} />
         <Stat label="Stake em futebol" value={formatAmount(stats.sports_stake_total)} sub="total apostado em jogos" />

@@ -32,7 +32,7 @@ export const NAV: NavEntry[] = [
       { to: '/onze', label: 'Onze de Ouro' },
     ],
   },
-  { to: '/poker', label: 'Póquer' },
+  { to: '/poker', label: 'Poker' },
   { to: '/friends', label: 'Amigos' },
   { to: '/challenges', label: 'Desafios' },
 ];

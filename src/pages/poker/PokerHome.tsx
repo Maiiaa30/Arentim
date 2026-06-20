@@ -27,8 +27,8 @@ export function PokerHome() {
           ← Voltar às Mesas
         </Link>
         <div className="mt-4">
-          <Eyebrow>Salão de Póquer</Eyebrow>
-          <h1 className="mt-2 font-display text-[40px] font-medium leading-[1.04] text-text">Póquer</h1>
+          <Eyebrow>Salão de Poker</Eyebrow>
+          <h1 className="mt-2 font-display text-[40px] font-medium leading-[1.04] text-text">Poker</h1>
           <p className="mt-3 font-sans text-[15px] leading-relaxed text-muted">
             Texas Hold'em — o servidor distribui, as cartas privadas ficam só para si.
           </p>
