@@ -3,7 +3,23 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/features/auth/AuthProvider';
 import { profileKey } from '@/features/profile/useProfile';
 import type { RouletteBet } from './roulette';
-import type { Profile, RouletteSpinResult } from '@/types/db';
+import type { Profile, RouletteBonus, RouletteSpinResult } from '@/types/db';
+
+/** This round's lucky numbers (the bonus mini-game), rolled server-side and
+ *  shown before betting. A straight bet that lands on one pays double. */
+export function useRouletteBonus() {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ['roulette', 'bonus', user?.id] as const,
+    enabled: !!user,
+    staleTime: Infinity, // re-rolled explicitly after each spin
+    queryFn: async (): Promise<RouletteBonus> => {
+      const { data, error } = await supabase.rpc('roulette_get_bonus');
+      if (error) throw error;
+      return data as RouletteBonus;
+    },
+  });
+}
 
 /** The most recent landed numbers (persisted in game_rounds) — "últimos
  *  resultados", so the history survives a page reload. */
@@ -58,6 +74,8 @@ export function useRoulette() {
       );
       void qc.invalidateQueries({ queryKey: ['transactions', user?.id] });
       void qc.invalidateQueries({ queryKey: ['roulette', 'recent', user?.id] });
+      // The spin re-rolled the lucky numbers — patch them in from the result.
+      if (res.bonus) qc.setQueryData(['roulette', 'bonus', user?.id], res.bonus);
     },
   });
 }

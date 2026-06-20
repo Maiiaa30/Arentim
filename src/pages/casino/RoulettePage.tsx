@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useProfile } from '@/features/profile/useProfile';
-import { useRoulette, useRecentRoulette } from '@/features/casino/useRoulette';
+import { useRoulette, useRecentRoulette, useRouletteBonus } from '@/features/casino/useRoulette';
 import { RouletteWheel } from '@/features/casino/RouletteWheel';
 import { BettingBoard } from '@/features/casino/BettingBoard';
 import { WinCelebration } from '@/features/casino/WinCelebration';
@@ -98,6 +98,7 @@ export function RoulettePage() {
   const { data: profile } = useProfile();
   const roulette = useRoulette();
   const { data: rouletteHistory } = useRecentRoulette();
+  const { data: bonus } = useRouletteBonus();
   const seededHistory = useRef(false);
 
   const [chip, setChip] = useState(CHIPS[1]!);
@@ -132,9 +133,12 @@ export function RoulettePage() {
     return m;
   }, [bets]);
 
+  const bonusSet = useMemo(() => new Set(bonus?.numbers ?? []), [bonus]);
+  const bonusMult = bonus?.mult ?? 2;
+
   // A straight-up hit (or a hefty multiple of the stake) earns the jackpot burst.
   const jackpotWin =
-    !!result && result.payout > 0 && result.payout >= Math.max(result.stake * 6, 1);
+    (!!result && result.payout > 0 && result.payout >= Math.max(result.stake * 6, 1)) || !!result?.bonus_hit;
 
   function placeBet(kind: RouletteBetKind, selection: number | null) {
     if (spinning) return;
@@ -231,6 +235,9 @@ export function RoulettePage() {
                     ? `Ganhou ${formatAmount(result.payout)} Tostões`
                     : 'Sem prémio desta vez'}
                 </p>
+                {result.bonus_hit && (
+                  <p className="animate-pop font-display text-sm font-bold text-gold">⭐ Número da sorte! Prémio a dobrar</p>
+                )}
               </div>
             ) : (
               <p className="font-sans text-sm text-muted">Faça as suas apostas.</p>
@@ -251,9 +258,18 @@ export function RoulettePage() {
 
         {/* Board + slip */}
         <div className="space-y-4">
+          {/* Lucky-number mini-game banner */}
+          {bonus && bonusSet.size > 0 && (
+            <div className="flex flex-wrap items-center justify-center gap-2 rounded-lg border border-gold/40 bg-gold/[0.08] px-3 py-2 text-center">
+              <span className="font-sans text-[11px] font-semibold uppercase tracking-[0.16em] text-gold">⭐ Números da sorte</span>
+              <span className="flex gap-1.5">{[...bonusSet].map((n) => numberBadge(n, `lucky-${n}`))}</span>
+              <span className="font-sans text-[11px] text-muted">— um pleno num destes paga <span className="font-bold text-gold-light">{bonusMult}×</span></span>
+            </div>
+          )}
+
           <div className="felt felt-rail overflow-x-auto rounded-lg p-3 sm:p-4">
             <div className="min-w-[300px]">
-              <BettingBoard onPlace={placeBet} stakes={stakeMap} disabled={spinning} />
+              <BettingBoard onPlace={placeBet} stakes={stakeMap} bonus={bonusSet} disabled={spinning} />
             </div>
           </div>
 
