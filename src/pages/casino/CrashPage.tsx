@@ -18,12 +18,6 @@ function crashColor(m: number): string {
   return '#C9A24B';
 }
 
-/** Per-multiplier top-position (%) for the rocket marker — mirrors CrashGraph. */
-function headTopPct(mult: number): number {
-  const yMax = Math.max(mult * 1.08, 2);
-  return (1 - Math.log(Math.max(mult, 1)) / Math.log(yMax)) * 100;
-}
-
 function humanize(e: unknown): string {
   const m = e instanceof Error ? e.message : String(e);
   if (m.includes('apostas fechadas')) return 'As apostas desta ronda já fecharam.';
@@ -172,13 +166,6 @@ export function CrashPage() {
 
           <div className="relative mx-auto h-72 w-full sm:h-80">
             <CrashGraph mult={displayMult} exploded={exploded} flying={flying} />
-            <span
-              className="absolute text-2xl"
-              style={{ left: `calc(${94}% )`, top: `calc(${headTopPct(displayMult)}% - 10px)`, transform: 'translate(-50%,-50%)' }}
-              aria-hidden
-            >
-              {exploded ? '💥' : '🚀'}
-            </span>
             <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
               {betting ? (
                 <>
