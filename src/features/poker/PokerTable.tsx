@@ -191,7 +191,7 @@ function Board({ community, dealKey, compact }: { community: number[]; dealKey: 
           ))
         : community.map((c, i) => (
             <div key={`${dealKey}-${i}`} className="animate-deal" style={{ animationDelay: `${i * 80}ms` }}>
-              <PokerCard card={c} small={compact} />
+              <PokerCard card={c} small={!!compact} />
             </div>
           ))}
     </div>
