@@ -34,12 +34,15 @@ describe('sobe e desce (adaptive hi-lo)', () => {
     expect(desce8).toBeCloseTo(1.63, 2);
     expect(hiloAdaptedMult(0)).toBe(0); // e.g. Sobe on 13
   });
-  it('keeps a house edge (EV ≈ 0.95 on every count)', () => {
-    for (const count of [1, 3, 5, 7, 11, 12]) {
+  it('keeps a house edge (EV ≈ 0.95) on real bets', () => {
+    for (const count of [1, 3, 5, 7, 11]) {
       const ev = (count / 12) * hiloAdaptedMult(count);
       expect(ev).toBeGreaterThan(0.93);
       expect(ev).toBeLessThan(0.97);
     }
+  });
+  it('a certain side (count 12) pays break-even, not a loss', () => {
+    expect(hiloAdaptedMult(12)).toBe(1);
   });
 });
 

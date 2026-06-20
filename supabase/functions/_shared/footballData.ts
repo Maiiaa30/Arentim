@@ -156,6 +156,16 @@ export async function fetchMatchesByDate(token: string, from: string, to: string
   return data.matches ?? [];
 }
 
+/** A single match by id — used to reconcile a fixture stuck 'live' outside the
+ *  polling window (e.g. a game that finished while the cron wasn't running). */
+export async function fetchMatchById(token: string, id: number): Promise<FdMatch | null> {
+  try {
+    return await fdGet<FdMatch>(`/matches/${id}`, token);
+  } catch {
+    return null;
+  }
+}
+
 // ---- Odds model (Poisson) --------------------------------------------------
 const HOME_ADV = 1.15;
 const MARGIN = 0.07; // ~7% overround

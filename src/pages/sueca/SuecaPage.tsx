@@ -17,6 +17,8 @@ const HUMAN = 0;
 const NAMES = ['Você', 'Bruno', 'Parceiro', 'Inês'];
 const rng = () => Math.random();
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+/** Varied pause so the bots don't all play in lockstep (like the poker bots). */
+const botDelay = () => 480 + Math.random() * 900;
 
 /** A face-up card. */
 function Card({ card, size = 'md' }: { card: number; size?: CardSize }) {
@@ -68,7 +70,7 @@ export function SuecaPage() {
         if (s.done) break;
         if (s.trickComplete) { await sleep(1150); if (!mounted.current) break; apply(collectTrick(stateRef.current)); continue; }
         if (s.turn === HUMAN) break;
-        await sleep(650);
+        await sleep(botDelay());
         if (!mounted.current) break;
         apply(playTurn(stateRef.current, HUMAN));
       }

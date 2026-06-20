@@ -22,7 +22,9 @@ export function diceMultiplier(pick: DicePick, sum: number): number {
  * side (count 0).
  */
 export function hiloAdaptedMult(count: number): number {
-  return count > 0 ? Math.round((0.95 * 12) / count * 100) / 100 : 0;
+  if (count <= 0) return 0;
+  if (count >= 12) return 1; // a certain side pays break-even, never a loss
+  return Math.round((0.95 * 12) / count * 100) / 100;
 }
 
 /**
