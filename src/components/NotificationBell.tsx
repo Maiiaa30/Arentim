@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { useNotifications, useUnreadCount, useMarkNotificationsRead } from '@/features/notifications/useNotifications';
 import { useFriendRequests, useFriendActions } from '@/features/friends/useFriends';
 import { useChallenges } from '@/features/challenges/useChallenges';
-import { usePush } from '@/features/push/usePush';
 import type { NotificationRow } from '@/types/db';
 
 /** "há 5 min" / "há 2 h" / "há 3 d" — compact PT-PT relative time. */
@@ -36,7 +35,6 @@ export function NotificationBell() {
   const { data: challenges = [] } = useChallenges();
   const markRead = useMarkNotificationsRead();
   const { respond } = useFriendActions();
-  const push = usePush();
 
   const incoming = requests.filter((r) => r.direction === 'incoming');
   const claimable = challenges.filter((c) => !c.claimed && c.progress >= c.target);
@@ -180,30 +178,6 @@ export function NotificationBell() {
               </ul>
             )}
           </div>
-
-          {push.supported && (
-            <div className="border-t border-border px-4 py-2.5">
-              {push.subscribed ? (
-                <button
-                  className="flex w-full items-center justify-between font-sans text-[12px] text-muted-2 hover:text-text disabled:opacity-50"
-                  disabled={push.busy}
-                  onClick={() => push.disable()}
-                >
-                  <span className="text-positive">🔔 Alertas ativos neste dispositivo</span>
-                  <span className="text-muted-2">Desativar</span>
-                </button>
-              ) : (
-                <button
-                  className="w-full text-left font-sans text-[12px] text-gold hover:text-gold-light disabled:opacity-50"
-                  disabled={push.busy}
-                  onClick={() => push.enable()}
-                >
-                  🔔 Ativar alertas neste dispositivo
-                </button>
-              )}
-              {push.error && <p className="mt-1 font-sans text-[11px] text-negative">{push.error}</p>}
-            </div>
-          )}
         </div>
       )}
     </div>
