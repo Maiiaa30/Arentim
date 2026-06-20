@@ -67,12 +67,17 @@ Deno.serve(async (req) => {
       .eq('id', id);
 
   const loadByMembership = async (tableId?: number): Promise<Row | null> => {
-    const q = db.from('poker_tables').select('id, host_id, status, buy_in, state, turn_deadline').neq('status', 'closed');
-    const { data } = tableId ? await q.eq('id', tableId).maybeSingle() : await q
-      .in('id', (await db.from('poker_table_members').select('table_id').eq('user_id', user.id)).data?.map((m) => m.table_id) ?? [-1])
-      .order('updated_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
+    // Always restrict to tables the caller is actually a member of — even when a
+    // tableId is supplied — so a non-member can't load (and act on / time out)
+    // another table's players by guessing a sequential id.
+    const memberOf = (await db.from('poker_table_members').select('table_id').eq('user_id', user.id)).data?.map((m) => m.table_id) ?? [];
+    if (memberOf.length === 0) return null;
+    let q = db.from('poker_tables')
+      .select('id, host_id, status, buy_in, state, turn_deadline')
+      .neq('status', 'closed')
+      .in('id', memberOf);
+    if (tableId != null) q = q.eq('id', tableId);
+    const { data } = await q.order('updated_at', { ascending: false }).limit(1).maybeSingle();
     return data as Row | null;
   };
 
