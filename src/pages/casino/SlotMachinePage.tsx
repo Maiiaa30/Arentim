@@ -278,7 +278,7 @@ function MachineScreen({ m }: { m: SlotMachineMeta }) {
             </span>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col items-center gap-2">
             <span className="font-sans text-[9px] uppercase tracking-[0.2em] text-muted-2">Aposta</span>
             <div className="flex flex-wrap items-center justify-center gap-1.5">
               {betOptions.map((c) => (
@@ -295,6 +295,30 @@ function MachineScreen({ m }: { m: SlotMachineMeta }) {
                   <Chip value={c} size={36} />
                 </button>
               ))}
+            </div>
+            {/* Custom bet — type any amount within the machine's range. */}
+            <div className="flex items-center gap-1.5">
+              <input
+                type="number"
+                min={m.min_bet}
+                max={m.max_bet}
+                value={stake}
+                disabled={busy}
+                onChange={(e) => {
+                  const v = Math.floor(Number(e.target.value) || 0);
+                  setStake(Math.min(m.max_bet, Math.max(m.min_bet, v)));
+                }}
+                aria-label="Aposta personalizada"
+                className="focus-ring w-24 rounded border border-border bg-bg px-2 py-1 text-center font-mono text-sm text-text"
+              />
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => setStake(Math.max(m.min_bet, Math.min(m.max_bet, balance)))}
+                className="focus-ring rounded-full border border-border px-2.5 py-1 font-sans text-[11px] uppercase tracking-wider text-muted-2 hover:text-text disabled:opacity-40"
+              >
+                Máx
+              </button>
             </div>
           </div>
 
