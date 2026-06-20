@@ -110,7 +110,7 @@ export function CrashPage() {
       const tick = () => {
         if (!flyingRef.current) return;
         const elapsed = (performance.now() - startedPerf.current) / 1000;
-        const m = Math.max(1, Math.floor(Math.exp(0.2 * elapsed) * 100) / 100);
+        const m = Math.max(1, Math.floor(Math.exp(0.15 * elapsed) * 100) / 100);
         setMult(m);
         if (autoOn && m >= autoTarget && roundId.current != null) {
           void finish(roundId.current);
@@ -154,7 +154,7 @@ export function CrashPage() {
 
       {/* Recent crashes */}
       {history.length > 0 && (
-        <div className="mx-auto flex max-w-md flex-wrap items-center gap-1.5">
+        <div className="mx-auto flex max-w-2xl flex-wrap items-center gap-1.5">
           <span className="font-sans text-[10px] uppercase tracking-[0.18em] text-muted-2">Anteriores</span>
           {history.map((h, i) => (
             <span key={i} className="rounded-full px-2 py-0.5 font-mono text-[11px] font-semibold" style={{ color: crashColor(h), background: `${crashColor(h)}1a` }}>
@@ -164,9 +164,9 @@ export function CrashPage() {
         </div>
       )}
 
-      <div className="felt felt-rail relative mx-auto max-w-md overflow-hidden rounded-lg px-5 py-7 text-center sm:px-8">
+      <div className="felt felt-rail relative mx-auto max-w-2xl overflow-hidden rounded-lg px-5 py-10 text-center sm:px-10">
         {result?.won && <WinCelebration key={winId} jackpot={result.mult >= 10} />}
-        <div className="relative mx-auto h-44 w-full">
+        <div className="relative mx-auto h-72 w-full sm:h-80">
           <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="absolute inset-0 h-full w-full">
             <line x1="0" y1={H} x2={W} y2={H} stroke="rgba(201,162,75,0.2)" strokeWidth="0.5" />
             <path
@@ -190,10 +190,10 @@ export function CrashPage() {
           </span>
           <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
             <span
-              className={`font-mono text-5xl font-bold tabular-nums ${
+              className={`font-mono text-6xl font-bold tabular-nums sm:text-7xl ${
                 busted ? 'text-negative' : flying ? 'text-gold-light' : result?.won ? 'text-positive' : 'text-text'
               }`}
-              style={{ textShadow: '0 0 26px rgba(0,0,0,0.6)' }}
+              style={{ textShadow: '0 0 30px rgba(0,0,0,0.65)' }}
             >
               {mult.toFixed(2)}×
             </span>
@@ -217,13 +217,13 @@ export function CrashPage() {
         </div>
 
         {flying && (
-          <Button variant="primary" onClick={manualCashout} disabled={cashout.isPending} className="mx-auto w-full max-w-xs">
+          <Button variant="primary" onClick={manualCashout} disabled={cashout.isPending} className="mx-auto w-full max-w-sm text-base">
             Retirar {formatAmount(Math.floor(stake * mult))} tós
           </Button>
         )}
       </div>
 
-      <div className="card mx-auto max-w-md space-y-4 p-5 sm:p-6">
+      <div className="card mx-auto max-w-2xl space-y-4 p-5 sm:p-6">
         <label className="flex cursor-pointer items-center justify-between">
           <span className="font-sans text-[12px] text-muted">Saída automática</span>
           <input type="checkbox" checked={autoOn} disabled={flying} onChange={(e) => setAutoOn(e.target.checked)} className="h-4 w-4 accent-gold" />

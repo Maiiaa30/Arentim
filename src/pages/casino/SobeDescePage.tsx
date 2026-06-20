@@ -67,11 +67,13 @@ export function SobeDescePage() {
         <p className="mt-2 font-sans text-sm text-muted">A marca sobe a escada e pára num número de 1 a 13. Aposte para que lado vai.</p>
       </div>
 
-      <div className="felt felt-rail relative mx-auto max-w-md overflow-hidden rounded-lg px-5 py-8 sm:px-8">
+      <div className="grid gap-6 lg:grid-cols-[1.3fr_1fr] lg:items-start">
+        {/* ---- Game ---- */}
+        <div className="felt felt-rail relative overflow-hidden rounded-lg px-5 py-8 sm:px-8">
         {result?.won && <WinCelebration key={spinId} />}
-        <div className="flex items-stretch justify-center gap-5">
+        <div className="flex items-stretch justify-center gap-7">
           {/* The ladder */}
-          <div className="flex w-[120px] flex-col gap-[3px]">
+          <div className="flex w-[160px] flex-col gap-1">
             {RUNGS.map((n) => {
               const here = marker === n;
               const isSeven = n === 7;
@@ -79,27 +81,27 @@ export function SobeDescePage() {
               return (
                 <div
                   key={n}
-                  className={`flex items-center gap-2 rounded px-2.5 py-[3px] transition-all duration-150 ${
+                  className={`flex items-center gap-2.5 rounded px-3 py-1.5 transition-all duration-150 ${
                     here ? 'scale-[1.06] shadow-[0_0_20px_rgba(201,162,75,0.45)] ring-1 ring-gold' : ''
                   }`}
                   style={{ background: here ? 'rgba(201,162,75,0.22)' : zoneTint }}
                 >
-                  <span className={`w-5 text-right font-mono text-sm font-bold ${here ? 'text-gold' : isSeven ? 'text-gold-light' : 'text-body'}`}>{n}</span>
+                  <span className={`w-6 text-right font-mono text-base font-bold ${here ? 'text-gold' : isSeven ? 'text-gold-light' : 'text-body'}`}>{n}</span>
                   <span
-                    className="h-1.5 flex-1 rounded-full"
+                    className="h-2 flex-1 rounded-full"
                     style={{ background: here ? '#C9A24B' : isSeven ? 'rgba(201,162,75,0.4)' : n > 7 ? 'rgba(43,111,78,0.5)' : 'rgba(176,48,58,0.5)' }}
                   />
-                  {here && <span className="text-xs">🪙</span>}
+                  {here && <span className="text-sm">🪙</span>}
                 </div>
               );
             })}
           </div>
 
           {/* Big readout + zone */}
-          <div className="flex w-[110px] flex-col items-center justify-center rounded-lg border border-gold/20 bg-black/30 px-3 py-4">
-            <span className="font-sans text-[9px] uppercase tracking-[0.2em] text-muted-2">{rolling ? 'a subir' : 'parou em'}</span>
-            <span className={`font-display text-5xl font-bold ${marker > 7 ? 'text-positive' : marker < 7 ? 'text-negative' : 'text-gold'}`}>{marker}</span>
-            <span className="mt-1 font-sans text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
+          <div className="flex flex-1 flex-col items-center justify-center rounded-lg border border-gold/20 bg-black/30 px-3 py-4">
+            <span className="font-sans text-[10px] uppercase tracking-[0.2em] text-muted-2">{rolling ? 'a subir' : 'parou em'}</span>
+            <span className={`font-display text-7xl font-bold ${marker > 7 ? 'text-positive' : marker < 7 ? 'text-negative' : 'text-gold'}`}>{marker}</span>
+            <span className="mt-1 font-sans text-xs font-semibold uppercase tracking-[0.16em] text-muted">
               {marker > 7 ? '▲ Sobe' : marker < 7 ? '▼ Desce' : '● Sete'}
             </span>
           </div>
@@ -122,7 +124,8 @@ export function SobeDescePage() {
         </div>
       </div>
 
-      <div className="card mx-auto max-w-md space-y-5 p-5 sm:p-6">
+        {/* ---- Bet ---- */}
+        <div className="card space-y-5 p-5 sm:p-6">
         <div>
           <p className="mb-2 font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-2">A sua aposta</p>
           <div className="grid grid-cols-3 gap-2.5">
@@ -152,6 +155,7 @@ export function SobeDescePage() {
             {rolling ? 'A jogar…' : tooPoor ? 'Saldo insuficiente' : `Jogar · ${formatAmount(stake)} tós`}
           </Button>
           {error && <p className="font-sans text-sm text-negative">{error}</p>}
+        </div>
         </div>
       </div>
     </div>
