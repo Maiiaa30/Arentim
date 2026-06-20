@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useProfile } from '@/features/profile/useProfile';
-import { useRoulette } from '@/features/casino/useRoulette';
+import { useRoulette, useRecentRoulette } from '@/features/casino/useRoulette';
 import { RouletteWheel } from '@/features/casino/RouletteWheel';
 import { BettingBoard } from '@/features/casino/BettingBoard';
 import { WinCelebration } from '@/features/casino/WinCelebration';
@@ -97,6 +97,8 @@ function HotCold({ recent }: { recent: number[] }) {
 export function RoulettePage() {
   const { data: profile } = useProfile();
   const roulette = useRoulette();
+  const { data: rouletteHistory } = useRecentRoulette();
+  const seededHistory = useRef(false);
 
   const [chip, setChip] = useState(CHIPS[1]!);
   const [bets, setBets] = useState<RouletteBet[]>([]);
@@ -109,6 +111,15 @@ export function RoulettePage() {
   const landTimer = useRef<number | null>(null);
 
   useEffect(() => () => { if (landTimer.current) window.clearTimeout(landTimer.current); }, []);
+
+  // Seed the recent-results strip from the DB once, so "últimos resultados"
+  // survive a page reload (each spin is recorded in game_rounds).
+  useEffect(() => {
+    if (!seededHistory.current && rouletteHistory && rouletteHistory.length) {
+      seededHistory.current = true;
+      setRecent((r) => (r.length ? r : rouletteHistory));
+    }
+  }, [rouletteHistory]);
 
   const staked = totalStake(bets);
   const balance = profile?.balance ?? 0;
@@ -227,8 +238,11 @@ export function RoulettePage() {
           </div>
 
           {recent.length > 0 && (
-            <div className="flex flex-wrap justify-center gap-1.5">
-              {recent.map((n, i) => numberBadge(n, `${n}-${i}`))}
+            <div className="w-full">
+              <p className="mb-1.5 text-center font-sans text-[9px] uppercase tracking-[0.2em] text-muted-2">Últimos resultados</p>
+              <div className="flex flex-wrap justify-center gap-1.5">
+                {recent.map((n, i) => numberBadge(n, `${n}-${i}`))}
+              </div>
             </div>
           )}
 
