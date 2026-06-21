@@ -138,7 +138,7 @@ export function Header() {
               <Brandmark size={40} />
             </span>
             <span className="leading-tight">
-              <span className="block bg-gradient-to-r from-gold-light via-gold to-gold-light bg-clip-text font-sans text-sm font-semibold tracking-[0.35em] text-transparent sm:text-base sm:tracking-[0.42em]">
+              <span className="block font-sans text-sm font-semibold tracking-[0.35em] text-gold sm:text-base sm:tracking-[0.42em]">
                 ARENTIM
               </span>
               <span className="hidden font-sans text-[9px] uppercase tracking-[0.3em] text-muted-2 sm:block">

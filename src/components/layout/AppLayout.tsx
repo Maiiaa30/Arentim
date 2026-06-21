@@ -12,11 +12,17 @@ export function AppLayout() {
   useRealtimeSync();
   return (
     <div className="flex min-h-full flex-col">
+      <a
+        href="#conteudo"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[100] focus:rounded focus:bg-gold focus:px-4 focus:py-2 focus:font-sans focus:text-sm focus:font-semibold focus:text-bg"
+      >
+        Saltar para o conteúdo
+      </a>
       <TopAccentRule />
       <Header />
       <AnnouncementBanner />
       <LowBalanceBanner />
-      <main className="mx-auto w-full max-w-[1480px] flex-1 px-5 py-8 sm:px-9 sm:py-10">
+      <main id="conteudo" className="mx-auto w-full max-w-[1480px] flex-1 px-5 py-8 sm:px-9 sm:py-10">
         <Outlet />
       </main>
       <Footer />
