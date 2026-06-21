@@ -5,11 +5,14 @@ import { AnnouncementBanner } from '@/components/AnnouncementBanner';
 import { LowBalanceBanner } from '@/components/LowBalanceBanner';
 import { TopAccentRule } from '@/components/ui/primitives';
 import { useRealtimeSync } from '@/features/realtime/useRealtimeSync';
+import { useReferralClaim } from '@/features/referrals/useReferral';
 
 /** App shell: top gilded rule, sticky header, routed content, disclaimer footer. */
 export function AppLayout() {
   // Keep friends / notifications / balance live across the app — no reloads.
   useRealtimeSync();
+  // Redeem a pending referral code (from a signup link) on first auth load.
+  useReferralClaim();
   return (
     <div className="flex min-h-full flex-col">
       <a

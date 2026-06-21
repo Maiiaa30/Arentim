@@ -1,0 +1,67 @@
+<!--
+  Arentim — "Convite de amigo". Sent by our own `send-invite` Edge Function (NOT
+  Supabase Auth), which substitutes {{REF_LINK}} and {{SENDER}} before POSTing to
+  Resend. Email-safe: table layout + inline styles only (no external CSS/JS/fonts).
+-->
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#0a0907;margin:0;padding:32px 0;font-family:Arial,Helvetica,sans-serif;">
+  <tr>
+    <td align="center">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;width:100%;">
+        <!-- gilded top rule -->
+        <tr><td style="height:3px;background:linear-gradient(90deg,#0a0907,#C9A24B,#0a0907);font-size:0;line-height:0;">&nbsp;</td></tr>
+
+        <!-- wordmark -->
+        <tr>
+          <td align="center" style="padding:28px 0 8px;">
+            <span style="font-family:Georgia,'Times New Roman',serif;font-size:22px;font-weight:bold;letter-spacing:8px;color:#C9A24B;">ARENTIM</span>
+            <div style="font-size:10px;letter-spacing:3px;color:#9d927a;text-transform:uppercase;margin-top:4px;">Casa de Jogos</div>
+          </td>
+        </tr>
+
+        <!-- card -->
+        <tr>
+          <td style="padding:8px 0;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#100e09;border:1px solid rgba(201,162,75,0.22);border-radius:8px;">
+              <tr>
+                <td style="padding:34px 34px 28px;">
+                  <h1 style="margin:0 0 12px;font-family:Georgia,'Times New Roman',serif;font-size:26px;font-weight:normal;color:#f3edde;">{{SENDER}} convidou-te</h1>
+                  <p style="margin:0 0 20px;font-size:15px;line-height:1.6;color:#b7ad95;">
+                    Junta-te ao Arentim — uma casa de jogos só a brincar. Inscreve-te pelo link abaixo e recebes logo
+                    <strong style="color:#f3edde;">100 Tostões</strong> para começar a jogar.
+                  </p>
+
+                  <!-- button -->
+                  <table role="presentation" cellpadding="0" cellspacing="0" style="margin:8px 0 22px;">
+                    <tr>
+                      <td align="center" style="border-radius:6px;background:#C9A24B;">
+                        <a href="{{REF_LINK}}" target="_blank"
+                           style="display:inline-block;padding:13px 30px;font-size:15px;font-weight:bold;color:#0a0907;text-decoration:none;letter-spacing:0.5px;">
+                          Aceitar convite
+                        </a>
+                      </td>
+                    </tr>
+                  </table>
+
+                  <p style="margin:0 0 6px;font-size:12px;color:#9d927a;">Se o botão não funcionar, copia este link para o navegador:</p>
+                  <p style="margin:0;font-size:12px;line-height:1.5;word-break:break-all;"><a href="{{REF_LINK}}" style="color:#C9A24B;">{{REF_LINK}}</a></p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- footer -->
+        <tr>
+          <td style="padding:18px 12px 0;">
+            <p style="margin:0 0 6px;font-size:12px;line-height:1.5;color:#6b6149;">
+              É tudo a brincar — o Arentim usa <strong style="color:#9d927a;">Tostões</strong>, uma moeda de mentira. Sem dinheiro real, sem pagamentos.
+            </p>
+            <p style="margin:0;font-size:12px;line-height:1.5;color:#6b6149;">
+              Não conheces {{SENDER}}? Ignora este email — não acontece nada.
+            </p>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
