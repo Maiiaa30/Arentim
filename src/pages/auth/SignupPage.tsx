@@ -35,16 +35,15 @@ export function SignupPage() {
 
     setBusy(true);
 
-    // Check the display name isn't already taken (case-insensitive).
+    // Check the display name isn't already taken (case-insensitive). Only BLOCK
+    // when the server clearly says it's taken — if the check itself errors
+    // (transient/permission), don't trap the user; let sign-up proceed.
     const { data: available, error: checkError } = await supabase.rpc('username_available', {
       p_name: parsed.data.displayName,
     });
     if (checkError) {
-      setBusy(false);
-      setError('Não foi possível validar o nome. Tente novamente.');
-      return;
-    }
-    if (!available) {
+      console.warn('username_available check failed; continuing to sign-up', checkError);
+    } else if (available === false) {
       setBusy(false);
       setError('Esse nome de exibição já está em uso. Escolha outro.');
       return;
@@ -58,12 +57,14 @@ export function SignupPage() {
     setBusy(false);
 
     if (signUpError) {
-      // Supabase surfaces a duplicate email as a "registered" error.
-      setError(
-        /registered|already/i.test(signUpError.message)
-          ? 'Este email já está registado.'
-          : signUpError.message,
-      );
+      console.error('sign-up failed', signUpError);
+      const msg = signUpError.message ?? '';
+      if (/registered|already/i.test(msg)) {
+        setError('Este email já está registado.');
+      } else {
+        // Never surface an empty/opaque object as the message.
+        setError(msg.trim().length > 2 ? msg : 'Não foi possível criar a conta. Tenta novamente.');
+      }
       return;
     }
 
@@ -97,7 +98,7 @@ export function SignupPage() {
   }
 
   return (
-    <AuthCard title="Criar a sua conta" subtitle="Comece com 5 000 Tostões oferecidos.">
+    <AuthCard title="Criar a sua conta" subtitle="Comece com 500 Tostões oferecidos.">
       <form onSubmit={onSubmit} className="space-y-4" noValidate>
         <Input
           id="displayName"
