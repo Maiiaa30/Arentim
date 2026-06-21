@@ -1,6 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
-import type { AdminAction, Fixture, Profile } from '@/types/db';
+import type {
+  AdminAction,
+  AdminAnnouncement,
+  AdminPlayerBet,
+  AdminPlayerTransaction,
+  Fixture,
+  Profile,
+} from '@/types/db';
 
 export interface AdminTop {
   id: string;
@@ -105,6 +112,60 @@ export function useAdminChallenges() {
   });
 }
 
+/** Recent ledger rows for one player (admin drill-down → Transações). */
+export function useAdminPlayerTransactions(userId: string | null) {
+  return useQuery({
+    queryKey: ['admin-player-transactions', userId] as const,
+    enabled: !!userId,
+    queryFn: async (): Promise<AdminPlayerTransaction[]> => {
+      const { data, error } = await supabase.rpc('admin_player_transactions', { p_user: userId!, p_limit: 30 });
+      if (error) throw error;
+      return data;
+    },
+  });
+}
+
+/** Recent sports bets for one player (admin drill-down → Apostas). */
+export function useAdminPlayerBets(userId: string | null) {
+  return useQuery({
+    queryKey: ['admin-player-bets', userId] as const,
+    enabled: !!userId,
+    queryFn: async (): Promise<AdminPlayerBet[]> => {
+      const { data, error } = await supabase.rpc('admin_player_bets', { p_user: userId!, p_limit: 20 });
+      if (error) throw error;
+      return data;
+    },
+  });
+}
+
+/** Every announcement (active + inactive) for the management list. */
+export function useAdminAnnouncements() {
+  return useQuery({
+    queryKey: ['admin-announcements'] as const,
+    queryFn: async (): Promise<AdminAnnouncement[]> => {
+      const { data, error } = await supabase.rpc('admin_announcements');
+      if (error) throw error;
+      return data;
+    },
+  });
+}
+
+/** Toggle an announcement active/inactive. */
+export function useSetAnnouncementActive() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (v: { id: number; active: boolean }) => {
+      const { error } = await supabase.rpc('admin_set_announcement_active', { p_id: v.id, p_active: v.active });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['admin-announcements'] });
+      void qc.invalidateQueries({ queryKey: ['announcements'] });
+      void qc.invalidateQueries({ queryKey: ['admin-actions'] });
+    },
+  });
+}
+
 export function useAdminActionsMutations() {
   const qc = useQueryClient();
   const refresh = () => {
@@ -112,6 +173,8 @@ export function useAdminActionsMutations() {
     void qc.invalidateQueries({ queryKey: ['admin-actions'] });
     void qc.invalidateQueries({ queryKey: ['admin-fixtures'] });
     void qc.invalidateQueries({ queryKey: ['admin-challenges'] });
+    void qc.invalidateQueries({ queryKey: ['admin-announcements'] });
+    void qc.invalidateQueries({ queryKey: ['announcements'] });
   };
 
   const adjustBalance = useMutation({
@@ -149,6 +212,13 @@ export function useAdminActionsMutations() {
     },
     onSuccess: refresh,
   });
+  const setOdds = useMutation({
+    mutationFn: async (v: { fixture: number; odds: Record<string, Record<string, number>> }) => {
+      const { error } = await supabase.rpc('admin_set_odds', { p_fixture: v.fixture, p_odds: v.odds });
+      if (error) throw error;
+    },
+    onSuccess: refresh,
+  });
   const broadcast = useMutation({
     mutationFn: async (v: { title: string; body: string }) => {
       const { error } = await supabase.rpc('admin_broadcast', { p_title: v.title, p_body: v.body });
@@ -182,5 +252,5 @@ export function useAdminActionsMutations() {
     },
   });
 
-  return { adjustBalance, setStreak, setSuspended, suspendUntil, settleFixture, broadcast, upsertChallenge, resetSeason };
+  return { adjustBalance, setStreak, setSuspended, suspendUntil, settleFixture, setOdds, broadcast, upsertChallenge, resetSeason };
 }

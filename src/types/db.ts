@@ -604,6 +604,36 @@ export type AdminAction = {
   created_at: string;
 };
 
+/** Row from admin_player_transactions — recent ledger for one player. */
+export type AdminPlayerTransaction = {
+  id: number;
+  type: TransactionType;
+  game: string | null;
+  amount: number;
+  balance_after: number;
+  note: string | null;
+  created_at: string;
+};
+
+/** Row from admin_player_bets — recent sports bets for one player. */
+export type AdminPlayerBet = {
+  id: number;
+  stake: number;
+  combined_odds: number;
+  potential_payout: number;
+  status: 'pending' | 'won' | 'lost' | 'void';
+  created_at: string;
+};
+
+/** Row from admin_announcements — every announcement for the management list. */
+export type AdminAnnouncement = {
+  id: number;
+  title: string;
+  body: string;
+  active: boolean;
+  created_at: string;
+};
+
 export type Transaction = {
   id: number;
   user_id: string;
@@ -1173,6 +1203,22 @@ export type Database = {
       };
       admin_broadcast: {
         Args: { p_title: string; p_body: string };
+        Returns: undefined;
+      };
+      admin_player_transactions: {
+        Args: { p_user: string; p_limit?: number };
+        Returns: AdminPlayerTransaction[];
+      };
+      admin_player_bets: {
+        Args: { p_user: string; p_limit?: number };
+        Returns: AdminPlayerBet[];
+      };
+      admin_announcements: {
+        Args: Record<string, never>;
+        Returns: AdminAnnouncement[];
+      };
+      admin_set_announcement_active: {
+        Args: { p_id: number; p_active: boolean };
         Returns: undefined;
       };
     };
