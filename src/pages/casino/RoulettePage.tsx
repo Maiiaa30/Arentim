@@ -226,12 +226,27 @@ export function RoulettePage() {
     setLastBets(bets.map((b) => ({ ...b }))); // remember for "Repetir"
     try {
       await placeBet.mutateAsync(bets as RouletteBetPayload[]);
-      setBets([]);
+      // Keep the slip on the board so the chips stay visible while the wheel
+      // spins; the new-round effect clears them when the next window opens.
       setChipHistory([]);
     } catch (e) {
       setError(humanize(e));
     }
   }
+
+  // Auto-bet: if the betting window is about to close and chips are placed but
+  // not yet confirmed, submit them automatically (once per round) so a player who
+  // forgot to press "Confirmar" still gets the bet they set up. Fires ~1s early so
+  // the request lands before the server closes the window.
+  const autoBetRoom = useRef<number | null>(null);
+  useEffect(() => {
+    if (!betting || mine || bets.length === 0 || placeBet.isPending) return;
+    if (bettingLeft > 1) return;
+    if (autoBetRoom.current === roomId) return;
+    autoBetRoom.current = roomId;
+    void confirm();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [betting, mine, bets.length, bettingLeft, roomId, placeBet.isPending]);
 
   return (
     <div className="animate-fade-in space-y-6">

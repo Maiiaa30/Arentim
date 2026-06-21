@@ -28,6 +28,9 @@ export interface Player {
   totalCommitted: number; // chips in for the whole hand (for side pots)
   status: 'active' | 'folded' | 'allin' | 'out';
   hasActed: boolean; // acted since the last raise this street
+  /** Set when a player leaves mid-hand: they are folded + cashed out now and the
+   *  seat is purged at the next hand start (removePlayer is a no-op mid-hand). */
+  leaving?: boolean;
 }
 
 export type Street = 'idle' | 'preflop' | 'flop' | 'turn' | 'river' | 'showdown';
@@ -163,6 +166,8 @@ function postBlind(s: TableState, idx: number, amount: number) {
 
 /** Start a new hand. Players with chips sit in; the button moves. */
 export function startHand(s: TableState, rand: Rand, rec?: StepRecorder): TableState {
+  // Drop anyone who left during the previous hand (already folded + cashed out).
+  if (s.players.some((p) => p.leaving)) s.players = s.players.filter((p) => !p.leaving);
   for (const p of s.players) {
     p.hole = [];
     p.committed = 0;

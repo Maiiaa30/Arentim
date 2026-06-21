@@ -248,16 +248,26 @@ Deno.serve(async (req) => {
     case 'leave': {
       const row = await loadByMembership(body.tableId);
       if (!row) return json({ error: 'no table' }, 404);
-      const state = row.state;
+      let state = row.state;
       const me = state.players.find((p) => p.id === user.id);
       let cashOut = 0;
       if (me) {
-        // You can only leave between hands; mid-hand you must finish first (else
-        // removePlayer is a no-op and your cashed-out chips would be paid twice).
+        // Leaving mid-hand used to be blocked ("Termine a mão antes de sair"),
+        // but with bots the table is almost never between hands, so a player
+        // could feel trapped. Instead, fold the leaver: chips already committed
+        // to the pot stay in play and go to the eventual winner (conserved),
+        // their remaining stack is cashed out now, and the seat is purged at the
+        // next hand start (removePlayer is a no-op mid-hand). If it's their turn,
+        // fold through the engine so the hand keeps progressing for everyone.
         if (!state.handOver) {
-          return json({ error: 'Termine a mão antes de sair da mesa.' }, 409);
+          if (state.toAct >= 0 && state.players[state.toAct]!.id === user.id) {
+            state = applyActionFor(state, user.id, 'fold', 0, rand);
+          } else if (me.status === 'active' || me.status === 'allin') {
+            me.status = 'folded';
+          }
         }
-        cashOut = me.stack;
+        const meNow = state.players.find((p) => p.id === user.id)!;
+        cashOut = meNow.stack;
         if (cashOut > 0) {
           // Idempotency keyed to this seat-session (table + user + join time, the
           // latter unique per re-join) so two concurrent `leave` requests can't
@@ -268,10 +278,12 @@ Deno.serve(async (req) => {
             p_idempotency_key: `poker-cashout-${row.id}-${user.id}-${row.joinedAt ?? '0'}`, p_wager: 0,
           });
         }
-        removePlayer(state, user.id);
+        meNow.stack = 0;
+        if (state.handOver) removePlayer(state, user.id);
+        else meNow.leaving = true; // purged at the next startHand
       }
       await db.from('poker_table_members').delete().eq('table_id', row.id).eq('user_id', user.id);
-      const remaining = state.players.filter((p) => !p.isBot).length;
+      const remaining = state.players.filter((p) => !p.isBot && !p.leaving).length;
       await persist(row.id, state, remaining === 0 ? 'closed' : undefined);
       return json({ left: true, cashOut });
     }
