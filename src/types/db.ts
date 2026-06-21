@@ -463,6 +463,32 @@ export type RouletteRoomState = {
 
 export type RouletteRoomBetResult = { ok?: boolean; balance: number; stake: number };
 
+/** A bet row in the shared horse-race room. */
+export type HorseBetRow = {
+  id: number;
+  room_id: number;
+  user_id: string;
+  display_name: string;
+  horse: number;
+  stake: number;
+  payout: number;
+  settled: boolean;
+  created_at: string;
+};
+
+/** Masked snapshot of the shared horse race (horse_room_now). */
+export type HorseRoomState = {
+  room_id: number;
+  status: 'betting' | 'racing' | 'done';
+  server_now: string;
+  betting_ends_at: string;
+  race_start_at: string;
+  finish_at: string;
+  odds: number[];
+  winner: number | null;
+  mine: { horse: number; stake: number; settled: boolean; payout: number } | null;
+};
+
 /** A head-to-head duel row (duel_list RPC). */
 export type DuelRow = {
   id: number;
@@ -730,6 +756,12 @@ export type Database = {
         Update: Partial<RouletteRoomBetRow>;
         Relationships: [];
       };
+      horse_bets: {
+        Row: HorseBetRow;
+        Insert: Partial<HorseBetRow> & { room_id: number; user_id: string; display_name: string; horse: number; stake: number };
+        Update: Partial<HorseBetRow>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
@@ -832,6 +864,18 @@ export type Database = {
       play_wheel: {
         Args: { p_stake: number; p_idempotency_key: string | null };
         Returns: WheelResult;
+      };
+      horse_room_now: {
+        Args: Record<string, never>;
+        Returns: HorseRoomState;
+      };
+      horse_room_bet: {
+        Args: { p_room_id: number; p_horse: number; p_stake: number };
+        Returns: { ok?: boolean; balance: number };
+      };
+      horse_room_history: {
+        Args: Record<string, never>;
+        Returns: number[];
       };
       crash_start: {
         Args: { p_stake: number; p_auto_target: number | null };

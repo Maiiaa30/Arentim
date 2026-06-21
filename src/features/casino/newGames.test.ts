@@ -44,14 +44,14 @@ describe('Chicken economics', () => {
 });
 
 describe('Tigrinho RTP (3 paylines)', () => {
-  it('returns ~0.95 of stake long-run', () => {
+  it('is deliberately stingy (~0.82 — the tiger eats your money)', () => {
     const w = [1, 2, 3, 4, 5, 6];
-    const mult = [238, 95, 57, 29, 18, 10];
+    const mult = [205, 82, 49, 25, 15, 9]; // mirrors 20260624000000_tigrinho_rtp
     const total = w.reduce((a, b) => a + b, 0); // 21
     // RTP = E[line mult] = Σ (w/total)^3 · mult
     const rtp = w.reduce((acc, wi, i) => acc + Math.pow(wi / total, 3) * mult[i]!, 0);
-    expect(rtp).toBeGreaterThan(0.93);
-    expect(rtp).toBeLessThan(0.97);
+    expect(rtp).toBeGreaterThan(0.79);
+    expect(rtp).toBeLessThan(0.85);
   });
 });
 

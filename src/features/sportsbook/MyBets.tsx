@@ -11,17 +11,19 @@ const statusLabel: Record<string, string> = {
   void: 'Anulada',
 };
 
-/** Small coloured pill for a leg/bet outcome. */
+/** Bold, high-contrast status pill so the outcome reads at a glance. */
 function ResultPill({ result }: { result: string }) {
   const tone =
     result === 'won'
-      ? 'border-positive/40 bg-positive/10 text-positive'
+      ? 'bg-positive text-bg shadow-[0_0_12px_rgba(31,138,91,0.35)]'
       : result === 'lost'
-        ? 'border-negative/40 bg-negative/10 text-negative'
-        : 'border-border bg-bg text-muted-2';
+        ? 'bg-negative text-white shadow-[0_0_12px_rgba(176,48,58,0.35)]'
+        : result === 'void'
+          ? 'bg-surface-raised text-muted-2 ring-1 ring-border'
+          : 'bg-gold text-bg shadow-[0_0_12px_rgba(201,162,75,0.4)]'; // pending
   return (
     <span
-      className={`shrink-0 rounded-full border px-2 py-0.5 font-sans text-[10px] font-medium uppercase tracking-[0.1em] ${tone}`}
+      className={`shrink-0 rounded-full px-2.5 py-1 font-sans text-[10px] font-bold uppercase tracking-[0.12em] ${tone}`}
     >
       {statusLabel[result] ?? result}
     </span>
