@@ -170,5 +170,17 @@ export function useAdminActionsMutations() {
     onSuccess: refresh,
   });
 
-  return { adjustBalance, setStreak, setSuspended, suspendUntil, settleFixture, broadcast, upsertChallenge };
+  const resetSeason = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.rpc('admin_reset_season');
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      refresh();
+      void qc.invalidateQueries({ queryKey: ['season-leaderboard'] });
+    },
+  });
+
+  return { adjustBalance, setStreak, setSuspended, suspendUntil, settleFixture, broadcast, upsertChallenge, resetSeason };
 }

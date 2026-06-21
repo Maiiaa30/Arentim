@@ -8,22 +8,16 @@ import { PlayerCard } from '@/features/friends/PlayerCard';
 import { DailyBonusCard } from '@/features/bonus/DailyBonusCard';
 import { LandingPage } from '@/pages/LandingPage';
 import { Button } from '@/components/ui/Button';
-import { Eyebrow, FramedPanel, RingAvatar, SectionHeader } from '@/components/ui/primitives';
-import { GameArt, type GameArtKind } from '@/features/casino/GameArt';
+import { Eyebrow, RingAvatar, SectionHeader } from '@/components/ui/primitives';
+import { HeroFrame } from '@/components/ui/HeroFrame';
+import { GameCard, type GameTile } from '@/features/casino/GameCard';
 import { WinPopup } from '@/features/sportsbook/WinPopup';
 import { formatTos } from '@/lib/format';
 
-interface GameTile {
-  to: string;
-  name: string;
-  desc: string;
-  art: GameArtKind;
-  badge?: string;
-  tone: string; // artwork gradient
-  cta?: string;
-}
-
 const GAMES: GameTile[] = [
+  { to: '/casino/tigrinho', name: 'Tigrinho', desc: 'A slot do tigre da sorte.', art: 'tigrinho', badge: 'Novo', tone: 'from-chip-ruby/40 to-bg' },
+  { to: '/casino/mines', name: 'Mines', desc: 'Diamantes ou minas?', art: 'mines', badge: 'Novo', tone: 'from-positive-felt/40 to-bg' },
+  { to: '/casino/frango', name: 'Frango na Estrada', desc: 'Atravessa sem morrer.', art: 'chicken', badge: 'Novo', tone: 'from-gold/30 to-bg' },
   { to: '/casino/crash', name: 'Crash', desc: 'Saia antes de rebentar.', art: 'crash', badge: 'Novo', tone: 'from-chip-ruby/40 to-bg' },
   { to: '/casino/wheel', name: 'Fita da Sorte', desc: 'Pare no multiplicador certo.', art: 'wheel', badge: 'Novo', tone: 'from-gold/30 to-bg' },
   { to: '/casino/roulette', name: 'Roleta', desc: 'Roleta europeia, zero único.', art: 'roulette', badge: 'Em alta', tone: 'from-chip-ruby/40 to-bg' },
@@ -33,31 +27,6 @@ const GAMES: GameTile[] = [
   { to: '/casino/sobe-e-desce', name: 'Sobe e Desce', desc: 'Sobe, desce, ou sete.', art: 'sobedesce', badge: 'Novo', tone: 'from-positive-felt/40 to-bg' },
   { to: '/sportsbook', name: 'Futebol', desc: 'Primeira Liga e mais.', art: 'football', badge: 'Ao vivo', tone: 'from-positive-felt/30 to-bg', cta: 'Abrir' },
 ];
-
-function GameCard({ g }: { g: GameTile }) {
-  return (
-    <Link to={g.to} className="card card-hover focus-ring group flex flex-col overflow-hidden">
-      <div className={`relative h-[120px] bg-gradient-to-br ${g.tone}`}>
-        <GameArt kind={g.art} />
-        {g.badge && (
-          <span className="absolute left-3 top-3 rounded-full border border-gold/40 bg-bg/60 px-2 py-0.5 font-sans text-[9px] uppercase tracking-[0.18em] text-gold">
-            {g.badge}
-          </span>
-        )}
-      </div>
-      <div className="flex flex-1 flex-col p-4">
-        <h3 className="font-display text-[22px] font-semibold text-text group-hover:text-gold">{g.name}</h3>
-        <p className="mt-1 flex-1 font-sans text-[12.5px] text-muted">{g.desc}</p>
-        <div className="mt-3 flex items-center justify-between">
-          <span className="font-mono text-xs text-muted-2">5 – 500 tós</span>
-          <span className="rounded border border-gold/40 px-3 py-1 font-sans text-[10px] uppercase tracking-[0.18em] text-gold transition-colors group-hover:bg-gold group-hover:text-bg">
-            {g.cta ?? 'Entrar'}
-          </span>
-        </div>
-      </div>
-    </Link>
-  );
-}
 
 function HighRollers({ onSelect }: { onSelect: (id: string) => void }) {
   const { data } = useLeaderboard('global', 'net');
@@ -126,25 +95,25 @@ export function HomePage() {
       <WinPopup />
       {user && <DailyBonusCard />}
 
-      <FramedPanel>
+      <HeroFrame>
         <div className="max-w-xl">
           <Eyebrow>Bem-vindo ao Arentim</Eyebrow>
-          <h1 className="mt-3 font-display text-[44px] font-medium leading-[1.04] text-text">
+          <h1 className="mt-3 font-display text-[44px] font-medium leading-[1.02] text-text sm:text-[52px]">
             A sorte está <span className="italic text-gold">lançada.</span>
           </h1>
           <p className="mt-4 font-sans text-[15px] leading-relaxed text-muted">
             Uma casa de jogos só para amigos. Cada conta começa com 500 Tostões. É tudo a brincar.
           </p>
           <div className="mt-7 flex flex-wrap gap-3">
-            <Link to="/casino/coinflip">
-              <Button variant="ghost">Lançar a Moeda</Button>
+            <Link to="/casino">
+              <Button variant="primary">Entrar no Casino</Button>
             </Link>
             <Link to="/sportsbook">
-              <Button variant="secondary">Ver Futebol</Button>
+              <Button variant="ghost">Ver Futebol</Button>
             </Link>
           </div>
         </div>
-      </FramedPanel>
+      </HeroFrame>
 
       <div className="flex flex-wrap gap-8">
         <div className="min-w-0 flex-[3_1_600px] space-y-5">

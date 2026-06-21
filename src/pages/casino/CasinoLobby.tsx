@@ -1,18 +1,12 @@
-import { Link } from 'react-router-dom';
 import { Eyebrow, FramedPanel, SectionHeader } from '@/components/ui/primitives';
-import { GameArt, type GameArtKind } from '@/features/casino/GameArt';
-
-interface GameTile {
-  to: string;
-  name: string;
-  desc: string;
-  art: GameArtKind;
-  badge?: string;
-  tone: string; // artwork gradient
-  range: string; // bet range
-}
+import { CasinoActivity } from '@/features/casino/CasinoActivity';
+import { GameCard, type GameTile } from '@/features/casino/GameCard';
 
 const NEW: GameTile[] = [
+  { to: '/casino/tigrinho', name: 'Tigrinho', desc: 'A slot do tigre da sorte. Três iguais pagam — o tigre é o prémio maior.', art: 'tigrinho', badge: 'Novo', tone: 'from-chip-ruby/40 to-bg', range: '5 – 100 tós' },
+  { to: '/casino/mines', name: 'Mines', desc: 'Revela diamantes e foge das minas. Retira antes de rebentar.', art: 'mines', badge: 'Novo', tone: 'from-positive-felt/40 to-bg', range: '5 – 100 tós' },
+  { to: '/casino/frango', name: 'Frango na Estrada', desc: 'Atravessa as faixas sem seres atropelado — o prémio sobe a cada faixa.', art: 'chicken', badge: 'Novo', tone: 'from-gold/30 to-bg', range: '5 – 100 tós' },
+  { to: '/casino/corrida', name: 'Corrida de Cavalos', desc: 'Escolhe um cavalo e aposta. Cota maior, prémio maior.', art: 'horse', badge: 'Novo', tone: 'from-chip-navy/40 to-bg', range: '5 – 100 tós' },
   { to: '/casino/crash', name: 'Crash', desc: 'Saia antes do foguetão rebentar. Multiplicador sem limite.', art: 'crash', badge: 'Novo', tone: 'from-chip-ruby/40 to-bg', range: '5 – 100 tós' },
   { to: '/casino/wheel', name: 'Fita da Sorte', desc: 'A fita corre e pára no multiplicador — até 5×.', art: 'wheel', badge: 'Novo', tone: 'from-gold/30 to-bg', range: '5 – 100 tós' },
   { to: '/casino/chest', name: 'Jogo dos Copos', desc: 'Siga a joia debaixo do copo enquanto baralham — encontre-a por 2.85×.', art: 'chest', badge: 'Novo', tone: 'from-gold/30 to-bg', range: '5 – 100 tós' },
@@ -31,41 +25,6 @@ const QUICK: GameTile[] = [
   { to: '/casino/slots', name: 'Slots', desc: 'Cinco máquinas temáticas e um pote progressivo.', art: 'slots', badge: '5 máquinas', tone: 'from-gold/30 to-bg', range: '5 – 1000 tós' },
   { to: '/casino/coinflip', name: 'Moeda', desc: 'Cara ou coroa — dobro ou nada, prémio par.', art: 'coinflip', badge: 'Rápido', tone: 'from-gold-light/30 to-bg', range: '5 – 500 tós' },
 ];
-
-function GameCard({ g, featured }: { g: GameTile; featured?: boolean }) {
-  return (
-    <Link
-      to={g.to}
-      className="card card-hover focus-ring group flex flex-col overflow-hidden transition-transform duration-300 ease-aretim hover:-translate-y-1"
-    >
-      <div className={`relative ${featured ? 'h-[156px]' : 'h-[132px]'} bg-gradient-to-br ${g.tone}`}>
-        <GameArt kind={g.art} />
-        <div
-          className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
-          style={{ background: 'radial-gradient(420px 180px at 50% -20%, rgba(201,162,75,0.18), transparent 70%)' }}
-          aria-hidden
-        />
-        {g.badge && (
-          <span className="absolute left-3 top-3 rounded-full border border-gold/40 bg-bg/60 px-2.5 py-0.5 font-sans text-[9px] font-medium uppercase tracking-[0.18em] text-gold backdrop-blur-sm">
-            {g.badge}
-          </span>
-        )}
-      </div>
-      <div className="flex flex-1 flex-col p-5">
-        <h3 className="font-display text-[24px] font-semibold leading-tight text-text transition-colors group-hover:text-gold">
-          {g.name}
-        </h3>
-        <p className="mt-1.5 flex-1 font-sans text-[12.5px] leading-relaxed text-muted">{g.desc}</p>
-        <div className="mt-4 flex items-center justify-between">
-          <span className="font-mono text-xs text-muted-2">{g.range}</span>
-          <span className="min-h-[40px] rounded border border-gold/40 px-4 py-2 font-sans text-[10px] font-medium uppercase tracking-[0.18em] text-gold transition-colors group-hover:bg-gold group-hover:text-bg">
-            Entrar
-          </span>
-        </div>
-      </div>
-    </Link>
-  );
-}
 
 function Section({ title, right, games, featured }: { title: string; right?: string; games: GameTile[]; featured?: boolean }) {
   return (
@@ -95,6 +54,8 @@ export function CasinoLobby() {
           </p>
         </div>
       </FramedPanel>
+
+      <CasinoActivity />
 
       <Section title="Novidades" right="Acabadas de chegar" games={NEW} featured />
       <Section title="As Mesas" right="Clássicos" games={TABLES} />

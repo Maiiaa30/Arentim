@@ -69,6 +69,8 @@ export default {
         reel: { '0%': { transform: 'translateY(0)' }, '100%': { transform: 'translateY(-50%)' } },
         coin3d: { '0%': { transform: 'rotateY(0deg)' }, '100%': { transform: 'rotateY(360deg)' } },
         floaty: { '0%,100%': { transform: 'translateY(0)' }, '50%': { transform: 'translateY(-5px)' } },
+        // Drifting clouds behind the crash chart (slow parallax sway).
+        drift: { '0%,100%': { transform: 'translateX(0)' }, '50%': { transform: 'translateX(-16px)' } },
         ball: {
           '0%,100%': { transform: 'translate(-26px,6px)' },
           '50%': { transform: 'translate(26px,-6px)' },
@@ -126,6 +128,7 @@ export default {
         reel: 'reel 2.4s linear infinite',
         coin3d: 'coin3d 2.4s linear infinite',
         floaty: 'floaty 3.4s ease-in-out infinite',
+        drift: 'drift 12s ease-in-out infinite',
         ball: 'ball 3s ease-in-out infinite',
         pop: 'pop 0.4s cubic-bezier(0.22,0.61,0.36,1)',
         deal: 'deal 0.32s cubic-bezier(0.22,0.61,0.36,1) both',

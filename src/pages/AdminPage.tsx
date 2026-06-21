@@ -190,7 +190,8 @@ export function AdminPage() {
   const { data: fixtures } = useAdminFixtures();
   const { data: challenges } = useAdminChallenges();
   const { data: actions } = useAdminActions();
-  const { settleFixture, broadcast, upsertChallenge } = useAdminActionsMutations();
+  const { settleFixture, broadcast, upsertChallenge, resetSeason } = useAdminActionsMutations();
+  const [seasonMsg, setSeasonMsg] = useState<string | null>(null);
 
   const [bTitle, setBTitle] = useState('');
   const [bBody, setBBody] = useState('');
@@ -218,7 +219,36 @@ export function AdminPage() {
         ))}
       </div>
 
-      {tab === 'overview' && <Overview stats={stats} />}
+      {tab === 'overview' && (
+        <div className="space-y-5">
+          <Overview stats={stats} />
+          <div className="card flex flex-wrap items-center justify-between gap-3 p-5">
+            <div>
+              <p className="font-display text-base font-medium text-text">Temporada</p>
+              <p className="font-sans text-[12px] text-muted-2">
+                Reinicia a tabela da temporada — o resultado de jogo passa a contar a partir de agora.
+              </p>
+              {seasonMsg && <p className="mt-1 font-sans text-[12px] text-positive">{seasonMsg}</p>}
+            </div>
+            <Button
+              variant="secondary"
+              disabled={resetSeason.isPending}
+              onClick={async () => {
+                if (!window.confirm('Reiniciar a temporada agora?')) return;
+                setSeasonMsg(null);
+                try {
+                  await resetSeason.mutateAsync();
+                  setSeasonMsg('Temporada reiniciada.');
+                } catch {
+                  setSeasonMsg('Não foi possível reiniciar.');
+                }
+              }}
+            >
+              {resetSeason.isPending ? 'A reiniciar…' : 'Repor temporada'}
+            </Button>
+          </div>
+        </div>
+      )}
 
       {tab === 'players' && (
         <div className="grid gap-4 lg:grid-cols-2">

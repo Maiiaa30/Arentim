@@ -4,7 +4,10 @@ import { useAuth } from '@/features/auth/AuthProvider';
 import { useProfile } from '@/features/profile/useProfile';
 import { AnimatedNumber } from '@/components/AnimatedNumber';
 import { Button } from '@/components/ui/Button';
-import { Monogram, RingAvatar } from '@/components/ui/primitives';
+import { RingAvatar } from '@/components/ui/primitives';
+import { Brandmark } from '@/components/ui/Brandmark';
+import { CoinIcon } from '@/components/CoinIcon';
+import { NotificationBell } from '@/components/NotificationBell';
 import { NAV, isGroup, type NavEntry, type NavLeaf } from './navItems';
 
 function initialsOf(name: string | undefined): string {
@@ -125,13 +128,17 @@ export function Header() {
   }
 
   return (
-    <header className="sticky top-0 z-30 border-b border-border bg-bg/[0.86] backdrop-blur-[14px]">
+    <header className="sticky top-0 z-30 border-b border-border bg-bg/[0.82] backdrop-blur-[14px]">
+      {/* Refined gold hairline glow under the bar */}
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-gold/40 to-transparent" aria-hidden />
       <div className="mx-auto flex h-[68px] max-w-[1480px] items-center justify-between gap-4 px-4 sm:px-9">
         <div className="flex min-w-0 items-center gap-7">
-          <NavLink to="/" className="focus-ring flex shrink-0 items-center gap-3 rounded">
-            <Monogram letter="A" />
+          <NavLink to="/" className="focus-ring group flex shrink-0 items-center gap-3 rounded">
+            <span className="transition-transform duration-300 ease-aretim group-hover:scale-105">
+              <Brandmark size={40} />
+            </span>
             <span className="leading-tight">
-              <span className="block font-sans text-sm font-medium tracking-[0.35em] text-text sm:text-base sm:tracking-[0.45em]">
+              <span className="block bg-gradient-to-r from-gold-light via-gold to-gold-light bg-clip-text font-sans text-sm font-semibold tracking-[0.35em] text-transparent sm:text-base sm:tracking-[0.42em]">
                 ARENTIM
               </span>
               <span className="hidden font-sans text-[9px] uppercase tracking-[0.3em] text-muted-2 sm:block">
@@ -141,7 +148,7 @@ export function Header() {
           </NavLink>
 
           {user && (
-            <nav className="hidden items-center gap-5 lg:flex">
+            <nav className="hidden items-center gap-4 xl:flex">
               {nav.map((e) =>
                 isGroup(e) ? (
                   <NavDropdown
@@ -162,22 +169,35 @@ export function Header() {
         <div className="flex shrink-0 items-center gap-2 sm:gap-4">
           {user ? (
             <>
-              <div className="hidden text-right sm:block">
-                <span className="block font-sans text-[9px] uppercase tracking-[0.25em] text-muted-2">Saldo</span>
-                <span className="flex items-center justify-end gap-1 font-display text-lg font-medium text-gold">
-                  {profile ? <AnimatedNumber value={profile.balance} /> : '—'}
-                  <span className="font-mono text-xs">tós</span>
+              {/* Balance chip doubles as the Caixa entry point (keeps the bar
+                  compact so the nav fits on narrow/vertical desktops). */}
+              <NavLink
+                to="/wallet"
+                title="Abrir a Caixa"
+                className="focus-ring hidden items-center gap-2 rounded-full border border-gold/25 bg-gold/[0.06] px-3.5 py-1.5 transition-colors hover:border-gold/50 sm:flex"
+              >
+                <CoinIcon className="h-4 w-4" />
+                <span className="leading-none">
+                  <span className="block font-sans text-[8px] uppercase tracking-[0.22em] text-muted-2">Saldo</span>
+                  <span className="flex items-baseline gap-1 font-display text-base font-semibold text-gold">
+                    {profile ? <AnimatedNumber value={profile.balance} /> : '—'}
+                    <span className="font-mono text-[10px]">tós</span>
+                  </span>
                 </span>
-              </div>
+              </NavLink>
 
-              <span className="flex items-center gap-1 rounded border border-border bg-surface px-2.5 py-1.5 font-display text-sm font-medium text-gold sm:hidden">
+              <NavLink
+                to="/wallet"
+                title="Abrir a Caixa"
+                className="flex items-center gap-1.5 rounded-full border border-gold/25 bg-gold/[0.06] px-2.5 py-1.5 font-display text-sm font-semibold text-gold sm:hidden"
+              >
+                <CoinIcon className="h-3.5 w-3.5" />
                 {profile ? <AnimatedNumber value={profile.balance} /> : '—'}
                 <span className="font-mono text-[10px]">tós</span>
-              </span>
+              </NavLink>
 
-              <Button variant="secondary" className="hidden !px-4 !py-2 sm:inline-flex" onClick={() => navigate('/wallet')}>
-                Caixa
-              </Button>
+              <NotificationBell />
+
               <NavLink to="/profile" className="focus-ring hidden rounded-full sm:inline-flex" title="O seu perfil">
                 <RingAvatar initials={initialsOf(profile?.display_name)} size={40} />
               </NavLink>
@@ -190,7 +210,7 @@ export function Header() {
                 aria-label={drawerOpen ? 'Fechar menu' : 'Abrir menu'}
                 aria-expanded={drawerOpen}
                 onClick={() => setDrawerOpen((v) => !v)}
-                className="focus-ring inline-flex h-10 w-10 items-center justify-center rounded border border-border text-gold lg:hidden"
+                className="focus-ring inline-flex h-10 w-10 items-center justify-center rounded border border-border text-gold xl:hidden"
               >
                 <span className="relative block h-4 w-5" aria-hidden>
                   <span className={`absolute left-0 block h-0.5 w-5 bg-current transition-all ${drawerOpen ? 'top-1.5 rotate-45' : 'top-0'}`} />
@@ -217,7 +237,7 @@ export function Header() {
 
       {/* Mobile drawer (below lg, authenticated). */}
       {user && drawerOpen && (
-        <div className="fixed inset-0 top-[68px] z-40 lg:hidden">
+        <div className="fixed inset-0 top-[68px] z-40 xl:hidden">
           <button
             type="button"
             aria-label="Fechar menu"
