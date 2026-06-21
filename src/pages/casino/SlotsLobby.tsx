@@ -66,6 +66,33 @@ function MachineCard({ m }: { m: SlotMachineMeta }) {
   );
 }
 
+/** Special non-DB machine: the cheeky high-variance Tigrinho. */
+function TigrinhoCard() {
+  return (
+    <Link to="/casino/tigrinho" className="card card-hover focus-ring group relative flex flex-col overflow-hidden">
+      <div
+        className="relative flex h-[180px] items-center justify-center gap-2 overflow-hidden"
+        style={{ background: 'radial-gradient(120% 130% at 50% -10%, rgba(224,168,58,0.45), transparent 60%), linear-gradient(180deg,#5a1414,#2a0a0a)' }}
+      >
+        <span className="text-2xl">🪙</span>
+        <span className="text-6xl drop-shadow-[0_2px_10px_rgba(224,168,58,0.5)] transition-transform duration-500 group-hover:-translate-y-0.5">🐯</span>
+        <span className="text-2xl">🧧</span>
+        <span className="absolute right-3 top-3 rounded-full border border-[#e0a83a]/70 bg-bg/70 px-2.5 py-0.5 font-sans text-[9px] uppercase tracking-[0.18em] text-[#e0a83a]">Novo</span>
+      </div>
+      <div className="flex flex-1 flex-col p-5">
+        <h3 className="font-display text-[26px] font-semibold text-text group-hover:text-gold">Tigrinho</h3>
+        <p className="mt-1.5 flex-1 font-sans text-[13.5px] leading-relaxed text-muted">
+          A slot do tigre da sorte. Raramente paga — mas quando paga, ruge. Joga por tua conta e risco. 🐯
+        </p>
+        <div className="mt-4 flex items-center justify-between">
+          <span className="font-mono text-[13px] text-muted-2">5 – 100 tós</span>
+          <span className="rounded border border-gold/40 px-3.5 py-1.5 font-sans text-[10px] uppercase tracking-[0.18em] text-gold transition-colors group-hover:bg-gold group-hover:text-bg">Jogar</span>
+        </div>
+      </div>
+    </Link>
+  );
+}
+
 export function SlotsLobby() {
   const { data: machines, isLoading, error } = useSlotMachines();
 
@@ -90,6 +117,7 @@ export function SlotsLobby() {
 
       {machines && (
         <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,300px),1fr))] gap-5">
+          <TigrinhoCard />
           {machines.map((m) => (
             <MachineCard key={m.key} m={m} />
           ))}

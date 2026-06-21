@@ -31,6 +31,7 @@ export function TigrinhoPage() {
   }, []);
 
   const balance = profile?.balance ?? 0;
+  const won = !!result && result.payout > 0;
 
   async function spin() {
     if (spinning) return;
@@ -39,9 +40,7 @@ export function TigrinhoPage() {
     setResult(null);
     setWinRows([]);
     setSpinning(true);
-    spinTimer.current = window.setInterval(() => {
-      setGrid(Array.from({ length: 9 }, randSym));
-    }, 80);
+    spinTimer.current = window.setInterval(() => setGrid(Array.from({ length: 9 }, randSym)), 70);
     try {
       const r = await play.mutateAsync(stake);
       stopTimer.current = window.setTimeout(() => {
@@ -51,7 +50,7 @@ export function TigrinhoPage() {
         setResult(r);
         setWinRows(r.wins.map((w) => w.row));
         if (r.payout > 0) setWinId((n) => n + 1);
-      }, 750);
+      }, 850);
     } catch {
       if (spinTimer.current) window.clearInterval(spinTimer.current);
       setSpinning(false);
@@ -61,58 +60,72 @@ export function TigrinhoPage() {
 
   return (
     <div className="animate-fade-in space-y-6">
-      {result && result.payout > 0 && <WinCelebration key={winId} jackpot={result.multiplier >= 20} />}
-      <div>
-        <Link to="/casino" className="font-sans text-sm text-muted-2 hover:text-text">← Casino</Link>
-        <Eyebrow className="mt-3">O Salão</Eyebrow>
-        <h1 className="mt-2 font-display text-[34px] font-medium leading-tight text-text sm:text-[38px]">Tigrinho</h1>
-        <p className="mt-2 font-sans text-sm text-muted">A slot do tigre da sorte. Três iguais numa linha pagam — o tigre 🐯 é o prémio maior.</p>
+      {won && <WinCelebration key={winId} jackpot={result!.multiplier >= 20} />}
+
+      <div className="text-center">
+        <Link to="/casino/slots" className="font-sans text-sm text-muted-2 hover:text-text">← Slots</Link>
+        <Eyebrow className="mt-3 !text-[#e0a83a]">A Sorte do Tigre</Eyebrow>
+        <h1 className="mt-1 bg-gradient-to-b from-[#ffe9a8] via-[#e0a83a] to-[#b0303a] bg-clip-text font-display text-[40px] font-bold leading-tight text-transparent drop-shadow-[0_2px_10px_rgba(224,168,58,0.3)] sm:text-[52px]">
+          🐯 Tigrinho 🐯
+        </h1>
+        <p className="mt-1 font-sans text-[12.5px] text-muted">Dizem que o tigrinho não paga… só come os tós. Tens coragem? 🔥</p>
       </div>
 
+      {/* Cabinet */}
       <div
-        className="relative mx-auto max-w-sm overflow-hidden rounded-2xl border-2 border-gold/50 p-5 shadow-[0_0_40px_rgba(201,162,75,0.15)]"
-        style={{ background: 'radial-gradient(120% 90% at 50% 0%, #5a1414, #2a0a0a 70%, #1a0707)' }}
+        className="relative mx-auto max-w-sm overflow-hidden rounded-[20px] border-[3px] border-[#e0a83a]/70 p-1.5 shadow-[0_0_50px_rgba(224,168,58,0.25),inset_0_0_30px_rgba(0,0,0,0.6)]"
+        style={{ background: 'linear-gradient(160deg,#e0a83a,#8a3a14 40%,#5a1414 70%,#2a0a0a)' }}
       >
-        <div className="grid grid-cols-3 gap-2">
-          {grid.map((s, i) => {
-            const row = Math.floor(i / 3);
-            const winning = !spinning && winRows.includes(row);
-            return (
-              <div
-                key={i}
-                className={`flex aspect-square items-center justify-center rounded-lg border text-4xl transition-all ${
-                  winning ? 'animate-pop border-gold bg-gold/20 shadow-[0_0_16px_rgba(201,162,75,0.5)]' : 'border-gold/20 bg-black/30'
-                } ${spinning ? 'blur-[1px]' : ''}`}
-              >
-                {SYM[s]}
-              </div>
-            );
-          })}
-        </div>
+        <div className="rounded-[14px] p-4" style={{ background: 'radial-gradient(130% 100% at 50% 0%, #6e1a1a, #2a0a0a 75%)' }}>
+          {/* ornaments */}
+          <div className="pointer-events-none absolute left-2 top-2 text-lg opacity-70">🪙</div>
+          <div className="pointer-events-none absolute right-2 top-2 text-lg opacity-70">🧧</div>
 
-        <div className="mt-4 min-h-[1.75rem] text-center">
-          {spinning ? (
-            <p className="font-sans text-sm text-gold-light">A rodar…</p>
-          ) : result ? (
-            result.payout > 0 ? (
-              <p className="animate-pop font-display text-lg font-bold text-gold">
-                Ganhaste {formatAmount(result.payout)} tós · {result.multiplier.toFixed(2)}×
-              </p>
+          <div className="grid grid-cols-3 gap-2">
+            {grid.map((s, i) => {
+              const row = Math.floor(i / 3);
+              const winning = won && !spinning && winRows.includes(row);
+              return (
+                <div
+                  key={i}
+                  className={`flex aspect-square items-center justify-center rounded-xl border-2 text-[44px] transition-all ${
+                    winning
+                      ? 'animate-pop border-[#ffe9a8] bg-gradient-to-b from-gold/30 to-[#b0303a]/30 shadow-[0_0_20px_rgba(255,233,168,0.7)]'
+                      : 'border-[#e0a83a]/25 bg-black/40'
+                  } ${spinning ? 'blur-[2px] brightness-110' : ''}`}
+                  style={{ textShadow: '0 2px 8px rgba(0,0,0,0.6)' }}
+                >
+                  {SYM[s]}
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="mt-3 min-h-[2rem] text-center">
+            {spinning ? (
+              <p className="animate-pulse font-display text-lg font-bold text-[#ffe9a8]">🐯 A rugir…</p>
+            ) : result ? (
+              won ? (
+                <p className="animate-pop font-display text-xl font-bold text-[#ffe9a8]">
+                  PAGOU! +{formatAmount(result.payout)} tós · {result.multiplier.toFixed(2)}×
+                </p>
+              ) : (
+                <p className="font-display text-base font-bold text-[#e0555f]">O tigre comeu os teus tós 🐯💸</p>
+              )
             ) : (
-              <p className="font-sans text-sm text-muted">Sem sorte. Gira outra vez.</p>
-            )
-          ) : (
-            <p className="font-sans text-sm text-muted-2">Gira para chamar o tigre.</p>
-          )}
+              <p className="font-sans text-sm text-[#e0a83a]">Gira e reza ao tigre.</p>
+            )}
+          </div>
         </div>
       </div>
 
       <div className="card mx-auto max-w-sm space-y-4 p-5">
         <StakeChips stake={stake} onChange={setStake} balance={balance} disabled={spinning} />
-        <Button variant="primary" onClick={spin} disabled={spinning || stake > balance} className="w-full">
-          {spinning ? 'A rodar…' : stake > balance ? 'Saldo insuficiente' : `Girar · ${formatAmount(stake)} tós`}
+        <Button variant="primary" onClick={spin} disabled={spinning || stake > balance} className="w-full !bg-gradient-to-r !from-[#e0a83a] !to-[#b0303a] !text-white">
+          {spinning ? 'A rodar…' : stake > balance ? 'Saldo insuficiente' : `GIRAR · ${formatAmount(stake)} tós`}
         </Button>
-        {error && <p className="font-sans text-sm text-negative">{error}</p>}
+        <p className="text-center font-sans text-[10px] text-muted-2">⚠️ Probabilidade de ganho baixa — joga por diversão.</p>
+        {error && <p className="text-center font-sans text-sm text-negative">{error}</p>}
       </div>
     </div>
   );
