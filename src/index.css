@@ -20,17 +20,16 @@
     font-weight: 300;
   }
 
-  /* Layered warm gold + faint green wash, painted on a fixed full-viewport
-     overlay so it never repaints on scroll (smoother than background-attachment:fixed). */
+  /* A single, very faint warm halo at the top — just enough to lift the page off
+     pure black. Painted on a fixed overlay so it never repaints on scroll. Kept
+     deliberately subtle: a flat near-black reads classier than an ambient glow. */
   body::before {
     content: '';
     position: fixed;
     inset: 0;
     z-index: -1;
     pointer-events: none;
-    background-image:
-      radial-gradient(1100px 520px at 50% -10%, rgba(201, 162, 75, 0.13), transparent 60%),
-      radial-gradient(700px 400px at 90% 8%, rgba(31, 138, 91, 0.07), transparent 60%);
+    background-image: radial-gradient(1100px 480px at 50% -14%, rgba(201, 162, 75, 0.06), transparent 62%);
   }
 
   h1, h2, h3 {

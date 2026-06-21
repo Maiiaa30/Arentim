@@ -1,124 +1,104 @@
 # Arentim
 
-A play-money social casino and football sportsbook, built for fun among a group
-of friends. **There is no real money and no real payments anywhere** — every
-balance is an in-app currency called **Tostões**. The interface is in
-**Português de Portugal**.
+A play-money social casino and football sportsbook, built for a group of friends.
+**There is no real money and no payments anywhere** — every balance is an in-app
+currency called **Tostões**. The interface is in **Português de Portugal**.
 
 > Apenas dinheiro de brincadeira — sem moeda real.
 
-## Features
+---
 
-- **Accounts & wallet** — email/password auth, profile with lifetime stats,
-  achievements, and an integer-only Tostões ledger where every
-  bet/win/bonus/adjustment reconciles.
-- **Daily bonus** — play-gated, escalating streak (must play to keep the streak).
-- **Casino** — Roleta, Blackjack (pedir/ficar/dobrar/dividir), Slots (5 themed
-  machines + a progressive jackpot), Moeda, Dados, Maior ou Menor, Sobe e Desce,
-  Fita da Sorte, Jogo dos Copos — all settled server-side with a CSPRNG.
-- **Live multiplayer rooms** — **Crash** and **Roleta** run as shared rooms:
-  one global round everyone watches in sync (server-authoritative, advisory-locked,
-  hidden values masked until safe), with live player panels.
-- **Sportsbook (Futebol)** — Primeira Liga & World Cup fixtures, 1·X·2 /
-  over-under / both-teams-to-score markets, singles + accumulators (the
-  **Boletim** bet slip), early cash-out on pending bets, live scores, automatic
-  settlement, and a betting leaderboard.
-- **Poker (Póquer)** & **Sueca** — Hold'em vs AI bots + private multiplayer
-  tables, and the Portuguese trick-taking game vs bots or 2v2 with friends.
-- **Onze de Ouro** — pick a Portuguese XI from real Liga Portugal squads (2005–2026).
-- **Social** — friend requests, online presence, gifting/requesting Tostões,
-  head-to-head **duels**, a notification bell, and realtime updates (no reloads).
-- **Leaderboards** — all-time (net / biggest win / streak) + a monthly **season**
-  board that resets on the 1st, global or friends-scoped.
-- **Challenges (Desafios)** — recovery (anti-stuck rescue) and high-roller
-  milestones + badges.
-- **Admin** — role-gated, fully audited player/economy/sportsbook management,
-  with a KPI dashboard and a season reset.
-- **AI content** — optional Gemini Flash match previews (text-only, untrusted).
+## For players — start in 60 seconds
+
+1. **Criar conta** (sign up). New accounts start with **500 Tostões**.
+2. On the **Salão**, claim the **bónus diário** (it grows on a streak — but you
+   have to keep playing to keep it).
+3. Pick something from the **Casino**: place chips on the **Roleta**, spin a slot,
+   or take on the big **Fortuna de Ouro** video slot.
+4. Add an **amigo**, send them a few tós, or call a **duelo** head-to-head.
+
+That's the whole loop — bet, win, climb the leaderboard, repeat. It's all make-believe money.
+
+---
+
+## What's inside
+
+- **Casino** — **Roleta** and **Crash** as shared live rooms (one round everyone
+  watches in sync), **Blackjack**, a **Slots** floor (themed machines, a
+  progressive jackpot, the classic **Vegas 777** drum, the high-variance
+  **Tigrinho**, and the flagship 5×3 **Fortuna de Ouro** video slot), **Plinko**,
+  **Balatró** (poker-hand skill game), **Mines**, **Atravessa!**, **Corrida de
+  Cavalos** (live), **Moeda**, **Dados**, **Maior ou Menor**, **Sobe e Desce**,
+  **Fita da Sorte** and **Jogo dos Copos**. Every outcome is settled server-side
+  with a CSPRNG — the client never decides money.
+- **Sportsbook (Futebol)** — fixtures with 1·X·2 / over-under / both-teams-to-score
+  markets, singles and accumulators (the **Boletim**), early cash-out, live scores,
+  automatic settlement and a betting leaderboard.
+- **Poker** & **Sueca** — Texas Hold'em vs bots or private friend tables, and the
+  Portuguese trick-taking game vs bots or 2v2.
+- **Onze de Ouro** — build a Portuguese XI from real Liga Portugal squads (2005–2026).
+- **Social** — friend requests and presence, gifting/requesting tós, head-to-head
+  duels, a notification bell, and realtime updates with no reloads.
+- **Leaderboards & challenges** — all-time and a monthly **season** board, plus
+  recovery and high-roller milestones with badges.
+- **Admin** — role-gated, fully audited player / economy / sportsbook management
+  with a KPI dashboard, player drill-down, odds editor and announcements.
+
+---
 
 ## Design
 
-Dark, gold, warm — the **Aretim** look.
+Dark, gold, warm — flat near-black surfaces with gold used sparingly as ink.
 
-- **Palette:** near-black warm canvas `#0a0907`, gold accent `#C9A24B`, soft warm
-  shadows, a gilded top-accent rule.
+- **Palette:** canvas `#0a0907`, gold accent `#C9A24B`, a gilded top-accent rule.
 - **Type:** Playfair Display (headings/figures), DM Sans (UI/body), DM Mono
   (money, odds, stakes). Restrained 3–4px radii.
-- **Primitives:** eight reusable building blocks live in
+- **Primitives:** reusable building blocks in
   [`src/components/ui/primitives.tsx`](src/components/ui/primitives.tsx)
   (TopAccentRule, Eyebrow, SectionHeader, Card, RingAvatar, CornerBrackets,
-  FramedPanel, Monogram) plus a restyled ghost/solid-gold `Button` and `Input`.
-  Build any new page from these and it matches the rest of the app.
+  FramedPanel, Monogram) plus `Button`/`Input`, a bespoke SVG icon set, and the
+  hand-drawn slot symbols. Build a new page from these and it matches the app.
 - Currency renders as thin-space groups + `Tt` (e.g. `12 500 Tt`); prose uses the
   full word _Tostões_. Helpers in [`src/lib/format.ts`](src/lib/format.ts).
 
-## Stack
+---
 
-- **Frontend:** React + Vite + TypeScript (strict) + Tailwind CSS
-- **Backend:** Supabase — Postgres (RLS + atomic RPCs), Auth, Realtime, Edge Functions (Deno)
-- **State:** React Query + Zustand
-- **Tooling:** ESLint + Prettier, Vitest (unit), Playwright (e2e)
+## For developers
 
-Server-authoritative wherever money or hidden information is involved: the client
-never awards itself balance and never sees other players' hidden cards.
-
-## Getting started
+**Stack:** React + Vite + TypeScript (strict) + Tailwind · Supabase (Postgres with
+RLS + atomic RPCs, Auth, Realtime, Edge Functions/Deno) · React Query + Zustand ·
+ESLint/Prettier, Vitest, Playwright. Money and hidden information are always
+server-authoritative — the client never awards itself balance and never sees
+another player's hidden cards.
 
 ```bash
 npm install
-cp .env.example .env       # fill in your Supabase URL + anon (publishable) key
+cp .env.example .env       # Supabase URL + anon (publishable) key
 npm run db:migrate         # apply DB migrations (reads supabase/.env)
-npm run dev
+npm run dev                # http://localhost:5173
 ```
 
-App runs at http://localhost:5173.
+To see the **Admin** area, grant yourself the role in the Supabase SQL editor:
+
+```sql
+update public.profiles set is_admin = true
+ where id = (select id from auth.users where email = 'YOUR_EMAIL');
+```
 
 ### Configuration
 
 - **Frontend `.env`** (safe to expose): `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`.
-  Do **not** create a `.env.local` with placeholder values — Vite loads it over
-  `.env` and would ship a broken key.
+  Don't create a `.env.local` with placeholders — Vite loads it over `.env`.
 - **Server secrets** (gitignored `supabase/.env`): DB URL, service key, access
-  token, API-Football & Gemini keys. Never prefixed `VITE_`. See
+  token, football + content API keys. Never `VITE_`-prefixed. See
   [`docs/SECURITY.md`](docs/SECURITY.md).
-- **Database:** apply migrations with `npm run db:migrate` (or the Supabase
-  dashboard) — see [`supabase/README.md`](supabase/README.md). Then grant
-  yourself admin with the snippet there.
-- **Edge Functions:** deploy with the Supabase CLI — see
+- **Edge Functions:** deploy with `npm run deploy:functions` — see
   [`docs/EDGE_FUNCTIONS.md`](docs/EDGE_FUNCTIONS.md).
+- **Live football** depends on a free data tier, so some windows may have no
+  upcoming fixtures; a few seeded fixtures keep the betting/settlement flow
+  exercisable.
 
-## Testing the app end-to-end
-
-Everything below already runs against the live Supabase project (migrations
-applied, Edge Functions deployed). To exercise it yourself:
-
-1. `npm run dev`, open the app, and **Criar conta** (sign up). New accounts start
-   with **5 000 Tostões**. If email confirmation is on, confirm via the link (or
-   the Supabase dashboard), then **Entrar**.
-2. **Make yourself admin** to see the Admin tab — in the Supabase SQL Editor:
-   ```sql
-   update public.profiles set is_admin = true
-    where id = (select id from auth.users where email = 'YOUR_EMAIL');
-   ```
-3. **What to try:**
-   - **Salão** — daily bonus claim, the game grid, High Rollers + Círculo rails.
-   - **Casino** — Roleta (place chips → Rodar), Slots, Moeda, Blackjack
-     (pedir/ficar/dobrar/dividir). Watch the **Saldo** in the header update.
-   - **Futebol** — tap odds to build the **Boletim**, stake, **Apostar**; then
-     settle a fixture from **Admin → Futebol** and watch the bet resolve.
-   - **Póquer** — vs bots, or create a **Mesa privada**, add a bot, and play a hand
-     (open a second account in another browser to play multiplayer).
-   - **Amigos / Desafios / Carteira / Perfil** — friend requests + presence,
-     claim challenge rewards, the transaction ledger, and your stats/badges.
-   - **Admin** — adjust a balance (reason required), suspend a player, broadcast
-     an announcement (appears as a banner), tune challenges.
-
-> **Live football data:** API-Football's free plan only covers seasons
-> 2022–2024, so there are no _current_ upcoming fixtures — the sportsbook runs on
-> a few **seeded** Primeira Liga fixtures until the plan is upgraded. The betting,
-> bet slip and settlement all work on those.
-
-## Scripts
+### Scripts
 
 | Script                                  | Purpose                                       |
 | --------------------------------------- | --------------------------------------------- |
@@ -126,18 +106,18 @@ applied, Edge Functions deployed). To exercise it yourself:
 | `npm run lint` / `typecheck` / `format` | ESLint / TypeScript / Prettier                |
 | `npm test` / `test:e2e`                 | Vitest unit/integration / Playwright e2e      |
 | `npm run db:migrate`                    | Apply pending SQL migrations                  |
+| `npm run deploy:functions`              | Deploy Supabase Edge Functions                |
 | `npm run check:secrets`                 | Fail if a secret leaked into the built bundle |
-| `npm run db:reset -- --yes`             | **Wipe ALL players & gameplay data** before a fresh launch (keeps config: catalogs, slot machines, fixtures). Irreversible. |
+| `npm run db:reset -- --yes`             | **Wipe ALL players & gameplay data** before a fresh launch (keeps config). Irreversible. |
 
-## Quality gate
+### Quality gate
 
 `lint`, `typecheck`, `npm audit --audit-level=high`, the test suite, `build`, and
 the bundle secret scan must all pass. CI
 ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) enforces this on every
-push and PR to `main`, and branch protection requires it before merge. Security
-posture and verification are documented in [`docs/SECURITY.md`](docs/SECURITY.md).
+push and PR to `main`; branch protection requires it before merge.
 
-## Project layout
+### Project layout
 
 ```
 src/

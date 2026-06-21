@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useNotifications, useUnreadCount, useMarkNotificationsRead } from '@/features/notifications/useNotifications';
 import { useFriendRequests, useFriendActions } from '@/features/friends/useFriends';
 import { useChallenges } from '@/features/challenges/useChallenges';
+import { UiIcon, type UiIconName } from '@/components/icons/UiIcon';
 import type { NotificationRow } from '@/types/db';
 
 /** "há 5 min" / "há 2 h" / "há 3 d" — compact PT-PT relative time. */
@@ -14,15 +15,15 @@ function ago(iso: string): string {
   return `há ${Math.floor(s / 86400)} d`;
 }
 
-function iconFor(type: string): string {
-  if (type === 'friend_request') return '👋';
-  if (type === 'friend_accept') return '🤝';
-  if (type === 'friend_win') return '🎉';
-  if (type === 'gift') return '🎁';
-  if (type === 'gift_request') return '🙏';
-  if (type === 'duel') return '⚔️';
-  if (type === 'duel_result') return '🏆';
-  return '🔔';
+function iconFor(type: string): UiIconName {
+  if (type === 'friend_request') return 'userPlus';
+  if (type === 'friend_accept') return 'check';
+  if (type === 'friend_win') return 'sparkle';
+  if (type === 'gift') return 'gift';
+  if (type === 'gift_request') return 'request';
+  if (type === 'duel') return 'duel';
+  if (type === 'duel_result') return 'trophy';
+  return 'bell';
 }
 
 export function NotificationBell() {
@@ -142,7 +143,7 @@ export function NotificationBell() {
                 }}
               >
                 <span className="flex items-center gap-2">
-                  <span aria-hidden>🏆</span>
+                  <UiIcon name="trophy" className="h-4 w-4 text-gold" />
                   <span className="font-sans text-sm text-text">
                     {claimable.length} desafio{claimable.length > 1 ? 's' : ''} para reclamar
                   </span>
@@ -166,7 +167,7 @@ export function NotificationBell() {
                       }`}
                       onClick={() => go(n)}
                     >
-                      <span className="mt-0.5 shrink-0 text-base" aria-hidden>{iconFor(n.type)}</span>
+                      <span className="mt-0.5 shrink-0 text-muted-2"><UiIcon name={iconFor(n.type)} className="h-[18px] w-[18px]" /></span>
                       <span className="min-w-0 flex-1">
                         <span className="block truncate font-sans text-sm font-medium text-text">{n.title}</span>
                         {n.body && <span className="block font-sans text-[12px] leading-snug text-muted">{n.body}</span>}
