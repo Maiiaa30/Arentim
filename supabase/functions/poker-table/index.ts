@@ -44,7 +44,7 @@ function genCode(): string {
   return Array.from(bytes, (b) => alphabet[b % alphabet.length]).join('');
 }
 
-type Row = { id: number; host_id: string; status: string; buy_in: number; state: TableState; turn_deadline: string | null };
+type Row = { id: number; host_id: string; status: string; buy_in: number; state: TableState; turn_deadline: string | null; joinedAt?: string | null };
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
@@ -76,15 +76,20 @@ Deno.serve(async (req) => {
     // Always restrict to tables the caller is actually a member of — even when a
     // tableId is supplied — so a non-member can't load (and act on / time out)
     // another table's players by guessing a sequential id.
-    const memberOf = (await db.from('poker_table_members').select('table_id').eq('user_id', user.id)).data?.map((m) => m.table_id) ?? [];
-    if (memberOf.length === 0) return null;
+    const members = (await db.from('poker_table_members').select('table_id, joined_at').eq('user_id', user.id)).data ?? [];
+    if (members.length === 0) return null;
     let q = db.from('poker_tables')
       .select('id, host_id, status, buy_in, state, turn_deadline')
       .neq('status', 'closed')
-      .in('id', memberOf);
+      .in('id', members.map((m) => m.table_id));
     if (tableId != null) q = q.eq('id', tableId);
     const { data } = await q.order('updated_at', { ascending: false }).limit(1).maybeSingle();
-    return data as Row | null;
+    if (!data) return null;
+    // Capture this seat's join timestamp here (while membership is guaranteed to
+    // exist) so a concurrent leave can't race it away before we build the
+    // cash-out idempotency key.
+    (data as Row).joinedAt = members.find((m) => m.table_id === (data as Row).id)?.joined_at ?? null;
+    return data as Row;
   };
 
   // Auto-fold a player who blew their turn timer (lazy enforcement).
@@ -214,8 +219,13 @@ Deno.serve(async (req) => {
         }
         cashOut = me.stack;
         if (cashOut > 0) {
+          // Idempotency keyed to this seat-session (table + user + join time, the
+          // latter unique per re-join) so two concurrent `leave` requests can't
+          // double-credit the stack, while a later legitimate re-join can still
+          // cash out (different join time → different key).
           await db.rpc('apply_ledger_entry', {
-            p_user_id: user.id, p_type: 'win', p_amount: cashOut, p_game: 'poker', p_note: 'poker table cash-out', p_idempotency_key: null, p_wager: 0,
+            p_user_id: user.id, p_type: 'win', p_amount: cashOut, p_game: 'poker', p_note: 'poker table cash-out',
+            p_idempotency_key: `poker-cashout-${row.id}-${user.id}-${row.joinedAt ?? '0'}`, p_wager: 0,
           });
         }
         removePlayer(state, user.id);

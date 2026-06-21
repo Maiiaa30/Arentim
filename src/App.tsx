@@ -2,6 +2,7 @@ import { lazy, Suspense, type ComponentType } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { RequireAuth } from '@/features/auth/RequireAuth';
+import { RequireAdmin } from '@/features/auth/RequireAdmin';
 import { HomePage } from '@/pages/HomePage';
 import { CasinoPreview } from '@/pages/dev/CasinoPreview';
 
@@ -95,7 +96,9 @@ export default function App() {
             <Route path="challenges" element={<ChallengesPage />} />
             <Route path="wallet" element={<WalletPage />} />
             <Route path="profile" element={<ProfilePage />} />
-            <Route path="admin" element={<AdminPage />} />
+            <Route element={<RequireAdmin />}>
+              <Route path="admin" element={<AdminPage />} />
+            </Route>
           </Route>
 
           {/* DEV-only visual harness (stripped from production builds). */}
