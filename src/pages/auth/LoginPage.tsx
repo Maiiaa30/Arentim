@@ -19,6 +19,25 @@ export function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [mode, setMode] = useState<'login' | 'reset'>('login');
+  const [resetMsg, setResetMsg] = useState<string | null>(null);
+
+  async function onReset(e: FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setResetMsg(null);
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      setError('Indica um email válido.');
+      return;
+    }
+    setBusy(true);
+    await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
+      redirectTo: `${window.location.origin}/redefinir-palavra-passe`,
+    });
+    setBusy(false);
+    // Never reveal whether the email exists — always show the same message.
+    setResetMsg('Se essa conta existir, enviámos um link para repor a palavra-passe.');
+  }
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -40,6 +59,34 @@ export function LoginPage() {
       return;
     }
     navigate(from, { replace: true });
+  }
+
+  if (mode === 'reset') {
+    return (
+      <AuthCard title="Repor palavra-passe" subtitle="Enviamos-te um link por email.">
+        <form onSubmit={onReset} className="space-y-4" noValidate>
+          <Input
+            id="email"
+            type="email"
+            label="Email"
+            autoComplete="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
+          {error && <p className="text-sm text-negative">{error}</p>}
+          {resetMsg && <p className="text-sm text-positive">{resetMsg}</p>}
+          <Button type="submit" variant="primary" className="w-full" disabled={busy}>
+            {busy ? 'A enviar…' : 'Enviar link'}
+          </Button>
+        </form>
+        <p className="mt-6 text-center text-sm text-muted">
+          <button onClick={() => { setMode('login'); setError(null); setResetMsg(null); }} className="font-medium text-gold hover:underline">
+            ← Voltar ao início de sessão
+          </button>
+        </p>
+      </AuthCard>
+    );
   }
 
   return (
@@ -68,7 +115,12 @@ export function LoginPage() {
           {busy ? 'A entrar…' : 'Entrar'}
         </Button>
       </form>
-      <p className="mt-6 text-center text-sm text-muted">
+      <div className="mt-4 text-center">
+        <button onClick={() => { setMode('reset'); setError(null); }} className="font-sans text-sm text-muted-2 hover:text-text">
+          Esqueceste-te da palavra-passe?
+        </button>
+      </div>
+      <p className="mt-4 text-center text-sm text-muted">
         Novo por aqui?{' '}
         <Link to="/signup" className="font-medium text-gold hover:underline">
           Criar conta
