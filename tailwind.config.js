@@ -69,6 +69,13 @@ export default {
         reel: { '0%': { transform: 'translateY(0)' }, '100%': { transform: 'translateY(-50%)' } },
         coin3d: { '0%': { transform: 'rotateY(0deg)' }, '100%': { transform: 'rotateY(360deg)' } },
         floaty: { '0%,100%': { transform: 'translateY(0)' }, '50%': { transform: 'translateY(-5px)' } },
+        // Galloping horse — a quick bob + lean, sits inside an X-flipped wrapper.
+        gallop: {
+          '0%,100%': { transform: 'translateY(0) rotate(-3deg)' },
+          '25%': { transform: 'translateY(-5px) rotate(1deg)' },
+          '50%': { transform: 'translateY(0) rotate(3deg)' },
+          '75%': { transform: 'translateY(-3px) rotate(0deg)' },
+        },
         // Drifting clouds behind the crash chart (slow parallax sway).
         drift: { '0%,100%': { transform: 'translateX(0)' }, '50%': { transform: 'translateX(-16px)' } },
         ball: {
@@ -119,6 +126,29 @@ export default {
           '70%': { transform: 'scale(0.98)' },
           '100%': { transform: 'scale(1)', opacity: '1' },
         },
+        // Video-slot cabinet: chasing marquee bulbs + a flashing win payline.
+        'bulb-chase': {
+          '0%,100%': { opacity: '1', filter: 'brightness(1.4)' },
+          '50%': { opacity: '0.35', filter: 'brightness(0.7)' },
+        },
+        'payline-pulse': {
+          '0%,100%': { opacity: '0.35', transform: 'scaleY(1)' },
+          '50%': { opacity: '1', transform: 'scaleY(1.6)' },
+        },
+        'coin-fall': {
+          '0%': { transform: 'translateY(-30px) rotate(0deg)', opacity: '0' },
+          '12%': { opacity: '1' },
+          '100%': { transform: 'translateY(360px) rotate(540deg)', opacity: '0' },
+        },
+        'symbol-throb': {
+          '0%,100%': { transform: 'scale(1)', filter: 'brightness(1)' },
+          '50%': { transform: 'scale(1.14)', filter: 'brightness(1.45)' },
+        },
+        'plinko-bin': {
+          '0%,100%': { transform: 'translateY(0)' },
+          '30%': { transform: 'translateY(6px)' },
+          '60%': { transform: 'translateY(-2px)' },
+        },
       },
       animation: {
         'fade-in': 'fade-in 0.25s cubic-bezier(0.22,0.61,0.36,1)',
@@ -139,6 +169,12 @@ export default {
         shake: 'shake 0.5s ease-in-out',
         'dice-tumble': 'dice-tumble 0.55s cubic-bezier(0.5,0.05,0.4,0.95) infinite',
         'win-burst': 'win-burst 0.55s cubic-bezier(0.22,0.61,0.36,1) both',
+        gallop: 'gallop 0.42s ease-in-out infinite',
+        'bulb-chase': 'bulb-chase 0.9s ease-in-out infinite',
+        'payline-pulse': 'payline-pulse 0.5s ease-in-out infinite',
+        'coin-fall': 'coin-fall 1.5s linear infinite',
+        'symbol-throb': 'symbol-throb 0.65s ease-in-out infinite',
+        'plinko-bin': 'plinko-bin 0.4s ease-out',
       },
     },
   },

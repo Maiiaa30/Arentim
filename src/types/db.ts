@@ -681,6 +681,38 @@ export type ChickenStepResult = {
 };
 export type ChickenCashoutResult = { payout: number; multiplier: number; lane: number; balance: number };
 
+/** Balatró — a single-blind poker-hand skill game (mirrors src/features/casino/balatro.ts). */
+export type BalatroState = {
+  hand: number[];
+  target: number;
+  score: number;
+  hands_left: number;
+  discards_left: number;
+  reward: number;
+  status: 'playing';
+};
+export type BalatroPlayResult = {
+  hand_type: string;
+  gained: number;
+  score: number;
+  hands_left: number;
+  discards_left: number;
+  played: number[];
+  hand: number[];
+  status: 'playing' | 'won' | 'lost';
+  payout: number;
+  balance: number;
+};
+export type BalatroDiscardResult = {
+  hand: number[];
+  score: number;
+  target: number;
+  hands_left: number;
+  discards_left: number;
+  status: 'playing';
+  balance: number;
+};
+
 /** Minimal shape consumed by the typed Supabase client. */
 export type Database = {
   public: {
@@ -865,6 +897,35 @@ export type Database = {
       play_wheel: {
         Args: { p_stake: number; p_idempotency_key: string | null };
         Returns: WheelResult;
+      };
+      play_plinko: {
+        Args: { p_stake: number; p_rows: number; p_risk: string; p_idempotency_key: string | null };
+        Returns: {
+          path: number[];
+          bin: number;
+          rows: number;
+          risk: string;
+          multiplier: number;
+          payout: number;
+          balance: number;
+          replayed: boolean;
+        };
+      };
+      balatro_start: {
+        Args: { p_stake: number };
+        Returns: BalatroState;
+      };
+      balatro_play: {
+        Args: { p_cards: number[] };
+        Returns: BalatroPlayResult;
+      };
+      balatro_discard: {
+        Args: { p_cards: number[] };
+        Returns: BalatroDiscardResult;
+      };
+      balatro_current: {
+        Args: Record<string, never>;
+        Returns: BalatroState | null;
       };
       horse_room_now: {
         Args: Record<string, never>;
