@@ -103,7 +103,8 @@ export function SlotsLobby() {
         <Eyebrow className="mt-3">O Salão de Slots</Eyebrow>
         <h1 className="mt-2 font-display text-[40px] font-medium leading-[1.04] text-text">Slots</h1>
         <p className="mt-3 max-w-xl font-sans text-[15px] leading-relaxed text-muted">
-          Cinco máquinas, cinco temas. Cada uma esconde o seu próprio jackpot — raro, mas a
+          Máquinas para todos os gostos — das temáticas modernas à clássica{' '}
+          <span className="text-gold">Vegas 777</span>. Cada uma esconde o seu próprio jackpot — raro, mas a
           qualquer rodada pode sair. A <span className="text-gold">Aurélia Royal</span> guarda o maior de todos.
         </p>
       </div>

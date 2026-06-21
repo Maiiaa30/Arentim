@@ -257,6 +257,8 @@ export type SlotMachineMeta = {
   name: string;
   blurb: string;
   accent: string;
+  /** Cabinet style: 'video' (ornate themed) or 'classic' (chrome 3-reel drum). */
+  cabinet?: 'video' | 'classic';
   min_bet: number;
   max_bet: number;
   jackpot_symbol: string;

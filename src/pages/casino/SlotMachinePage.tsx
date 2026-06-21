@@ -210,6 +210,50 @@ function CoinShower({ count }: { count: number }) {
   );
 }
 
+/**
+ * Full-screen takeover for the biggest wins (mega / jackpot). Rotating gold rays,
+ * a heavy coin rain and a giant prize readout, over a darkened screen. The parent
+ * mounts it only for the top tiers and unmounts it when the win alert clears.
+ */
+function BigWinOverlay({ label, amount, accent }: { label: string; amount: number; accent: string }) {
+  return (
+    <div className="pointer-events-none fixed inset-0 z-[60] flex items-center justify-center overflow-hidden">
+      <div className="absolute inset-0 animate-fade-in" style={{ background: 'radial-gradient(circle at 50% 45%, transparent 24%, rgba(0,0,0,0.6))' }} />
+      <svg className="animate-spin-slow absolute h-[170vmax] w-[170vmax] opacity-40" viewBox="0 0 200 200" aria-hidden>
+        {Array.from({ length: 24 }, (_, i) => (
+          <path key={i} d="M100 100 L97 0 L103 0 Z" fill={accent} opacity={i % 2 ? 0.5 : 0.18} transform={`rotate(${i * 15} 100 100)`} />
+        ))}
+      </svg>
+      <CoinShower count={40} />
+      <div className="relative animate-win-burst px-4 text-center">
+        <p className="font-display text-[42px] font-bold leading-none sm:text-7xl" style={{ color: accent, textShadow: `0 0 44px ${accent}` }}>
+          {label}
+        </p>
+        <p className="mt-3 font-display text-3xl font-bold text-gold-light sm:text-5xl">+{formatAmount(amount)} tós</p>
+      </div>
+    </div>
+  );
+}
+
+/** The chrome side lever of a classic cabinet; the knob dips while spinning. */
+function Lever({ pulled }: { pulled: boolean }) {
+  return (
+    <div className="pointer-events-none absolute -right-3 top-10 z-30 hidden sm:block" aria-hidden>
+      <div className="relative h-44 w-3">
+        <div className="absolute inset-x-0 bottom-0 h-12 rounded-full" style={{ background: 'linear-gradient(90deg,#9aa3ab,#e8eef2,#79828b)' }} />
+        <div
+          className="absolute inset-x-[-3px] rounded-full transition-[top] duration-300 ease-out"
+          style={{ top: pulled ? '70px' : '0px', height: '70px', background: 'linear-gradient(90deg,#8a939b,#dfe6ec,#6b747c)' }}
+        />
+        <div
+          className="absolute left-1/2 h-7 w-7 -translate-x-1/2 rounded-full transition-[top] duration-300 ease-out"
+          style={{ top: pulled ? '64px' : '-6px', background: 'radial-gradient(circle at 36% 30%, #ff8b8b, #b0303a 70%)', boxShadow: '0 3px 8px rgba(0,0,0,0.5)' }}
+        />
+      </div>
+    </div>
+  );
+}
+
 function MachineScreen({ m }: { m: SlotMachineMeta }) {
   const { data: profile } = useProfile();
   const play = usePlaySlot();
@@ -265,6 +309,16 @@ function MachineScreen({ m }: { m: SlotMachineMeta }) {
     return s;
   }, [won, targets]);
   const tier = winAlert ? winTier(winAlert.jackpot, winAlert.mult) : null;
+  const classic = m.cabinet === 'classic';
+  // The biggest tiers (mega / jackpot) trigger a full-screen takeover.
+  const bigWin = !!(winAlert && tier && tier.coins >= 22);
+  // Cabinet skins: chrome-and-gold drum for classic, ornate gilded for video.
+  const frameBg = classic
+    ? 'linear-gradient(150deg,#eef3f6,#b9c2c9 32%,#727b84 64%,#cfd6dc)'
+    : `linear-gradient(155deg, #f7e4ad, ${hex}, #5b4824)`;
+  const innerBg = classic
+    ? 'radial-gradient(135% 90% at 50% -10%, rgba(120,130,140,0.28), transparent 55%), linear-gradient(180deg, #16191e, #0a0b0d 75%)'
+    : `radial-gradient(135% 90% at 50% -10%, ${hex}38, transparent 55%), linear-gradient(180deg, #171309, #0a0907 75%)`;
 
   async function onSpin() {
     if (busy || stake > balance || stake < m.min_bet) return;
@@ -311,6 +365,7 @@ function MachineScreen({ m }: { m: SlotMachineMeta }) {
 
   return (
     <div className="animate-fade-in space-y-5">
+      {bigWin && tier && <BigWinOverlay label={tier.label} amount={winAlert!.amount} accent={hex} />}
       {/* Compact header */}
       <div className="flex items-center justify-between">
         <Link to="/casino/slots" className="font-sans text-sm text-muted-2 hover:text-text">← Todas as slots</Link>
@@ -320,16 +375,15 @@ function MachineScreen({ m }: { m: SlotMachineMeta }) {
         </span>
       </div>
 
-      {/* Cabinet — ornate gilded frame around a themed reel housing */}
+      {/* Cabinet — chrome drum (classic) or ornate gilded frame (video) */}
       <div
-        className="mx-auto max-w-3xl rounded-[20px] p-1 shadow-[0_30px_90px_rgba(0,0,0,0.6)]"
-        style={{ background: `linear-gradient(155deg, #f7e4ad, ${hex}, #5b4824)` }}
+        className="relative mx-auto max-w-3xl rounded-[20px] p-1 shadow-[0_30px_90px_rgba(0,0,0,0.6)]"
+        style={{ background: frameBg }}
       >
+        {classic && <Lever pulled={busy} />}
         <div
           className="relative overflow-hidden rounded-[16px] p-3 sm:p-10"
-          style={{
-            background: `radial-gradient(135% 90% at 50% -10%, ${hex}38, transparent 55%), linear-gradient(180deg, #171309, #0a0907 75%)`,
-          }}
+          style={{ background: innerBg }}
         >
           <SlotBackdrop machineKey={m.key} />
           {/* Chasing marquee bulbs around the cabinet — light up on spin & win. */}

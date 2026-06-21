@@ -51,6 +51,14 @@ const MACHINES: Record<string, Machine> = {
     pay2: {},
     jackpot: 'crown',
   },
+  // Classic 3-reel "Vegas 777": cherry / BAR×3 / bell / lucky-7.
+  vegas: {
+    L: 40,
+    counts: { cherry: 14, bell: 10, bar: 6, barbar: 4, barbarbar: 4, seven: 2 },
+    pay3: { cherry: 4, bell: 12, bar: 25, barbar: 60, barbarbar: 120, seven: 250 },
+    pay2: { cherry: 1 },
+    jackpot: 'seven',
+  },
 };
 
 /** Exact RTP by enumerating the (ordered) outcome space of three reels. */
