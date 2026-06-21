@@ -52,7 +52,13 @@ export function SignupPage() {
     const { data, error: signUpError } = await supabase.auth.signUp({
       email: parsed.data.email,
       password: parsed.data.password,
-      options: { data: { display_name: parsed.data.displayName } },
+      options: {
+        data: { display_name: parsed.data.displayName },
+        // Send the confirmation link back to whatever origin the user signed up
+        // from (prod or a preview deploy), not the project's default Site URL.
+        // The origin must also be in Supabase → Auth → URL Configuration → Redirect URLs.
+        emailRedirectTo: window.location.origin,
+      },
     });
     setBusy(false);
 
