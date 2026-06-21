@@ -66,6 +66,40 @@ function MachineCard({ m }: { m: SlotMachineMeta }) {
   );
 }
 
+/** Flagship 5×3 video slot — a wide feature banner above the machine grid. */
+function FortunaFeature() {
+  const showcase = ['seven', 'diamond', 'crown', 'ring', 'coin'];
+  return (
+    <Link
+      to="/casino/fortuna"
+      className="focus-ring group relative block overflow-hidden rounded-lg border border-gold/30"
+      style={{ background: 'radial-gradient(130% 140% at 18% -10%, rgba(201,162,75,0.28), transparent 60%), linear-gradient(110deg,#15120a,#0a0907 60%)' }}
+    >
+      <div className="flex flex-col gap-5 p-6 sm:flex-row sm:items-center sm:justify-between sm:p-7">
+        <div className="max-w-md">
+          <span className="font-sans text-[10px] font-semibold uppercase tracking-[0.22em] text-gold">Vídeo slot · 5×3 · 9 linhas</span>
+          <h2 className="mt-2 font-display text-[30px] font-semibold leading-tight text-text group-hover:text-gold sm:text-[36px]">Fortuna de Ouro</h2>
+          <p className="mt-1.5 font-sans text-[13.5px] leading-relaxed text-muted">
+            A grande máquina da casa — cinco rolos, nove linhas e cinco setes que valem uma fortuna.
+          </p>
+          <span className="mt-4 inline-flex rounded border border-gold/50 px-4 py-1.5 font-sans text-[11px] uppercase tracking-[0.18em] text-gold transition-colors group-hover:bg-gold group-hover:text-bg">
+            Jogar agora
+          </span>
+        </div>
+        <div className="flex shrink-0 items-center gap-1.5 sm:gap-2.5">
+          {showcase.map((id, i) => (
+            <SymbolArt
+              key={id}
+              id={id}
+              className={`h-12 w-12 drop-shadow-[0_2px_8px_rgba(0,0,0,0.6)] transition-transform duration-500 sm:h-16 sm:w-16 ${i === 0 ? 'group-hover:-translate-y-1' : 'group-hover:-translate-y-0.5'}`}
+            />
+          ))}
+        </div>
+      </div>
+    </Link>
+  );
+}
+
 /** Special non-DB machine: the cheeky high-variance Tigrinho. */
 function TigrinhoCard() {
   return (
@@ -108,6 +142,8 @@ export function SlotsLobby() {
           qualquer rodada pode sair. A <span className="text-gold">Aurélia Royal</span> guarda o maior de todos.
         </p>
       </div>
+
+      <FortunaFeature />
 
       {isLoading && <p className="py-12 text-center text-muted">A acender as máquinas…</p>}
       {error && (
