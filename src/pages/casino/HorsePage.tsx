@@ -18,6 +18,31 @@ function paces(roomId: number, winner: number): number[] {
   return Array.from({ length: 6 }, (_, i) => (i === winner ? 1 : 0.6 + ((roomId * 31 + i * 17) % 32) / 100));
 }
 
+/** A galloping race horse silhouette in the jockey's silk colour, facing right. */
+function RaceHorse({ color, className = '', galloping = false }: { color: string; className?: string; galloping?: boolean }) {
+  return (
+    <svg viewBox="0 0 72 48" className={`${className} ${galloping ? 'animate-floaty' : ''}`} aria-hidden>
+      <g fill={color} stroke={color} strokeLinecap="round">
+        <g strokeWidth="3.2" fill="none">
+          <path d="M20 33 L12 45" />
+          <path d="M26 34 L22 46" />
+          <path d="M46 33 L56 45" />
+          <path d="M42 34 L50 46" />
+        </g>
+        <path d="M9 27 Q-1 32 3 45" strokeWidth="3.6" fill="none" />
+        <circle cx="18" cy="28" r="11" />
+        <ellipse cx="32" cy="29" rx="18" ry="8.5" />
+        <circle cx="46" cy="27" r="9" />
+        <path d="M48 22 Q57 14 59 5 L65 8 Q60 19 52 26 Z" />
+        <path d="M58 5 L67 3 L68 9 L61 12 Z" />
+        <path d="M58 5 l1.5 -4 l2.5 3 z" />
+      </g>
+      <path d="M50 21 Q57 12 60 5" stroke="rgba(0,0,0,0.32)" strokeWidth="2" fill="none" />
+      <circle cx="63" cy="7" r="1.2" fill="rgba(0,0,0,0.65)" />
+    </svg>
+  );
+}
+
 export function HorsePage() {
   const { data: profile } = useProfile();
   const { state, bets, history, placeBet } = useHorseRoom();
@@ -104,41 +129,57 @@ export function HorsePage() {
         </div>
       )}
 
-      {/* Racetrack */}
-      <div className="mx-auto max-w-3xl overflow-hidden rounded-xl border border-[#1f5a3e] shadow-[0_8px_30px_rgba(0,0,0,0.35),inset_0_0_30px_rgba(0,0,0,0.4)]">
-        {/* Header bar */}
-        <div className="flex items-center justify-between bg-[#143b2b] px-4 py-2">
-          <span className="font-display text-sm font-semibold text-gold-light">🏇 Hipódromo Arentim</span>
-          <span className="font-sans text-[11px] uppercase tracking-[0.18em] text-white/60">
+      {/* Racetrack scene */}
+      <div className="mx-auto max-w-3xl overflow-hidden rounded-xl border border-black/50 shadow-[0_10px_36px_rgba(0,0,0,0.45)]">
+        {/* Sky + grandstand */}
+        <div className="relative h-[68px] overflow-hidden" style={{ background: 'linear-gradient(180deg,#2a3f6b 0%,#46598a 55%,#6a7ba6 100%)' }}>
+          {/* sun glow */}
+          <div className="absolute right-10 top-1 h-12 w-12 rounded-full bg-[#ffe9a8]/40 blur-md" />
+          {/* grandstand roof */}
+          <div className="absolute inset-x-0 bottom-0 h-9" style={{ background: 'linear-gradient(180deg,#3a2f25,#241c14)', clipPath: 'polygon(0 35%, 100% 0, 100% 100%, 0 100%)' }} />
+          {/* crowd dots */}
+          <div className="absolute inset-x-0 bottom-0 flex h-7 items-end gap-[3px] overflow-hidden px-2 pb-0.5">
+            {Array.from({ length: 90 }, (_, i) => (
+              <span key={i} className="inline-block h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: ['#caa', '#ac9', '#9ab', '#cb9', '#bbb'][i % 5], opacity: 0.7 }} />
+            ))}
+          </div>
+          <span className="absolute left-3 top-2 font-display text-sm font-semibold text-white drop-shadow">🏇 Hipódromo Arentim</span>
+          <span className="absolute right-3 top-2 rounded bg-black/30 px-2 py-0.5 font-sans text-[11px] uppercase tracking-[0.14em] text-white/85">
             {betting ? `Apostas · ${bettingLeft}s` : racing ? 'A correr' : done ? `Próxima · ${nextLeft}s` : 'A preparar'}
           </span>
         </div>
-        <div className="relative">
-          {/* finish post: checkered + flag */}
-          <div className="pointer-events-none absolute inset-y-0 right-9 z-10 w-3 opacity-90" style={{ backgroundImage: 'repeating-conic-gradient(#fff 0% 25%, #111 0% 50%)', backgroundSize: '6px 6px' }} aria-hidden />
-          <span className="pointer-events-none absolute right-1 top-1 z-10 text-base">🏁</span>
+
+        {/* Track */}
+        <div className="relative" style={{ background: '#2b6f4e' }}>
+          {/* top + bottom white rails */}
+          <span className="pointer-events-none absolute inset-x-0 top-0 z-10 h-1 bg-white/70" />
+          <span className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-1 bg-white/70" />
+          {/* finish line: checkered + banner */}
+          <div className="pointer-events-none absolute inset-y-0 right-10 z-20 w-2.5 opacity-95" style={{ backgroundImage: 'repeating-conic-gradient(#fff 0% 25%, #111 0% 50%)', backgroundSize: '5px 5px' }} aria-hidden />
+          <span className="pointer-events-none absolute right-1.5 top-1 z-20 rounded bg-[#b0303a] px-1.5 py-0.5 font-display text-[9px] font-bold uppercase tracking-wider text-white">Meta</span>
+
           {ODDS.map((odd, i) => {
             const isWin = done && state?.winner === i;
             const mineHere = mine?.horse === i;
             return (
               <div
                 key={i}
-                className="relative flex h-16 items-center"
-                style={{ background: isWin ? 'linear-gradient(90deg,#3f8a5f,#2b6f4e)' : i % 2 ? '#1f5240' : '#27634c' }}
+                className="relative flex h-[58px] items-center"
+                style={{ background: isWin ? 'linear-gradient(90deg,#3f8a5f,#2b6f4e)' : i % 2 ? '#26614a' : '#2e7553' }}
               >
-                <span className="absolute inset-x-0 top-0 h-px bg-white/10" />
-                <span className="absolute left-2.5 flex h-9 w-9 items-center justify-center rounded-full text-[14px] font-bold text-white shadow ring-2 ring-black/30" style={{ background: COLORS[i] }}>
+                {/* turf texture line */}
+                <span className="pointer-events-none absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-black/10" />
+                {/* number badge */}
+                <span className="absolute left-2.5 z-[6] flex h-9 w-9 items-center justify-center rounded-full text-[14px] font-bold text-white shadow ring-2 ring-black/40" style={{ background: COLORS[i] }}>
                   {i + 1}
                 </span>
-                <span className="absolute right-2 font-mono text-[11px] text-white/60">{odd}×</span>
-                {mineHere && <span className="absolute left-12 top-1.5 rounded bg-gold/20 px-1 text-[10px] font-semibold text-gold">tu</span>}
-                <span
-                  className="absolute z-[5] text-[34px]"
-                  style={{ left: `calc(${pos[i]}% + 44px)`, filter: `drop-shadow(0 2px 2px rgba(0,0,0,0.6)) drop-shadow(0 0 4px ${COLORS[i]})` }}
-                >
-                  🏇
-                </span>
-                {isWin && <span className="absolute right-12 top-1/2 -translate-y-1/2 animate-pop text-2xl">🏆</span>}
+                <span className="absolute right-2.5 z-[6] font-mono text-[11px] text-white/65">{odd}×</span>
+                {mineHere && <span className="absolute left-12 top-1.5 z-[6] rounded bg-gold/25 px-1 text-[10px] font-semibold text-gold">tu</span>}
+                {/* the horse */}
+                <div className="absolute z-[5]" style={{ left: `calc(${pos[i]}% + 44px)`, transform: 'translateX(-50%)', filter: `drop-shadow(0 2px 3px rgba(0,0,0,0.5))` }}>
+                  <RaceHorse color={COLORS[i]!} galloping={racing} className="h-[42px] w-[60px]" />
+                </div>
+                {isWin && <span className="absolute right-14 top-1/2 z-[6] -translate-y-1/2 animate-pop text-2xl">🏆</span>}
               </div>
             );
           })}
