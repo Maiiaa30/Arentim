@@ -19,7 +19,7 @@ const TABLES: GameTile[] = [
 // Quick single-player rounds.
 const ARCADE: GameTile[] = [
   { to: '/casino/mines', name: 'Mines', desc: 'Revela diamantes e foge das minas. Retira a tempo.', art: 'mines', badge: 'Novo', tone: 'from-positive-felt/40 to-bg', range: '5 – 100 tós' },
-  { to: '/casino/frango', name: 'Frango na Estrada', desc: 'Atravessa as faixas sem seres atropelado.', art: 'chicken', badge: 'Novo', tone: 'from-gold/30 to-bg', range: '5 – 100 tós' },
+  { to: '/casino/frango', name: 'Travessia', desc: 'A galinha atravessa as faixas — quanto mais longe, maior o prémio.', art: 'chicken', badge: 'Novo', tone: 'from-gold/30 to-bg', range: '5 – 100 tós' },
   { to: '/casino/wheel', name: 'Fita da Sorte', desc: 'A fita corre e pára no multiplicador — até 5×.', art: 'wheel', tone: 'from-gold/30 to-bg', range: '5 – 100 tós' },
   { to: '/casino/chest', name: 'Jogo dos Copos', desc: 'Segue a joia debaixo do copo — encontra-a por 2.85×.', art: 'chest', tone: 'from-gold/30 to-bg', range: '5 – 100 tós' },
   { to: '/casino/maior-menor', name: 'Maior ou Menor', desc: 'Um dado. Maior, menor, ou acerta no número a 5.7×.', art: 'highlow', tone: 'from-chip-navy/40 to-bg', range: '5 – 100 tós' },
