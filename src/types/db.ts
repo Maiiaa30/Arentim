@@ -1065,6 +1065,16 @@ export type Database = {
         Args: { p_to: string; p_amount: number };
         Returns: { balance: number; amount: number };
       };
+      my_referral: {
+        Args: Record<string, never>;
+        Returns: { code: string | null; referred_by: string | null; referred_count: number };
+      };
+      claim_referral: {
+        Args: { p_code: string };
+        Returns:
+          | { status: 'already' | 'invalid' }
+          | { status: 'claimed'; reward: number; balance: number };
+      };
       duel_create: {
         Args: { p_opponent: string; p_stake: number; p_game?: string };
         Returns: { duel_id: number; balance: number };

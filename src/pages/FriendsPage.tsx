@@ -11,6 +11,7 @@ import {
 import { PlayerCard } from '@/features/friends/PlayerCard';
 import { useDuels, useDuelActions } from '@/features/friends/useDuels';
 import { DuelsPanel } from '@/features/friends/DuelsPanel';
+import { ConvidarCard } from '@/features/referrals/ConvidarCard';
 import { useAuth } from '@/features/auth/AuthProvider';
 import { UiIcon } from '@/components/icons/UiIcon';
 import { Button } from '@/components/ui/Button';
@@ -254,6 +255,7 @@ export function FriendsPage() {
 
       {tab === 'friends' && (
         <div className="space-y-3">
+          <ConvidarCard />
           <label className="flex items-center justify-end gap-2 font-sans text-xs text-muted-2">
             <input type="checkbox" checked={showBalance} onChange={(e) => setShowBalance(e.target.checked)} />
             Mostrar saldos

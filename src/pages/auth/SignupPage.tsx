@@ -1,5 +1,5 @@
-import { useState, type FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useEffect, useState, type FormEvent } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { signupSchema } from '@/features/auth/schema';
 import { Button } from '@/components/ui/Button';
@@ -8,12 +8,20 @@ import { AuthCard } from './AuthCard';
 
 export function SignupPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [email, setEmail] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [needsConfirm, setNeedsConfirm] = useState(false);
+
+  // Capture a referral code from the link (?ref=CODE) and stash it so it
+  // survives the email-confirmation round-trip; it's claimed on first login.
+  useEffect(() => {
+    const ref = searchParams.get('ref');
+    if (ref) localStorage.setItem('arentim:ref', ref.trim());
+  }, [searchParams]);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
