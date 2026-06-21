@@ -302,9 +302,10 @@ export type HiloDealResult = {
   desce_mult: number;
 };
 
-/** cups_start: where the ball goes + the exact swap sequence to animate. */
+/** cups_start: a cosmetic swap sequence for the shuffle. The winning cup is
+ *  hidden server-side (decided at cups_pick) and never sent here, so it can't be
+ *  read from the response. */
 export type CupsStartResult = {
-  start: number;
   swaps: [number, number][];
   multiplier: number;
   balance: number;
