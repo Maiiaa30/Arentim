@@ -56,7 +56,7 @@ Deno.serve(async (req) => {
   if (!user) return json({ error: 'unauthorized' }, 401);
 
   const db = createClient(SUPABASE_URL, SERVICE_KEY);
-  let body: { op?: string; code?: string; buyIn?: number; botCount?: number; difficulty?: string; action?: string; raiseTo?: number; tableId?: number };
+  let body: { op?: string; code?: string; buyIn?: number; botCount?: number; difficulty?: string; action?: string; raiseTo?: number; tableId?: number; amount?: number };
   try { body = await req.json(); } catch { return json({ error: 'bad request' }, 400); }
 
   const name = async () =>
@@ -100,6 +100,23 @@ Deno.serve(async (req) => {
       if (!actor.isBot) s = applyActionFor(s, actor.id, 'fold', 0, rand);
     }
     return s;
+  };
+
+  // Between hands, broke bots leave and a fresh bot takes the seat (same
+  // difficulty, a new buy-in) so the table stays full and the game keeps going.
+  const rotateBrokeBots = (state: TableState, buyIn: number) => {
+    if (!state.handOver) return;
+    const broke = state.players.filter((p) => p.isBot && p.stack <= 0);
+    for (const b of broke) {
+      removePlayer(state, b.id);
+      addPlayer(state, {
+        id: `bot_${crypto.randomUUID().slice(0, 6)}`,
+        name: randomBotName(state.players.map((p) => p.name)),
+        isBot: true,
+        difficulty: b.difficulty,
+        stack: buyIn,
+      });
+    }
   };
 
   switch (body.op) {
@@ -172,6 +189,7 @@ Deno.serve(async (req) => {
       const row = await loadByMembership(body.tableId);
       if (!row) return json({ error: 'no table' }, 404);
       if (row.host_id !== user.id) return json({ error: 'host only' }, 403);
+      rotateBrokeBots(row.state, row.buy_in);
       if (row.state.players.length < 2) return json({ error: 'need at least 2 players' }, 409);
       const trail: unknown[] = [];
       const rec: StepRecorder = (st) => trail.push(viewFor(st, user.id));
@@ -198,11 +216,33 @@ Deno.serve(async (req) => {
       const row = await loadByMembership(body.tableId);
       if (!row) return json({ error: 'no table' }, 404);
       if (!row.state.handOver) return json({ error: 'hand in progress' }, 409);
+      rotateBrokeBots(row.state, row.buy_in);
       const trail: unknown[] = [];
       const rec: StepRecorder = (st) => trail.push(viewFor(st, user.id));
       const state = startHand(row.state, rand, rec);
       await persist(row.id, state, 'active');
       return json({ view: viewFor(state, user.id), trail, turnDeadline: deadlineFor(state) });
+    }
+
+    case 'rebuy': {
+      // A seated human tops their stack back up from their Tostões balance —
+      // only between hands. Bots are auto-replaced instead (rotateBrokeBots).
+      const row = await loadByMembership(body.tableId);
+      if (!row) return json({ error: 'no table' }, 404);
+      if (!row.state.handOver) return json({ error: 'Só podes recarregar entre mãos.' }, 409);
+      const me = row.state.players.find((p) => p.id === user.id);
+      if (!me || me.isBot) return json({ error: 'not seated' }, 404);
+      const amount = Math.floor(Number(body.amount));
+      if (!Number.isInteger(amount) || amount < 100 || amount > 1_000_000_000) return json({ error: 'invalid amount' }, 400);
+      // Keep a single seat from hoarding the whole bankroll on the felt.
+      if (me.stack + amount > row.buy_in * 20) return json({ error: 'Limite da mesa atingido.' }, 400);
+      const { error: debit } = await db.rpc('apply_ledger_entry', {
+        p_user_id: user.id, p_type: 'bet', p_amount: -amount, p_game: 'poker', p_note: 'poker table recarga', p_idempotency_key: null, p_wager: amount,
+      });
+      if (debit) return json({ error: 'insufficient balance' }, 400);
+      me.stack += amount;
+      await persist(row.id, row.state);
+      return json({ view: viewFor(row.state, user.id) });
     }
 
     case 'leave': {
