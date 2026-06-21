@@ -115,7 +115,7 @@ export function MinesPage() {
         <p className="mt-2 font-sans text-sm text-muted">Revela diamantes para subir o multiplicador. Retira antes de tocares numa mina.</p>
       </div>
 
-      <div className="felt felt-rail mx-auto max-w-md rounded-lg p-5 sm:p-6">
+      <div className="felt felt-rail mx-auto max-w-xl rounded-lg p-5 sm:p-7">
         <div className="mb-4 flex items-center justify-center gap-4 text-center">
           <div>
             <p className="font-sans text-[10px] uppercase tracking-[0.18em] text-muted-2">Multiplicador</p>
@@ -129,13 +129,13 @@ export function MinesPage() {
           )}
         </div>
 
-        <div className="mx-auto grid max-w-[320px] grid-cols-5 gap-1.5">
+        <div className="mx-auto grid max-w-[460px] grid-cols-5 gap-2.5">
           {Array.from({ length: 25 }, (_, i) => (
             <button
               key={i}
               onClick={() => reveal(i)}
               disabled={phase !== 'playing' || busy || safe.has(i)}
-              className={`focus-ring flex aspect-square items-center justify-center rounded-md text-xl transition-colors ${tileCls(i)}`}
+              className={`focus-ring flex aspect-square items-center justify-center rounded-lg text-3xl shadow-[inset_0_-3px_6px_rgba(0,0,0,0.35)] transition-all hover:scale-[1.03] disabled:hover:scale-100 ${tileCls(i)}`}
             >
               {tileFace(i)}
             </button>
