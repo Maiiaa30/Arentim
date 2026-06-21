@@ -122,7 +122,20 @@ export function PrivatePokerPage() {
   }
   async function onLeave() {
     if (tableId == null) return;
-    await wrap(async () => { await leave.mutateAsync(tableId); setTableId(null); setCode(''); setReplayView(null); });
+    const leftId = tableId;
+    await wrap(async () => {
+      await leave.mutateAsync(leftId);
+      // Drop the table from the seated list immediately so the "auto-select if
+      // already seated" effect below doesn't re-enter the table we just left
+      // (the list refetch lags behind, so without this you get pulled back in).
+      qc.setQueryData(
+        ['poker-tables', user?.id],
+        (old: { table_id: number }[] | undefined) => old?.filter((t) => t.table_id !== leftId) ?? [],
+      );
+      setTableId(null);
+      setCode('');
+      setReplayView(null);
+    });
   }
 
   // ---- Lobby ----
