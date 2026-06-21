@@ -233,7 +233,7 @@ export function BalatroPage() {
                       className={`focus-ring rounded-md transition-transform ${isSel ? '-translate-y-3 ring-2 ring-gold' : 'hover:-translate-y-1.5'} disabled:cursor-not-allowed`}
                       aria-pressed={isSel}
                     >
-                      <PlayingCardFace rank={RANK_LABELS[cardRank(card)]} suit={cardSuit(card)} size="lg" />
+                      <PlayingCardFace rank={RANK_LABELS[cardRank(card)]} suit={cardSuit(card)} size="xl" />
                     </button>
                   );
                 })}

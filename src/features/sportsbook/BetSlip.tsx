@@ -45,7 +45,7 @@ export function BetSlip() {
   }
 
   return (
-    <div className="card sticky top-[92px] border-border-strong p-5">
+    <div className="card border-border-strong p-5">
       <div className="mb-4 flex items-center justify-between">
         <h3 className="font-display text-xl font-medium text-text">Boletim</h3>
         {items.length > 0 && (

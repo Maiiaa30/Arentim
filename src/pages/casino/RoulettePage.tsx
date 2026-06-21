@@ -90,6 +90,8 @@ export function RoulettePage() {
 
   const [chip, setChip] = useState(CHIPS[1]!);
   const [bets, setBets] = useState<RouletteBet[]>([]);
+  const [lastBets, setLastBets] = useState<RouletteBet[]>([]); // previous confirmed slip, for "Repetir"
+  const [chipHistory, setChipHistory] = useState<{ key: string; amount: number }[]>([]); // chip order, for "Anular"
   const [error, setError] = useState<string | null>(null);
 
   // Wheel animation, driven by the shared room phase.
@@ -182,20 +184,50 @@ export function RoulettePage() {
       }
       return [...prev, { kind, selection, stake: chip, ...(numbers ? { numbers } : {}) }];
     });
+    setChipHistory((h) => [...h, { key: k, amount: chip }]);
   }
 
   function clearBets() {
     if (boardDisabled) return;
     setBets([]);
+    setChipHistory([]);
+    setError(null);
+  }
+
+  /** Remove the last chip placed (reduce a bet without clearing everything). */
+  function undoChip() {
+    if (boardDisabled || chipHistory.length === 0) return;
+    const last = chipHistory[chipHistory.length - 1]!;
+    setChipHistory((h) => h.slice(0, -1));
+    setBets((prev) => {
+      const idx = prev.findIndex((b) => betCellKey(b.kind, b.selection, b.numbers) === last.key);
+      if (idx < 0) return prev;
+      const next = [...prev];
+      const stake = next[idx]!.stake - last.amount;
+      if (stake <= 0) next.splice(idx, 1);
+      else next[idx] = { ...next[idx]!, stake };
+      return next;
+    });
+    setError(null);
+  }
+
+  /** Re-place the previous confirmed slip in one tap. */
+  function repeatBet() {
+    if (!betting || mine || lastBets.length === 0) return;
+    if (totalStake(lastBets) > balance) { setError('Saldo insuficiente para repetir a aposta.'); return; }
+    setBets(lastBets.map((b) => ({ ...b })));
+    setChipHistory([]); // repeated slip is cleared with Limpar, not chip-by-chip
     setError(null);
   }
 
   async function confirm() {
     if (!betting || mine || bets.length === 0) return;
     setError(null);
+    setLastBets(bets.map((b) => ({ ...b }))); // remember for "Repetir"
     try {
       await placeBet.mutateAsync(bets as RouletteBetPayload[]);
       setBets([]);
+      setChipHistory([]);
     } catch (e) {
       setError(humanize(e));
     }
@@ -337,7 +369,13 @@ export function RoulettePage() {
                 Total <CoinIcon className="h-3.5 w-3.5" />
                 <span className="font-mono tabular-nums font-semibold text-text">{formatAmount(mine ? mine.stake : staked)}</span>
               </span>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
+                <Button variant="ghost" onClick={repeatBet} disabled={!betting || !!mine || lastBets.length === 0}>
+                  Repetir
+                </Button>
+                <Button variant="ghost" onClick={undoChip} disabled={boardDisabled || chipHistory.length === 0}>
+                  Anular
+                </Button>
                 <Button variant="ghost" onClick={clearBets} disabled={boardDisabled || bets.length === 0}>
                   Limpar
                 </Button>

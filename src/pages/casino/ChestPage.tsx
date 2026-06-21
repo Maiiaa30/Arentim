@@ -9,7 +9,7 @@ import { Eyebrow } from '@/components/ui/primitives';
 import { formatAmount } from '@/lib/format';
 import type { CupsPickResult } from '@/types/db';
 
-type Phase = 'ready' | 'shuffle' | 'pick' | 'reveal';
+type Phase = 'ready' | 'show' | 'shuffle' | 'pick' | 'reveal';
 const SLOT = 33.34;
 
 function Cup({ lifted }: { lifted: boolean }) {
@@ -33,6 +33,7 @@ export function ChestPage() {
   const [stake, setStake] = useState(25);
   const [phase, setPhase] = useState<Phase>('ready');
   const [pos, setPos] = useState([0, 1, 2]); // pos[cupId] = screen position
+  const [showPos, setShowPos] = useState(1); // cosmetic spot the jewel is shown at the start (NOT the answer)
   const [result, setResult] = useState<CupsPickResult | null>(null);
   const [winId, setWinId] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -50,22 +51,30 @@ export function ChestPage() {
     setPos([0, 1, 2]);
     try {
       const res = await cupsStart.mutateAsync(stake);
-      // Shuffle the cups (cosmetic — the winning cup is hidden server-side and
-      // isn't sent here, so it can't be read from the response/devtools).
-      setPhase('shuffle');
-      let p = [0, 1, 2];
-      res.swaps.forEach(([a, b], i) => {
-        timers.current.push(
-          window.setTimeout(() => {
-            const ca = p.indexOf(a);
-            const cb = p.indexOf(b);
-            p = p.slice();
-            [p[ca], p[cb]] = [p[cb]!, p[ca]!];
-            setPos(p);
-            if (i === res.swaps.length - 1) timers.current.push(window.setTimeout(() => setPhase('pick'), 360));
-          }, i * 360),
-        );
-      });
+      // Show the jewel under a cup briefly, then shuffle. The shown spot is purely
+      // cosmetic — the winning cup is decided + hidden server-side and isn't sent
+      // here, so it can't be read from the response (and the jewel is hidden
+      // during the shuffle, so the shown spot doesn't have to be the answer).
+      setShowPos(Math.floor(Math.random() * 3));
+      setPhase('show');
+      timers.current.push(
+        window.setTimeout(() => {
+          setPhase('shuffle');
+          let p = [0, 1, 2];
+          res.swaps.forEach(([a, b], i) => {
+            timers.current.push(
+              window.setTimeout(() => {
+                const ca = p.indexOf(a);
+                const cb = p.indexOf(b);
+                p = p.slice();
+                [p[ca], p[cb]] = [p[cb]!, p[ca]!];
+                setPos(p);
+                if (i === res.swaps.length - 1) timers.current.push(window.setTimeout(() => setPhase('pick'), 360));
+              }, i * 360),
+            );
+          });
+        }, 1100),
+      );
     } catch (e) {
       setPhase('ready');
       setError(e instanceof Error ? e.message : 'Não foi possível começar.');
@@ -91,8 +100,8 @@ export function ChestPage() {
     setError(null);
   }
 
-  const ballPos = result?.prize ?? 0; // screen position of the ball (revealed at the end)
-  const ballVisible = phase === 'reveal';
+  const ballPos = phase === 'show' ? showPos : (result?.prize ?? 0); // screen position of the jewel
+  const ballVisible = phase === 'show' || phase === 'reveal';
 
   return (
     <div className="animate-fade-in space-y-6">
@@ -100,7 +109,7 @@ export function ChestPage() {
         <Link to="/casino" className="font-sans text-sm text-muted-2 hover:text-text">← Casino</Link>
         <Eyebrow className="mt-3">O Salão</Eyebrow>
         <h1 className="mt-2 font-display text-[34px] font-medium leading-tight text-text sm:text-[38px]">Jogo dos Copos</h1>
-        <p className="mt-2 font-sans text-sm text-muted">Os copos baralham com a joia escondida. Adivinha debaixo de qual está para levar 2.85×.</p>
+        <p className="mt-2 font-sans text-sm text-muted">Vês a joia, os copos baralham depressa, e adivinhas onde ficou — para levar 2.85×.</p>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[1.3fr_1fr] lg:items-start">
@@ -121,7 +130,7 @@ export function ChestPage() {
             {/* The three cups */}
             {[0, 1, 2].map((cupId) => {
               const p = pos[cupId]!;
-              const lifted = phase === 'reveal' && result != null && p === result.prize;
+              const lifted = (phase === 'show' && p === showPos) || (phase === 'reveal' && result != null && p === result.prize);
               const pickedHere = phase === 'reveal' && result?.picked === p;
               return (
                 <button
@@ -140,7 +149,9 @@ export function ChestPage() {
           </div>
 
           <div className="mt-6 flex min-h-[2.5rem] items-center justify-center px-2">
-            {phase === 'shuffle' ? (
+            {phase === 'show' ? (
+              <p className="font-sans text-sm text-gold-light">A joia foi colocada — vão baralhar!</p>
+            ) : phase === 'shuffle' ? (
               <p className="animate-pulse font-display text-lg italic text-gold-light">A baralhar…</p>
             ) : phase === 'pick' ? (
               <p className="font-sans text-sm text-gold-light">Onde está a joia? Escolha um copo.</p>
