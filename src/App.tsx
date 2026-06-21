@@ -30,6 +30,8 @@ const MinesPage = lazy(() => named(import('@/pages/casino/MinesPage'), 'MinesPag
 const TigrinhoPage = lazy(() => named(import('@/pages/casino/TigrinhoPage'), 'TigrinhoPage'));
 const HorsePage = lazy(() => named(import('@/pages/casino/HorsePage'), 'HorsePage'));
 const ChickenPage = lazy(() => named(import('@/pages/casino/ChickenPage'), 'ChickenPage'));
+const PlinkoPage = lazy(() => named(import('@/pages/casino/PlinkoPage'), 'PlinkoPage'));
+const BalatroPage = lazy(() => named(import('@/pages/casino/BalatroPage'), 'BalatroPage'));
 const SportsbookPage = lazy(() => named(import('@/pages/SportsbookPage'), 'SportsbookPage'));
 const ScoresPage = lazy(() => named(import('@/pages/ScoresPage'), 'ScoresPage'));
 const OnzePage = lazy(() => named(import('@/pages/OnzePage'), 'OnzePage'));
@@ -76,6 +78,8 @@ export default function App() {
             <Route path="casino/tigrinho" element={<TigrinhoPage />} />
             <Route path="casino/corrida" element={<HorsePage />} />
             <Route path="casino/frango" element={<ChickenPage />} />
+            <Route path="casino/plinko" element={<PlinkoPage />} />
+            <Route path="casino/balatro" element={<BalatroPage />} />
             <Route path="sportsbook" element={<SportsbookPage />} />
             <Route path="resultados" element={<ScoresPage />} />
             <Route path="onze" element={<OnzePage />} />
