@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/features/auth/AuthProvider';
 import { profileKey } from '@/features/profile/useProfile';
@@ -19,11 +19,13 @@ import type {
   MinesState,
   MinesPickResult,
   MinesCashoutResult,
+  MinesCurrent,
   TigrinhoResult,
   HorseResult,
   ChickenState,
   ChickenStepResult,
   ChickenCashoutResult,
+  ChickenCurrent,
 } from '@/types/db';
 
 function useInvalidateWallet() {
@@ -223,6 +225,32 @@ export function useMinesCashout() {
       return data;
     },
     onSuccess: invalidate,
+  });
+}
+
+/** Mines: the in-progress round (or null), so the page can resume after leaving. */
+export function useMinesCurrent() {
+  return useQuery({
+    queryKey: ['mines-current'],
+    queryFn: async (): Promise<MinesCurrent | null> => {
+      const { data, error } = await supabase.rpc('mines_current');
+      if (error) throw error;
+      return data;
+    },
+    staleTime: 0,
+  });
+}
+
+/** Frango: the in-progress round (or null), so the page can resume after leaving. */
+export function useChickenCurrent() {
+  return useQuery({
+    queryKey: ['chicken-current'],
+    queryFn: async (): Promise<ChickenCurrent | null> => {
+      const { data, error } = await supabase.rpc('chicken_current');
+      if (error) throw error;
+      return data;
+    },
+    staleTime: 0,
   });
 }
 

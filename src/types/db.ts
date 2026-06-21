@@ -672,6 +672,14 @@ export type MinesCashoutResult = {
   mines: number[];
   balance: number;
 };
+/** Masked in-progress Mines round for resume (mines_current). Never the layout. */
+export type MinesCurrent = {
+  mines: number;
+  stake: number;
+  picks: number[];
+  multiplier: number;
+  next_multiplier: number;
+};
 
 /** Tigrinho (3×3 tiger slot). */
 export type TigrinhoResult = {
@@ -712,6 +720,8 @@ export type ChickenStepResult = {
   balance?: number;
 };
 export type ChickenCashoutResult = { payout: number; multiplier: number; lane: number; balance: number };
+/** Masked in-progress Frango round for resume (chicken_current). */
+export type ChickenCurrent = { difficulty: string; step: number; stake: number; multiplier: number };
 
 /** Balatró — a single-blind poker-hand skill game (mirrors src/features/casino/balatro.ts). */
 export type BalatroState = {
@@ -901,6 +911,14 @@ export type Database = {
       mines_cashout: {
         Args: Record<string, never>;
         Returns: MinesCashoutResult;
+      };
+      mines_current: {
+        Args: Record<string, never>;
+        Returns: MinesCurrent | null;
+      };
+      chicken_current: {
+        Args: Record<string, never>;
+        Returns: ChickenCurrent | null;
       };
       play_tigrinho: {
         Args: { p_stake: number; p_idempotency_key?: string };

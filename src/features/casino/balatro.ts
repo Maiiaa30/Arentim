@@ -7,11 +7,12 @@
  *   rank = card % 13 (0='2' … 8='10', 9='J', 10='Q', 11='K', 12='A').
  *
  * SCORING of a played selection:
- *   gained = (handBaseChips + Σ chipValue(played cards)) × handMult
- * where the hand type is the BEST poker hand formed by the selected cards.
- *
- * SIMPLIFICATION (must match SQL): ALL played cards contribute their chip value,
- * not only the "scoring" cards of the hand. This keeps SQL/JS trivially in sync.
+ *   gained = (handBaseChips + Σ chipValue(SCORING cards)) × handMult
+ * where the hand type is the BEST poker hand formed by the selected cards, and
+ * only the cards that actually FORM that hand score (like Balatro): a High Card
+ * scores just the highest card, a Pair just the two matched cards, a Trio the
+ * three, etc.; a Straight / Flush / Full House / Straight Flush score all five.
+ * (Mirrored exactly in the SQL balatro_score so server and client agree.)
  */
 
 export type HandType =
@@ -37,7 +38,7 @@ export const HAND_TABLE: Record<HandType, { base: number; mult: number }> = {
   straight_flush: { base: 100, mult: 8 },
 };
 
-export const BALATRO_TARGET = 620;
+export const BALATRO_TARGET = 650;
 export const BALATRO_REWARD = 2.0;
 export const BALATRO_HANDS = 4;
 export const BALATRO_DISCARDS = 3;
@@ -117,11 +118,31 @@ export function evaluateHand(cards: number[]): { type: HandType; base: number; m
   return { type, ...HAND_TABLE[type] };
 }
 
-/** Score a played selection using the formula above. */
+/**
+ * The cards that actually form the hand and therefore score. Straight / Flush /
+ * Full House / Straight Flush use all five; High Card scores only the highest
+ * card; pair-family hands (pair, two pair, trips, four) score every card whose
+ * rank appears 2+ times (so the kickers don't count).
+ */
+export function scoringCards(cards: number[], type: HandType): number[] {
+  if (type === 'flush' || type === 'straight' || type === 'straight_flush' || type === 'full_house') {
+    return cards.slice();
+  }
+  if (type === 'high_card') {
+    let best = cards[0]!;
+    for (const c of cards) if (cardRank(c) > cardRank(best)) best = c;
+    return [best];
+  }
+  const counts = new Map<number, number>();
+  for (const c of cards) counts.set(cardRank(c), (counts.get(cardRank(c)) ?? 0) + 1);
+  return cards.filter((c) => (counts.get(cardRank(c)) ?? 0) >= 2);
+}
+
+/** Score a played selection: (base + Σ chipValue(scoring cards)) × mult. */
 export function scorePlay(cards: number[]): { type: HandType; gained: number } {
   const { type, base, mult } = evaluateHand(cards);
   let chips = base;
-  for (const c of cards) chips += chipValue(cardRank(c));
+  for (const c of scoringCards(cards, type)) chips += chipValue(cardRank(c));
   return { type, gained: chips * mult };
 }
 

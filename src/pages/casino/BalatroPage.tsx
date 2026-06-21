@@ -140,7 +140,8 @@ export function BalatroPage() {
         <p className="mt-2 font-sans text-sm text-muted">
           Forma a melhor mão de póquer com as cartas que escolheres. Tens 4 mãos para chegar à pontuação-alvo
           e 3 descartes para melhorar o teu baralho. Cada mão pontua{' '}
-          <span className="text-gold">(chips base + valor das cartas) × multiplicador</span>.
+          <span className="text-gold">(chips base + cartas que formam a mão) × multiplicador</span> — só contam as
+          cartas que fazem a combinação.
         </p>
       </div>
 
