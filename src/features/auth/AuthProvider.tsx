@@ -44,7 +44,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!active) return;
       const uid = session?.user?.id ?? null;
       if (prevUid.current !== undefined && prevUid.current !== uid) {
+        // The account actually changed (different user / sign-out) — e.g. another
+        // tab signed in, since the session is shared per-browser. Hard reload so
+        // ZERO stale cross-account state (cached balances, in-flight bets, the
+        // supabase client's queued requests) can survive into the new account.
         qc.clear();
+        prevUid.current = uid;
+        window.location.reload();
+        return;
       }
       prevUid.current = uid;
       setState({ session, user: session?.user ?? null, loading: false });
