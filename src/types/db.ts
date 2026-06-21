@@ -836,6 +836,18 @@ export type Database = {
         Args: { p_machine: string; p_stake: number; p_idempotency_key: string | null };
         Returns: SlotSpinResult;
       };
+      play_video_slot: {
+        Args: { p_stake: number; p_idempotency_key: string | null };
+        Returns: {
+          grid: string[][];
+          lines: { line: number; symbol: string; len: number; mult: number }[];
+          multiplier: number;
+          jackpot: boolean;
+          payout: number;
+          balance: number;
+          replayed: boolean;
+        };
+      };
       play_dice: {
         Args: { p_stake: number; p_pick: string; p_idempotency_key: string | null };
         Returns: DiceResult;
