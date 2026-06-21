@@ -104,21 +104,44 @@ export function HorsePage() {
         </div>
       )}
 
-      {/* Track */}
-      <div className="felt felt-rail mx-auto max-w-2xl space-y-1.5 rounded-lg p-4 sm:p-5">
-        {ODDS.map((odd, i) => {
-          const isWin = done && state?.winner === i;
-          const mineHere = mine?.horse === i;
-          return (
-            <div key={i} className={`relative flex h-10 items-center overflow-hidden rounded border-l-2 ${isWin ? 'border-l-gold bg-gold/15' : mineHere ? 'border-l-gold/60 bg-gold/[0.05]' : 'border-l-border bg-black/20'}`}>
-              <span className="absolute right-1.5 font-mono text-[10px] text-muted-2">{odd}×</span>
-              <span className="absolute right-7 top-0 h-full w-px bg-white/15" />
-              <span className="absolute left-1.5 font-mono text-[10px]" style={{ color: COLORS[i] }}>{i + 1}</span>
-              <span className="absolute text-xl" style={{ left: `calc(${pos[i]}% + 14px)`, filter: `drop-shadow(0 0 2px ${COLORS[i]})` }}>🏇</span>
-              {mineHere && <span className="absolute left-6 top-0.5 text-[9px] text-gold">★</span>}
-            </div>
-          );
-        })}
+      {/* Racetrack */}
+      <div className="mx-auto max-w-2xl overflow-hidden rounded-xl border border-[#1f5a3e] shadow-[inset_0_0_30px_rgba(0,0,0,0.4)]">
+        <div className="relative">
+          {/* checkered finish post */}
+          <div
+            className="pointer-events-none absolute inset-y-0 right-8 z-10 w-3 opacity-90"
+            style={{ backgroundImage: 'repeating-conic-gradient(#fff 0% 25%, #111 0% 50%)', backgroundSize: '6px 6px' }}
+            aria-hidden
+          />
+          {ODDS.map((odd, i) => {
+            const isWin = done && state?.winner === i;
+            const mineHere = mine?.horse === i;
+            return (
+              <div
+                key={i}
+                className="relative flex h-12 items-center"
+                style={{ background: isWin ? 'linear-gradient(90deg,#3a7a55,#2b6f4e)' : i % 2 ? '#205240' : '#26614b' }}
+              >
+                {/* lane rail */}
+                <span className="absolute inset-x-0 top-0 h-px bg-white/10" />
+                {/* number badge */}
+                <span className="absolute left-2 flex h-7 w-7 items-center justify-center rounded-full text-[12px] font-bold text-white shadow ring-1 ring-black/30" style={{ background: COLORS[i] }}>
+                  {i + 1}
+                </span>
+                <span className="absolute right-1.5 font-mono text-[10px] text-white/55">{odd}×</span>
+                {mineHere && <span className="absolute left-10 top-1 text-[10px] text-gold">★ tu</span>}
+                {/* horse */}
+                <span
+                  className="absolute z-[5] text-[26px]"
+                  style={{ left: `calc(${pos[i]}% + 36px)`, filter: `drop-shadow(0 1px 2px rgba(0,0,0,0.6)) drop-shadow(0 0 3px ${COLORS[i]})` }}
+                >
+                  🏇
+                </span>
+                {isWin && <span className="absolute right-12 top-1/2 -translate-y-1/2 animate-pop text-lg">🏆</span>}
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       <div className="min-h-[1.75rem] text-center">
