@@ -1,0 +1,37 @@
+<!--
+  Arentim — security notification: "Email da conta alterado".
+  Paste into your provider's "Email address changed" template. {{ .SiteURL }} =
+  your site; swap the variable / hardcode the domain if your provider differs.
+-->
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#0a0907;margin:0;padding:32px 0;font-family:Arial,Helvetica,sans-serif;">
+  <tr><td align="center">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;width:100%;">
+      <tr><td style="height:3px;background:linear-gradient(90deg,#0a0907,#C9A24B,#0a0907);font-size:0;line-height:0;">&nbsp;</td></tr>
+      <tr><td align="center" style="padding:28px 0 8px;">
+        <span style="font-family:Georgia,'Times New Roman',serif;font-size:22px;font-weight:bold;letter-spacing:8px;color:#C9A24B;">ARENTIM</span>
+        <div style="font-size:10px;letter-spacing:3px;color:#9d927a;text-transform:uppercase;margin-top:4px;">Segurança da conta</div>
+      </td></tr>
+      <tr><td style="padding:8px 0;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#100e09;border:1px solid rgba(201,162,75,0.22);border-radius:8px;">
+          <tr><td style="padding:34px 34px 28px;">
+            <h1 style="margin:0 0 12px;font-family:Georgia,'Times New Roman',serif;font-size:24px;font-weight:normal;color:#f3edde;">O email da tua conta foi alterado</h1>
+            <p style="margin:0 0 18px;font-size:15px;line-height:1.6;color:#b7ad95;">
+              O endereço de email associado à tua conta Arentim foi alterado. Se foste tu, está tudo certo.
+            </p>
+            <p style="margin:0 0 18px;font-size:15px;line-height:1.6;color:#b7ad95;">
+              <strong style="color:#f3edde;">Não reconheces esta alteração?</strong> Entra já e protege a conta — repõe a palavra-passe.
+            </p>
+            <table role="presentation" cellpadding="0" cellspacing="0" style="margin:6px 0 4px;">
+              <tr><td align="center" style="border-radius:6px;background:#C9A24B;">
+                <a href="{{ .SiteURL }}/login" target="_blank" style="display:inline-block;padding:12px 28px;font-size:14px;font-weight:bold;color:#0a0907;text-decoration:none;">Proteger a conta</a>
+              </td></tr>
+            </table>
+          </td></tr>
+        </table>
+      </td></tr>
+      <tr><td style="padding:18px 12px 0;">
+        <p style="margin:0;font-size:12px;line-height:1.5;color:#6b6149;">Aviso de segurança automático do Arentim.</p>
+      </td></tr>
+    </table>
+  </td></tr>
+</table>
