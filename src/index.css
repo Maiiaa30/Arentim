@@ -51,6 +51,13 @@
     to { transform: translateY(-85.7142857%); }
   }
 
+  /* Video-slot reel landing: a 12-cell strip (9 fillers + the 3 result rows) in
+     a 3-row window. Settle on the last 3 cells → offset -(9/12)*100% = -75%. */
+  @keyframes reel-land-3 {
+    from { transform: translateY(0); }
+    to { transform: translateY(-75%); }
+  }
+
   /* Full-screen confetti rain + a one-shot gold flash for jackpots. */
   @keyframes confetti-fall {
     0% { transform: translateY(-12vh) rotate(0deg); opacity: 0; }
