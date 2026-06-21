@@ -519,6 +519,7 @@ export type DuelRespondResult = {
 export type CasinoActivity = {
   crash: { players: number; friends: number };
   roulette: { players: number; friends: number };
+  horse?: { players: number; friends: number };
   recent: { name: string; game: string | null; amount: number; at: string; is_me: boolean }[];
 };
 

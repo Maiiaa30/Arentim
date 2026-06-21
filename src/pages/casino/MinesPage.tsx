@@ -115,50 +115,22 @@ export function MinesPage() {
         <p className="mt-2 font-sans text-sm text-muted">Revela diamantes para subir o multiplicador. Retira antes de tocares numa mina.</p>
       </div>
 
-      <div className="felt felt-rail mx-auto max-w-xl rounded-lg p-5 sm:p-7">
-        <div className="mb-4 flex items-center justify-center gap-4 text-center">
-          <div>
-            <p className="font-sans text-[10px] uppercase tracking-[0.18em] text-muted-2">Multiplicador</p>
-            <p className={`font-mono text-2xl font-bold tabular-nums ${phase === 'done' && !result?.won ? 'text-negative' : 'text-gold'}`}>{mult.toFixed(2)}×</p>
-          </div>
-          {phase === 'playing' && (
+      <div className="grid gap-6 lg:grid-cols-[300px_1fr] lg:items-start">
+        {/* Bet / controls panel */}
+        <div className="card space-y-4 p-5 lg:sticky lg:top-[88px]">
+          <div className="flex items-end justify-between">
             <div>
-              <p className="font-sans text-[10px] uppercase tracking-[0.18em] text-muted-2">Próximo</p>
-              <p className="font-mono text-lg tabular-nums text-muted">{nextMult.toFixed(2)}×</p>
+              <p className="font-sans text-[10px] uppercase tracking-[0.18em] text-muted-2">Multiplicador</p>
+              <p className={`font-mono text-3xl font-bold tabular-nums ${phase === 'done' && !result?.won ? 'text-negative' : 'text-gold'}`}>{mult.toFixed(2)}×</p>
             </div>
-          )}
-        </div>
+            {phase === 'playing' && (
+              <div className="text-right">
+                <p className="font-sans text-[10px] uppercase tracking-[0.18em] text-muted-2">Próximo</p>
+                <p className="font-mono text-base tabular-nums text-muted">{nextMult.toFixed(2)}×</p>
+              </div>
+            )}
+          </div>
 
-        <div className="mx-auto grid max-w-[460px] grid-cols-5 gap-2.5">
-          {Array.from({ length: 25 }, (_, i) => (
-            <button
-              key={i}
-              onClick={() => reveal(i)}
-              disabled={phase !== 'playing' || busy || safe.has(i)}
-              className={`focus-ring flex aspect-square items-center justify-center rounded-lg text-3xl shadow-[inset_0_-3px_6px_rgba(0,0,0,0.35)] transition-all hover:scale-[1.03] disabled:hover:scale-100 ${tileCls(i)}`}
-            >
-              {tileFace(i)}
-            </button>
-          ))}
-        </div>
-
-        <div className="mt-4 min-h-[2rem] text-center">
-          {phase === 'done' && result && (
-            <p className={`font-display text-base font-bold ${result.won ? 'text-positive' : 'text-negative'}`}>
-              {result.won ? `Retiraste ${formatAmount(result.payout)} tós!` : 'Rebentaste numa mina.'}
-            </p>
-          )}
-        </div>
-
-        {phase === 'playing' && (
-          <Button variant="primary" onClick={takeMoney} disabled={safe.size === 0 || busy} className="w-full">
-            Retirar {formatAmount(cashValue)} tós
-          </Button>
-        )}
-      </div>
-
-      {phase !== 'playing' && (
-        <div className="card mx-auto max-w-md space-y-4 p-5">
           <div>
             <span className="mb-2 block font-sans text-sm font-medium text-muted">Minas</span>
             <div className="flex gap-2">
@@ -166,20 +138,51 @@ export function MinesPage() {
                 <button
                   key={m}
                   onClick={() => setMines(m)}
-                  className={`focus-ring rounded px-3 py-1.5 font-mono text-sm ${mines === m ? 'bg-gold text-bg' : 'border border-border text-muted hover:text-text'}`}
+                  disabled={phase === 'playing'}
+                  className={`focus-ring flex-1 rounded px-3 py-1.5 font-mono text-sm disabled:opacity-50 ${mines === m ? 'bg-gold text-bg' : 'border border-border text-muted hover:text-text'}`}
                 >
                   {m}
                 </button>
               ))}
             </div>
           </div>
-          <StakeChips stake={stake} onChange={setStake} balance={balance} />
-          <Button variant="primary" onClick={begin} disabled={busy || stake > balance} className="w-full">
-            {stake > balance ? 'Saldo insuficiente' : `Jogar · ${formatAmount(stake)} tós`}
-          </Button>
+
+          <StakeChips stake={stake} onChange={setStake} balance={balance} disabled={phase === 'playing'} />
+
+          {phase === 'playing' ? (
+            <Button variant="primary" onClick={takeMoney} disabled={safe.size === 0 || busy} className="w-full">
+              Retirar {formatAmount(cashValue)} tós
+            </Button>
+          ) : (
+            <Button variant="primary" onClick={begin} disabled={busy || stake > balance} className="w-full">
+              {stake > balance ? 'Saldo insuficiente' : `Apostar · ${formatAmount(stake)} tós`}
+            </Button>
+          )}
+
+          {phase === 'done' && result && (
+            <p className={`text-center font-display text-sm font-bold ${result.won ? 'text-positive' : 'text-negative'}`}>
+              {result.won ? `Retiraste ${formatAmount(result.payout)} tós!` : 'Rebentaste numa mina.'}
+            </p>
+          )}
           {error && <p className="font-sans text-sm text-negative">{error}</p>}
         </div>
-      )}
+
+        {/* Board */}
+        <div className="felt felt-rail rounded-lg p-4 sm:p-6">
+          <div className="mx-auto grid max-w-[560px] grid-cols-5 gap-2.5 sm:gap-3">
+            {Array.from({ length: 25 }, (_, i) => (
+              <button
+                key={i}
+                onClick={() => reveal(i)}
+                disabled={phase !== 'playing' || busy || safe.has(i)}
+                className={`focus-ring flex aspect-square items-center justify-center rounded-lg text-3xl shadow-[inset_0_-3px_6px_rgba(0,0,0,0.35)] transition-all hover:scale-[1.03] disabled:hover:scale-100 sm:text-4xl ${tileCls(i)}`}
+              >
+                {tileFace(i)}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

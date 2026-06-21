@@ -105,39 +105,40 @@ export function HorsePage() {
       )}
 
       {/* Racetrack */}
-      <div className="mx-auto max-w-2xl overflow-hidden rounded-xl border border-[#1f5a3e] shadow-[inset_0_0_30px_rgba(0,0,0,0.4)]">
+      <div className="mx-auto max-w-3xl overflow-hidden rounded-xl border border-[#1f5a3e] shadow-[0_8px_30px_rgba(0,0,0,0.35),inset_0_0_30px_rgba(0,0,0,0.4)]">
+        {/* Header bar */}
+        <div className="flex items-center justify-between bg-[#143b2b] px-4 py-2">
+          <span className="font-display text-sm font-semibold text-gold-light">🏇 Hipódromo Arentim</span>
+          <span className="font-sans text-[11px] uppercase tracking-[0.18em] text-white/60">
+            {betting ? `Apostas · ${bettingLeft}s` : racing ? 'A correr' : done ? `Próxima · ${nextLeft}s` : 'A preparar'}
+          </span>
+        </div>
         <div className="relative">
-          {/* checkered finish post */}
-          <div
-            className="pointer-events-none absolute inset-y-0 right-8 z-10 w-3 opacity-90"
-            style={{ backgroundImage: 'repeating-conic-gradient(#fff 0% 25%, #111 0% 50%)', backgroundSize: '6px 6px' }}
-            aria-hidden
-          />
+          {/* finish post: checkered + flag */}
+          <div className="pointer-events-none absolute inset-y-0 right-9 z-10 w-3 opacity-90" style={{ backgroundImage: 'repeating-conic-gradient(#fff 0% 25%, #111 0% 50%)', backgroundSize: '6px 6px' }} aria-hidden />
+          <span className="pointer-events-none absolute right-1 top-1 z-10 text-base">🏁</span>
           {ODDS.map((odd, i) => {
             const isWin = done && state?.winner === i;
             const mineHere = mine?.horse === i;
             return (
               <div
                 key={i}
-                className="relative flex h-12 items-center"
-                style={{ background: isWin ? 'linear-gradient(90deg,#3a7a55,#2b6f4e)' : i % 2 ? '#205240' : '#26614b' }}
+                className="relative flex h-16 items-center"
+                style={{ background: isWin ? 'linear-gradient(90deg,#3f8a5f,#2b6f4e)' : i % 2 ? '#1f5240' : '#27634c' }}
               >
-                {/* lane rail */}
                 <span className="absolute inset-x-0 top-0 h-px bg-white/10" />
-                {/* number badge */}
-                <span className="absolute left-2 flex h-7 w-7 items-center justify-center rounded-full text-[12px] font-bold text-white shadow ring-1 ring-black/30" style={{ background: COLORS[i] }}>
+                <span className="absolute left-2.5 flex h-9 w-9 items-center justify-center rounded-full text-[14px] font-bold text-white shadow ring-2 ring-black/30" style={{ background: COLORS[i] }}>
                   {i + 1}
                 </span>
-                <span className="absolute right-1.5 font-mono text-[10px] text-white/55">{odd}×</span>
-                {mineHere && <span className="absolute left-10 top-1 text-[10px] text-gold">★ tu</span>}
-                {/* horse */}
+                <span className="absolute right-2 font-mono text-[11px] text-white/60">{odd}×</span>
+                {mineHere && <span className="absolute left-12 top-1.5 rounded bg-gold/20 px-1 text-[10px] font-semibold text-gold">tu</span>}
                 <span
-                  className="absolute z-[5] text-[26px]"
-                  style={{ left: `calc(${pos[i]}% + 36px)`, filter: `drop-shadow(0 1px 2px rgba(0,0,0,0.6)) drop-shadow(0 0 3px ${COLORS[i]})` }}
+                  className="absolute z-[5] text-[34px]"
+                  style={{ left: `calc(${pos[i]}% + 44px)`, filter: `drop-shadow(0 2px 2px rgba(0,0,0,0.6)) drop-shadow(0 0 4px ${COLORS[i]})` }}
                 >
                   🏇
                 </span>
-                {isWin && <span className="absolute right-12 top-1/2 -translate-y-1/2 animate-pop text-lg">🏆</span>}
+                {isWin && <span className="absolute right-12 top-1/2 -translate-y-1/2 animate-pop text-2xl">🏆</span>}
               </div>
             );
           })}
@@ -145,11 +146,13 @@ export function HorsePage() {
       </div>
 
       <div className="min-h-[1.75rem] text-center">
-        {betting ? (
+        {!state ? (
+          <p className="font-sans text-sm text-muted-2 animate-floaty">A ligar à corrida…</p>
+        ) : betting ? (
           <p className="font-display text-base font-bold text-gold-light">Apostas abertas · <span className="font-mono">{bettingLeft}s</span></p>
         ) : racing ? (
           <p className="font-sans text-sm text-gold-light animate-floaty">E partem…</p>
-        ) : done && state ? (
+        ) : done ? (
           <p className={`font-display text-lg font-bold ${mine?.settled && mine.payout > 0 ? 'text-positive' : 'text-negative'}`}>
             Venceu o cavalo {(state.winner ?? 0) + 1}
             {mine ? (mine.payout > 0 ? ` — ganhaste ${formatAmount(mine.payout)} tós!` : ' — desta vez não.') : ''}
@@ -175,7 +178,7 @@ export function HorsePage() {
           </div>
           <StakeChips stake={stake} onChange={setStake} balance={balance} disabled={!betting || !!mine} />
           <Button variant="primary" onClick={bet} disabled={!betting || !!mine || placeBet.isPending || stake > balance} className="w-full">
-            {mine ? `Apostaste no #${mine.horse + 1} · ${formatAmount(mine.stake)} tós` : !betting ? 'Aguarda a próxima corrida…' : stake > balance ? 'Saldo insuficiente' : `Apostar no #${horse + 1} · ${formatAmount(stake)} tós`}
+            {mine ? `Apostaste no #${mine.horse + 1} · ${formatAmount(mine.stake)} tós` : !state ? 'A ligar…' : !betting ? 'Aguarda a próxima corrida…' : stake > balance ? 'Saldo insuficiente' : `Apostar no #${horse + 1} · ${formatAmount(stake)} tós`}
           </Button>
           {error && <p className="font-sans text-sm text-negative">{error}</p>}
         </div>
