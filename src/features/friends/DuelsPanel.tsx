@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useDuels, useDuelActions } from './useDuels';
 import { Button } from '@/components/ui/Button';
 import { formatAmount } from '@/lib/format';
@@ -36,6 +37,20 @@ function ResultLine({ d, meId }: { d: DuelRow; meId: string | undefined }) {
 export function DuelsPanel({ meId }: { meId: string | undefined }) {
   const { data: duels } = useDuels();
   const { respond, cancel } = useDuelActions();
+  const [flash, setFlash] = useState<string | null>(null);
+
+  async function accept(duelId: number) {
+    setFlash(null);
+    try {
+      const r = await respond.mutateAsync({ duelId, accept: true });
+      // A duel settles instantly — show the roll outcome right away.
+      if (r.status === 'settled') {
+        setFlash(`${r.won ? '🏆 Ganhaste' : 'Perdeste'} — tiraste ${r.opponent_roll}, ele ${r.challenger_roll}.`);
+      }
+    } catch {
+      setFlash('Não foi possível responder ao duelo.');
+    }
+  }
 
   const incoming = (duels ?? []).filter((d) => d.status === 'pending' && d.role === 'opponent');
   const outgoing = (duels ?? []).filter((d) => d.status === 'pending' && d.role === 'challenger');
@@ -45,8 +60,10 @@ export function DuelsPanel({ meId }: { meId: string | undefined }) {
     <div className="space-y-6">
       <p className="font-sans text-[12.5px] text-muted">
         Desafia um amigo: ambos apostam o mesmo, cada um tira um número de 1 a 100, o maior leva o pote. Cria um
-        duelo no separador <span className="text-text">Amigos</span> (⚔️ Desafiar).
+        duelo no separador <span className="text-text">Amigos</span> (Desafiar). Ao aceitar, o duelo resolve-se na hora.
       </p>
+
+      {flash && <p className="font-sans text-sm font-medium text-gold">{flash}</p>}
 
       <div className="space-y-2">
         <h2 className="font-sans text-[10.5px] font-medium uppercase tracking-[0.18em] text-muted-2">
@@ -62,7 +79,7 @@ export function DuelsPanel({ meId }: { meId: string | undefined }) {
               </span>
               <div className="flex gap-2">
                 <Button variant="primary" className="!px-4 !py-2" disabled={respond.isPending}
-                  onClick={() => respond.mutate({ duelId: d.id, accept: true })}>
+                  onClick={() => accept(d.id)}>
                   Aceitar
                 </Button>
                 <Button variant="ghost" className="!px-4 !py-2" disabled={respond.isPending}

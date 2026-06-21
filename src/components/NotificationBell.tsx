@@ -58,9 +58,16 @@ export function NotificationBell() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
+  // Route a notification to the right tab (the stored link is just '/friends').
+  const TAB_LINK: Record<string, string> = {
+    duel: '/friends?tab=duels',
+    duel_result: '/friends?tab=duels',
+    friend_request: '/friends?tab=requests',
+  };
   function go(n: NotificationRow) {
     setOpen(false);
-    if (n.link) navigate(n.link);
+    const link = TAB_LINK[n.type] ?? n.link;
+    if (link) navigate(link);
   }
 
   return (

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useFriends, useFriendRequests, useFriendActions, useSearchUsers, useGiftTos, useRequestTos } from '@/features/friends/useFriends';
 import { useProfile } from '@/features/profile/useProfile';
 import { usePresence } from '@/features/friends/usePresence';
@@ -198,7 +199,12 @@ function AmountPicker({ label, disabled, myBalance, onPick, err }: {
 }
 
 export function FriendsPage() {
-  const [tab, setTab] = useState<Tab>('friends');
+  const [searchParams] = useSearchParams();
+  const wantTab = searchParams.get('tab');
+  const initialTab: Tab = (['friends', 'requests', 'duels', 'find', 'leaderboard'] as const).includes(wantTab as Tab)
+    ? (wantTab as Tab)
+    : 'friends';
+  const [tab, setTab] = useState<Tab>(initialTab);
   const [showBalance, setShowBalance] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
   const online = usePresence();
