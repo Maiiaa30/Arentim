@@ -80,6 +80,10 @@ export function usePokerTableActions() {
     mutationFn: (tableId: number) => call({ op: 'leave', tableId }),
     onSuccess: refreshBalance,
   });
+  const rebuy = useMutation({
+    mutationFn: (v: { tableId: number; amount: number }) => call({ op: 'rebuy', ...v }),
+    onSuccess: refreshBalance,
+  });
 
-  return { create, join, addBot, start, deal, act, leave };
+  return { create, join, addBot, start, deal, act, leave, rebuy };
 }

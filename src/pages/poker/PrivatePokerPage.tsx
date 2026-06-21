@@ -45,7 +45,7 @@ export function PrivatePokerPage() {
   const { user } = useAuth();
   const { data: profile } = useProfile();
   const { data: myTables } = useMyPokerTables();
-  const { create, join, addBot, start, deal, act, leave } = usePokerTableActions();
+  const { create, join, addBot, start, deal, act, leave, rebuy } = usePokerTableActions();
   const qc = useQueryClient();
 
   const [tableId, setTableId] = useState<number | null>(null);
@@ -65,7 +65,7 @@ export function PrivatePokerPage() {
   const view = replayView ?? polledView;
   const isHost = state?.host ?? false;
   const balance = profile?.balance ?? 0;
-  const busy = create.isPending || join.isPending || act.isPending || start.isPending || deal.isPending || addBot.isPending || leave.isPending || animating;
+  const busy = create.isPending || join.isPending || act.isPending || start.isPending || deal.isPending || addBot.isPending || leave.isPending || rebuy.isPending || animating;
 
   // If already seated somewhere, auto-select it.
   useEffect(() => {
@@ -119,6 +119,10 @@ export function PrivatePokerPage() {
       const res = await join.mutateAsync(joinCode.toUpperCase().trim());
       setTableId(res.table_id ?? null);
     });
+  }
+  async function onRebuy(amount: number) {
+    if (tableId == null) return;
+    await wrap(() => rebuy.mutateAsync({ tableId, amount }));
   }
   async function onLeave() {
     if (tableId == null) return;
@@ -279,6 +283,28 @@ export function PrivatePokerPage() {
         myTurn={!!myTurn}
         resultBanner={<ResultBanner view={view} />}
       />
+
+      {/* Out of chips — rebuy from your Tostões balance (between hands only) */}
+      {me && me.stack === 0 && view.handOver && (
+        <div className="card space-y-3 border-gold/40 bg-gold/[0.06] p-4 text-center">
+          <p className="font-display text-base font-medium text-text">Ficaste sem fichas</p>
+          <p className="font-sans text-sm text-muted">Recarrega para continuar — sai do teu saldo de Tostões.</p>
+          <div className="flex flex-wrap justify-center gap-2">
+            {BUYIN_PRESETS.map((amt) => (
+              <button
+                key={amt}
+                type="button"
+                disabled={busy || amt > balance}
+                onClick={() => onRebuy(amt)}
+                className="focus-ring rounded-full border border-gold/40 px-4 py-2 font-mono text-sm text-gold transition-colors hover:bg-gold hover:text-bg disabled:opacity-30"
+              >
+                +{formatAmount(amt)}
+              </button>
+            ))}
+          </div>
+          <p className="font-sans text-[11px] text-muted-2">Saldo: {formatAmount(balance)} tós</p>
+        </div>
+      )}
 
       {/* Controls */}
       <div className="card space-y-3 p-4">
