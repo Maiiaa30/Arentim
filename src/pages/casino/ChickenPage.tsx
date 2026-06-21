@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useProfile } from '@/features/profile/useProfile';
-import { useChickenStart, useChickenStep, useChickenCashout } from '@/features/casino/useQuickGames';
+import { useChickenStart, useChickenStep, useChickenCashout, useChickenCurrent } from '@/features/casino/useQuickGames';
 import { StakeChips } from '@/features/casino/StakeChips';
 import { WinCelebration } from '@/features/casino/WinCelebration';
 import { Button } from '@/components/ui/Button';
@@ -58,6 +58,7 @@ export function ChickenPage() {
   const start = useChickenStart();
   const stepRpc = useChickenStep();
   const cashout = useChickenCashout();
+  const resume = useChickenCurrent();
 
   const [stake, setStake] = useState(25);
   const [diff, setDiff] = useState('easy');
@@ -81,6 +82,19 @@ export function ChickenPage() {
     if (!el) return;
     el.scrollTo({ left: Math.max(0, chickenLeft - el.clientWidth * 0.38), behavior: 'smooth' });
   }, [chickenLeft]);
+
+  // Resume an in-progress crossing left behind (stake stays in it until you cash
+  // out, get hit, or start a new round).
+  useEffect(() => {
+    const c = resume.data;
+    if (phase === 'idle' && c) {
+      setDiff(c.difficulty);
+      setStake(c.stake);
+      setStep(c.step);
+      setMult(Number(c.multiplier));
+      setPhase('playing');
+    }
+  }, [resume.data, phase]);
 
   async function begin() {
     setError(null);

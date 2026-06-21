@@ -405,14 +405,30 @@ function Tigrinho() {
 function Horse() {
   return (
     <div className="relative h-full overflow-hidden">
-      <div className="absolute inset-x-0 bottom-4 h-px bg-gold/30" />
-      <div className="absolute inset-x-0 bottom-7 h-px bg-gold/15" />
-      {/* nested so position / X-flip / oscillation each own their transform —
-          the flip makes the left-facing 🏇 glyph face its direction of travel */}
-      <span className="absolute bottom-5 left-1/2 -translate-x-1/2">
+      {/* sky glow */}
+      <div className="absolute inset-0" style={{ background: 'radial-gradient(120% 90% at 50% -20%, rgba(124,176,228,0.18), transparent 60%)' }} />
+      {/* green turf with mowing stripes */}
+      <div
+        className="absolute inset-x-0 bottom-0 h-[58%]"
+        style={{ backgroundImage: 'repeating-linear-gradient(90deg,#2f7d53 0 16px,#2a734c 16px 32px)' }}
+      />
+      {/* white running rail */}
+      <div className="absolute inset-x-0 bottom-[58%] h-[2px] bg-white/70" />
+      {/* checkered finish line on the right */}
+      <div
+        className="absolute bottom-0 right-5 top-[42%] w-1.5 opacity-90"
+        style={{ backgroundImage: 'repeating-conic-gradient(#fff 0% 25%, #11110c 0% 50%)', backgroundSize: '4px 4px' }}
+        aria-hidden
+      />
+      {/* speed lines */}
+      <div className="absolute left-3 top-[60%] h-px w-8 bg-white/40 blur-[0.5px]" />
+      <div className="absolute left-6 top-[72%] h-px w-6 bg-white/30 blur-[0.5px]" />
+      {/* galloping horse — flipped so the left-facing glyph runs toward the finish */}
+      <span className="absolute bottom-[20%] left-[38%]">
         <span className="inline-block" style={{ transform: 'scaleX(-1)' }}>
-          <span className="animate-ball inline-block text-3xl">🏇</span>
+          <span className="animate-gallop inline-block text-[34px] drop-shadow-[0_3px_3px_rgba(0,0,0,0.45)]">🏇</span>
         </span>
+        <span className="absolute -left-2 bottom-1 h-1 w-1.5 rounded-full bg-white/40 blur-[1px]" aria-hidden />
       </span>
     </div>
   );

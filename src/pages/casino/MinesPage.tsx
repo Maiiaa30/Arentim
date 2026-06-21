@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useProfile } from '@/features/profile/useProfile';
-import { useMinesStart, useMinesPick, useMinesCashout } from '@/features/casino/useQuickGames';
+import { useMinesStart, useMinesPick, useMinesCashout, useMinesCurrent } from '@/features/casino/useQuickGames';
 import { StakeChips } from '@/features/casino/StakeChips';
 import { WinCelebration } from '@/features/casino/WinCelebration';
 import { Button } from '@/components/ui/Button';
@@ -15,6 +15,7 @@ export function MinesPage() {
   const start = useMinesStart();
   const pick = useMinesPick();
   const cashout = useMinesCashout();
+  const resume = useMinesCurrent();
 
   const [stake, setStake] = useState(25);
   const [mines, setMines] = useState(3);
@@ -30,6 +31,20 @@ export function MinesPage() {
 
   const balance = profile?.balance ?? 0;
   const busy = start.isPending || pick.isPending || cashout.isPending;
+
+  // Resume an in-progress round left behind (the stake stays locked in it until
+  // you cash out, bust, or start a new game).
+  useEffect(() => {
+    const c = resume.data;
+    if (phase === 'idle' && c) {
+      setMines(c.mines);
+      setStake(c.stake);
+      setSafe(new Set(c.picks));
+      setMult(Number(c.multiplier));
+      setNextMult(Number(c.next_multiplier));
+      setPhase('playing');
+    }
+  }, [resume.data, phase]);
 
   async function begin() {
     setError(null);

@@ -133,6 +133,22 @@ describe('scorePlay', () => {
     expect(r.gained).toBe((100 + 5 + 6 + 7 + 8 + 9) * 8);
     expect(r.gained).toBe(1080);
   });
+
+  it('only the scoring cards count — kickers are ignored', () => {
+    // Pair of 7s + K + Q + 2 kickers → only the two 7s score: (10 + 7 + 7) × 2 = 48.
+    const r = scorePlay([card(R['7'], 0), card(R['7'], 1), card(R.K, 2), card(R.Q, 3), card(R['2'], 0)]);
+    expect(r.type).toBe('pair');
+    expect(r.gained).toBe((HAND_TABLE.pair.base + 7 + 7) * HAND_TABLE.pair.mult);
+    expect(r.gained).toBe(48);
+  });
+
+  it('high card scores only the highest card', () => {
+    // 2,5,9,J,K mixed suits → high card = K only: (5 + 10) × 1 = 15.
+    const r = scorePlay([card(R['2'], 0), card(R['5'], 1), card(R['9'], 2), card(R.J, 3), card(R.K, 0)]);
+    expect(r.type).toBe('high_card');
+    expect(r.gained).toBe((HAND_TABLE.high_card.base + 10) * 1);
+    expect(r.gained).toBe(15);
+  });
 });
 
 // ---- Monte-Carlo win-rate band ---------------------------------------------
