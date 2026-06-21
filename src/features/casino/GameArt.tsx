@@ -195,16 +195,35 @@ function Slots() {
 
 function Coinflip() {
   return (
-    <div className="flex h-full items-center justify-center" style={{ perspective: '320px' }}>
-      <div
-        className="relative h-[76px] w-[76px] animate-coin3d rounded-full"
-        style={{
-          background: `radial-gradient(circle at 38% 30%, #f7e7bd, ${GOLD} 55%, #6b542a)`,
-          boxShadow: 'inset 0 0 0 3px rgba(255,255,255,0.22), 0 8px 18px rgba(0,0,0,0.5)',
-        }}
-      >
-        <span className="absolute inset-[6px] rounded-full border border-[#8a6c34]/60" />
-        <span className="absolute inset-0 flex items-center justify-center font-display text-[32px] font-bold text-[#5a431f]">A</span>
+    <div className="flex h-full items-center justify-center" style={{ perspective: '360px' }}>
+      <div className="animate-coin3d h-[86px] w-[86px]" style={{ transformStyle: 'preserve-3d' }}>
+        <svg viewBox="0 0 100 100" className="h-full w-full drop-shadow-[0_8px_14px_rgba(0,0,0,0.5)]" aria-hidden>
+          <defs>
+            <radialGradient id="ga-coin" cx="38%" cy="30%" r="80%">
+              <stop offset="0%" stopColor="#fbeec0" />
+              <stop offset="45%" stopColor="#e7c573" />
+              <stop offset="78%" stopColor="#C9A24B" />
+              <stop offset="100%" stopColor="#7d6228" />
+            </radialGradient>
+            <linearGradient id="ga-coin-rim" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#f7e4ad" />
+              <stop offset="50%" stopColor="#C9A24B" />
+              <stop offset="100%" stopColor="#6b542a" />
+            </linearGradient>
+          </defs>
+          <circle cx="50" cy="50" r="49" fill="url(#ga-coin-rim)" />
+          {Array.from({ length: 36 }, (_, i) => (
+            <rect key={i} x="49.3" y="1" width="1.4" height="6" rx="0.6" fill="rgba(60,42,12,0.45)" transform={`rotate(${i * 10} 50 50)`} />
+          ))}
+          <circle cx="50" cy="50" r="43" fill="url(#ga-coin)" />
+          <circle cx="50" cy="50" r="35" fill="none" stroke="rgba(80,58,18,0.5)" strokeWidth="1.4" />
+          <g fill="rgba(70,50,16,0.78)">
+            <path d="M32 62h36l-3-20-8 8-7-12-7 12-8-8z" stroke="rgba(70,50,16,0.5)" strokeWidth="1" strokeLinejoin="round" />
+            <rect x="32" y="63" width="36" height="5" rx="1.5" />
+            <circle cx="50" cy="35" r="3" />
+          </g>
+          <ellipse cx="38" cy="32" rx="18" ry="11" fill="rgba(255,255,255,0.28)" />
+        </svg>
       </div>
     </div>
   );

@@ -123,7 +123,7 @@ export function ChickenPage() {
       <div>
         <Link to="/casino" className="font-sans text-sm text-muted-2 hover:text-text">← Casino</Link>
         <Eyebrow className="mt-3">O Salão</Eyebrow>
-        <h1 className="mt-2 font-display text-[34px] font-medium leading-tight text-text sm:text-[38px]">Frango na Estrada</h1>
+        <h1 className="mt-2 font-display text-[34px] font-medium leading-tight text-text sm:text-[38px]">Travessia</h1>
         <p className="mt-2 font-sans text-sm text-muted">Atravessa as faixas para subir o prémio. Cuidado com o trânsito — retira antes de seres atropelado.</p>
       </div>
 
