@@ -49,7 +49,8 @@ export function CasinoActivity() {
   const { data } = useCasinoActivity();
   if (!data) return null;
 
-  const totalLive = data.crash.players + data.roulette.players;
+  const horse = data.horse ?? { players: 0, friends: 0 };
+  const totalLive = data.crash.players + data.roulette.players + horse.players;
   const recent = data.recent ?? [];
 
   return (
@@ -60,9 +61,10 @@ export function CasinoActivity() {
         {totalLive > 0 && <span className="font-mono text-[10px] text-gold">{totalLive} a jogar</span>}
       </div>
 
-      <div className="grid gap-2 sm:grid-cols-2">
+      <div className="grid gap-2 sm:grid-cols-3">
         <LiveRow to="/casino/crash" name="Crash" players={data.crash.players} friends={data.crash.friends} />
         <LiveRow to="/casino/roulette" name="Roleta" players={data.roulette.players} friends={data.roulette.friends} />
+        <LiveRow to="/casino/corrida" name="Corrida" players={horse.players} friends={horse.friends} />
       </div>
 
       {recent.length > 0 && (
