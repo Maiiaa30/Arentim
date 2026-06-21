@@ -96,9 +96,14 @@ export function useMyBets() {
     queryKey: ['bets', user?.id] as const,
     enabled: !!user,
     queryFn: async (): Promise<BetWithLegs[]> => {
+      // Scope to the current user explicitly. The bets RLS policy is
+      // `user_id = auth.uid() OR is_admin()`, so on an admin account an
+      // unfiltered select would return EVERY user's bets (they'd show up in "as
+      // minhas apostas" and couldn't be sold — cashout_bet checks ownership).
       const { data: bets, error } = await supabase
         .from('bets')
         .select('*')
+        .eq('user_id', user!.id)
         .order('created_at', { ascending: false });
       if (error) throw error;
       if (bets.length === 0) return [];
