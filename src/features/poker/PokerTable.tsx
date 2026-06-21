@@ -247,13 +247,16 @@ const RAIL: Record<number, { left: number; top: number }[]> = {
   3: [{ left: 16, top: 33 }, { left: 50, top: 16 }, { left: 84, top: 33 }],
   4: [{ left: 13, top: 39 }, { left: 35, top: 18 }, { left: 65, top: 18 }, { left: 87, top: 39 }],
   5: [{ left: 11, top: 43 }, { left: 30, top: 20 }, { left: 50, top: 15 }, { left: 70, top: 20 }, { left: 89, top: 43 }],
+  6: [{ left: 10, top: 46 }, { left: 24, top: 21 }, { left: 42, top: 14 }, { left: 58, top: 14 }, { left: 76, top: 21 }, { left: 90, top: 46 }],
+  7: [{ left: 9, top: 50 }, { left: 18, top: 25 }, { left: 35, top: 15 }, { left: 50, top: 13 }, { left: 65, top: 15 }, { left: 82, top: 25 }, { left: 91, top: 50 }],
+  8: [{ left: 9, top: 54 }, { left: 15, top: 29 }, { left: 29, top: 16 }, { left: 44, top: 13 }, { left: 56, top: 13 }, { left: 71, top: 16 }, { left: 85, top: 29 }, { left: 91, top: 54 }],
 };
 
 export function PokerTable({ view, youId, myTurn, resultBanner }: PokerTableProps) {
   const opponents = view.players.filter((p) => p.id !== youId);
   const you = view.players.find((p) => p.id === youId);
   const street = STREET_LABEL[view.street] ?? view.street;
-  const rail = RAIL[Math.min(5, Math.max(1, opponents.length))] ?? RAIL[5]!;
+  const rail = RAIL[Math.min(8, Math.max(1, opponents.length))] ?? RAIL[8]!;
 
   // At showdown the engine reveals each contender's made hand — show its name.
   const handById = new Map((view.result?.reveal ?? []).map((r) => [r.id, handPt(r.hand)]));

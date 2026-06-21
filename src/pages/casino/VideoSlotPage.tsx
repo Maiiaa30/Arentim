@@ -335,10 +335,15 @@ function ReelColumn({
   reelTarget,
   mode,
   winRows,
+  spinSeq,
 }: {
   reelTarget: [string, string, string];
   mode: ReelMode;
   winRows: Set<number>;
+  /** Increments once per spin — keeps the landing strip/animation stable across
+   *  the win-state re-renders that happen after the reels settle (otherwise the
+   *  strip rebuilt every render and the land animation replayed = a "refresh"). */
+  spinSeq: number;
 }) {
   // The strip that scrolls during 'spin' (captured from STRIP so it never leaks
   // the incoming result), and the landing strip = fillers + the 3 result rows.
@@ -347,12 +352,12 @@ function ReelColumn({
     for (let i = 0; i < 3; i++) s.push(...STRIP);
     return s;
   }, []);
+  // Built once per spin (deps on spinSeq, not the per-render reelTarget array).
   const landStrip = useMemo(() => {
     const fillers: string[] = [];
     for (let i = 0; i < 9; i++) fillers.push(STRIP[Math.floor(Math.random() * STRIP.length)]!);
     return [...fillers, ...reelTarget];
-    // rebuild whenever we re-enter land with a new target
-  }, [reelTarget, mode === 'land']); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [spinSeq]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const cell = (id: string, row: number, key: number, isResult: boolean) => (
     <div
@@ -387,7 +392,7 @@ function ReelColumn({
         </div>
       ) : (
         <div
-          key={landStrip.join('-')}
+          key={`land-${spinSeq}`}
           className="will-change-transform"
           style={{ animation: 'reel-land-3 0.85s cubic-bezier(0.15,0.85,0.25,1) forwards' }}
         >
@@ -493,6 +498,7 @@ export function VideoSlotPage() {
 
   const [stake, setStake] = useState(MIN_BET);
   const [grid, setGrid] = useState<string[][]>(() => spinGrid([0, 8, 16, 24, 32]));
+  const [spinSeq, setSpinSeq] = useState(0);
   const [modes, setModes] = useState<ReelMode[]>(['idle', 'idle', 'idle', 'idle', 'idle']);
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<VideoSlotResult | null>(null);
@@ -538,6 +544,7 @@ export function VideoSlotPage() {
     try {
       const res = await play.mutateAsync(stake);
       setGrid(res.grid);
+      setSpinSeq((n) => n + 1); // fresh landing strip for this spin only
       const id = ++spinId.current;
       const base = Math.max(0, 700 - (performance.now() - startedAt));
       const GAP = 260; // stop reels left→right
@@ -654,6 +661,7 @@ export function VideoSlotPage() {
                       reelTarget={[reelTarget[0]!, reelTarget[1]!, reelTarget[2]!]}
                       mode={modes[r]!}
                       winRows={winRowsByReel[r]!}
+                      spinSeq={spinSeq}
                     />
                   ))}
                 </div>
