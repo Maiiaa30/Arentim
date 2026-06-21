@@ -10,7 +10,15 @@ import { Eyebrow } from '@/components/ui/primitives';
 import { formatAmount } from '@/lib/format';
 
 const ODDS = [2.4, 4, 6, 9, 14, 28];
+// Winner is drawn weighted by 1/odds (= round(10000/odds)); favourites win more.
+const WEIGHTS = [4167, 2500, 1667, 1111, 714, 357];
+const WEIGHT_TOTAL = WEIGHTS.reduce((a, b) => a + b, 0); // 10516
 const COLORS = ['#C9A24B', '#b0303a', '#2b6f4e', '#2b4a8b', '#9a5cc2', '#c97f2a'];
+
+/** Real win chance of a horse, in % — its draw weight over the total. */
+function winChance(i: number): number {
+  return (WEIGHTS[i]! / WEIGHT_TOTAL) * 100;
+}
 
 /** Deterministic per-horse pace from the room id, so every client sees the same
  * race; the winner runs at full pace and leads to the line. */
@@ -18,15 +26,27 @@ function paces(roomId: number, winner: number): number[] {
   return Array.from({ length: 6 }, (_, i) => (i === winner ? 1 : 0.6 + ((roomId * 31 + i * 17) % 32) / 100));
 }
 
-/** A racing horse (the detailed OS jockey glyph) with a ground shadow + gallop bob. */
+/** A racing horse (the OS jockey glyph) with a ground shadow + gallop.
+ * The 🏇 glyph faces LEFT by default, but the horses run left→right, so we flip
+ * it on X to face the direction of travel (was the "running backwards" bug). The
+ * gallop animation lives on the inner span so it composes with the flip. */
 function RaceHorse({ galloping = false }: { galloping?: boolean }) {
   return (
     <span className="relative inline-block">
-      <span
-        className={`block text-[40px] leading-none ${galloping ? 'animate-floaty' : ''}`}
-        style={{ filter: 'drop-shadow(0 3px 2px rgba(0,0,0,0.45))' }}
-      >
-        🏇
+      {/* dust kicked up behind a galloping horse */}
+      {galloping && (
+        <span className="absolute -left-2 bottom-0 flex gap-0.5" aria-hidden>
+          <span className="h-1 w-1 rounded-full bg-white/40 blur-[1px]" />
+          <span className="h-1.5 w-1.5 rounded-full bg-white/25 blur-[1px]" />
+        </span>
+      )}
+      <span className="block" style={{ transform: 'scaleX(-1)' }}>
+        <span
+          className={`block text-[40px] leading-none ${galloping ? 'animate-gallop' : ''}`}
+          style={{ filter: 'drop-shadow(0 3px 2px rgba(0,0,0,0.45))' }}
+        >
+          🏇
+        </span>
       </span>
       <span className="absolute -bottom-1 left-1/2 h-1.5 w-9 -translate-x-1/2 rounded-[50%] bg-black/35 blur-[2px]" aria-hidden />
     </span>
@@ -199,9 +219,12 @@ export function HorsePage() {
             <div className="flex flex-wrap gap-2">
               {ODDS.map((odd, i) => (
                 <button key={i} onClick={() => setHorse(i)} disabled={!betting || !!mine}
-                  className={`focus-ring flex items-center gap-1.5 rounded px-3 py-1.5 font-mono text-sm disabled:opacity-50 ${horse === i ? 'bg-gold text-bg' : 'border border-border text-muted hover:text-text'}`}>
-                  <span style={{ color: horse === i ? undefined : COLORS[i] }}>#{i + 1}</span>
-                  <span className="text-[11px] opacity-80">{odd}×</span>
+                  className={`focus-ring flex flex-col items-center gap-0.5 rounded px-3 py-1.5 font-mono text-sm disabled:opacity-50 ${horse === i ? 'bg-gold text-bg' : 'border border-border text-muted hover:text-text'}`}>
+                  <span className="flex items-center gap-1.5">
+                    <span style={{ color: horse === i ? undefined : COLORS[i] }}>#{i + 1}</span>
+                    <span className="text-[11px] opacity-80">{odd}×</span>
+                  </span>
+                  <span className={`text-[10px] tabular-nums ${horse === i ? 'text-bg/70' : 'text-muted-2'}`}>{winChance(i).toFixed(0)}%</span>
                 </button>
               ))}
             </div>
@@ -239,6 +262,39 @@ export function HorsePage() {
           )}
         </div>
       </div>
+
+      {/* How the odds work — full transparency for the friend group. */}
+      <details className="card overflow-hidden p-0">
+        <summary className="flex cursor-pointer list-none items-center justify-between px-5 py-3.5 font-display text-sm font-medium text-text">
+          Como se calculam as probabilidades?
+          <span className="font-sans text-xs text-muted-2">ⓘ</span>
+        </summary>
+        <div className="space-y-3 border-t border-border px-5 py-4 font-sans text-[13px] leading-relaxed text-muted">
+          <p>
+            Cada cavalo tem <span className="text-text">cotação fixa</span> (ex.: o favorito paga 2.4×, o azarão 28×). Ganhas{' '}
+            <span className="text-text">aposta × cotação</span> se o teu cavalo vencer.
+          </p>
+          <p>
+            O servidor sorteia o vencedor com peso <span className="font-mono text-text">1 / cotação</span> — ou seja, os favoritos
+            ganham mais vezes. A hipótese real de cada cavalo é o seu peso a dividir pela soma de todos:
+          </p>
+          <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">
+            {ODDS.map((odd, i) => (
+              <div key={i} className="flex items-center justify-between rounded border border-border px-2.5 py-1.5 font-mono text-xs">
+                <span className="flex items-center gap-1.5">
+                  <span className="flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-bold text-white" style={{ background: COLORS[i] }}>{i + 1}</span>
+                  <span className="text-muted-2">{odd}×</span>
+                </span>
+                <span className="tabular-nums text-text">{winChance(i).toFixed(1)}%</span>
+              </div>
+            ))}
+          </div>
+          <p className="text-muted-2">
+            As hipóteses somam ~105% (o «overround»): essa folga de ~5% é a margem da casa, por isso a devolução média (RTP) é cerca
+            de <span className="text-text">95%</span> — igual para qualquer cavalo. É tudo a brincar, só tós.
+          </p>
+        </div>
+      </details>
     </div>
   );
 }

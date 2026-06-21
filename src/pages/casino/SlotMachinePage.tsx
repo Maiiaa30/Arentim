@@ -67,6 +67,7 @@ function Reel({
   target,
   mode,
   won,
+  winning,
   accent,
   glyphById,
 }: {
@@ -74,6 +75,8 @@ function Reel({
   target: string;
   mode: ReelMode;
   won: boolean;
+  /** This specific reel is part of the winning line (throb its symbol). */
+  winning: boolean;
   accent: string;
   glyphById: Record<string, string>;
 }) {
@@ -124,6 +127,85 @@ function Reel({
           {landStrip.map(tile)}
         </div>
       )}
+
+      {/* Winning-symbol throb — only after the spin fully settles (won ⇒ !busy),
+          so it never flashes the result before the reel lands. */}
+      {winning && (
+        <div className="pointer-events-none absolute inset-0 z-[15] flex items-center justify-center">
+          <span
+            className="absolute h-[78px] w-[78px] rounded-full sm:h-24 sm:w-24"
+            style={{ background: `radial-gradient(circle, ${accent}66, transparent 68%)` }}
+          />
+          <SymbolArt id={target} glyph={glyphById[target]} className={`${SYMBOL} animate-symbol-throb relative`} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Win tiers escalate the celebration by how big the multiplier is. */
+function winTier(jackpot: boolean, mult: number): { label: string; coins: number } | null {
+  if (jackpot) return { label: '✦ JACKPOT ✦', coins: 28 };
+  if (mult <= 0) return null;
+  if (mult >= 40) return { label: 'MEGA PRÉMIO', coins: 22 };
+  if (mult >= 18) return { label: 'GRANDE PRÉMIO', coins: 16 };
+  if (mult >= 3) return { label: 'BOA!', coins: 10 };
+  return { label: 'GANHOU', coins: 6 };
+}
+
+/** Chasing marquee bulbs around the cabinet, like a real machine's light frame. */
+function MarqueeBulbs({ accent, lit }: { accent: string; lit: boolean }) {
+  return (
+    <div className="pointer-events-none absolute inset-0 z-20" aria-hidden>
+      {/* top + bottom rows */}
+      {[0, 1].map((row) => (
+        <div key={row} className={`absolute inset-x-3 flex justify-between ${row === 0 ? 'top-1.5' : 'bottom-1.5'}`}>
+          {Array.from({ length: 18 }, (_, i) => (
+            <span
+              key={i}
+              className={`h-1.5 w-1.5 rounded-full ${lit ? 'animate-bulb-chase' : ''}`}
+              style={{
+                background: lit ? accent : `${accent}55`,
+                boxShadow: lit ? `0 0 6px ${accent}` : 'none',
+                animationDelay: `${(i % 4) * 0.22}s`,
+              }}
+            />
+          ))}
+        </div>
+      ))}
+      {/* left + right columns */}
+      {[0, 1].map((col) => (
+        <div key={col} className={`absolute inset-y-5 flex flex-col justify-between ${col === 0 ? 'left-1.5' : 'right-1.5'}`}>
+          {Array.from({ length: 8 }, (_, i) => (
+            <span
+              key={i}
+              className={`h-1.5 w-1.5 rounded-full ${lit ? 'animate-bulb-chase' : ''}`}
+              style={{
+                background: lit ? accent : `${accent}55`,
+                boxShadow: lit ? `0 0 6px ${accent}` : 'none',
+                animationDelay: `${(i % 4) * 0.22}s`,
+              }}
+            />
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** A shower of falling coins over the cabinet on a win. */
+function CoinShower({ count }: { count: number }) {
+  return (
+    <div className="pointer-events-none absolute inset-0 z-[25] overflow-hidden" aria-hidden>
+      {Array.from({ length: count }, (_, i) => (
+        <span
+          key={i}
+          className="animate-coin-fall absolute top-0 text-xl"
+          style={{ left: `${(i * 97 + 7) % 100}%`, animationDelay: `${(i % 6) * 0.16}s`, animationDuration: `${1.2 + (i % 5) * 0.18}s` }}
+        >
+          🪙
+        </span>
+      ))}
     </div>
   );
 }
@@ -156,7 +238,7 @@ function MachineScreen({ m }: { m: SlotMachineMeta }) {
   const [modes, setModes] = useState<[ReelMode, ReelMode, ReelMode]>(['idle', 'idle', 'idle']);
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<{ payout: number; jackpot: boolean; mult: number; id: number } | null>(null);
-  const [winAlert, setWinAlert] = useState<{ amount: number; jackpot: boolean; id: number } | null>(null);
+  const [winAlert, setWinAlert] = useState<{ amount: number; jackpot: boolean; mult: number; id: number } | null>(null);
   const [pool, setPool] = useState<number | null>(m.progressive ? m.jackpot_pool ?? null : null);
   const displayPool = useCountUp(pool);
   const [error, setError] = useState<string | null>(null);
@@ -170,6 +252,19 @@ function MachineScreen({ m }: { m: SlotMachineMeta }) {
   useEffect(() => () => timers.current.forEach((t) => window.clearTimeout(t)), []);
 
   const won = !busy && (result?.payout ?? 0) > 0;
+  // Which reels form the winning line (three-of-a-kind → all; paying pair → the
+  // matched two). Only set once the spin has settled (won ⇒ !busy).
+  const winIndices = useMemo(() => {
+    const s = new Set<number>();
+    if (!won) return s;
+    const [a, b, c] = targets;
+    if (a === b && b === c) return new Set([0, 1, 2]);
+    if (a === b) { s.add(0); s.add(1); }
+    else if (a === c) { s.add(0); s.add(2); }
+    else if (b === c) { s.add(1); s.add(2); }
+    return s;
+  }, [won, targets]);
+  const tier = winAlert ? winTier(winAlert.jackpot, winAlert.mult) : null;
 
   async function onSpin() {
     if (busy || stake > balance || stake < m.min_bet) return;
@@ -197,7 +292,7 @@ function MachineScreen({ m }: { m: SlotMachineMeta }) {
           setResult({ payout: res.payout, jackpot: res.jackpot, mult: res.multiplier, id });
           // A win pops a big animated alert over the cabinet; it self-dismisses.
           if (res.payout > 0) {
-            setWinAlert({ amount: res.payout, jackpot: res.jackpot, id });
+            setWinAlert({ amount: res.payout, jackpot: res.jackpot, mult: res.multiplier, id });
             timers.current.push(window.setTimeout(() => setWinAlert((w) => (w?.id === id ? null : w)), 2800));
           }
           // Reveal the new pool with the outcome: a losing spin visibly fattens
@@ -237,14 +332,17 @@ function MachineScreen({ m }: { m: SlotMachineMeta }) {
           }}
         >
           <SlotBackdrop machineKey={m.key} />
+          {/* Chasing marquee bulbs around the cabinet — light up on spin & win. */}
+          <MarqueeBulbs accent={hex} lit={busy || won} />
+          {winAlert && <CoinShower count={tier?.coins ?? 8} />}
           {winAlert && (
             <div className="pointer-events-none absolute inset-x-0 top-0 z-30 flex justify-center pt-5 sm:pt-8" aria-live="polite">
               <div
                 className="animate-win-burst rounded-2xl border-2 px-7 py-3.5 text-center shadow-[0_12px_55px_rgba(201,162,75,0.55)] backdrop-blur-sm"
                 style={{ borderColor: hex, background: 'rgba(10,9,7,0.82)' }}
               >
-                <p className="font-sans text-[10px] uppercase tracking-[0.34em] text-gold-light">
-                  {winAlert.jackpot ? '✦ Jackpot ✦' : 'Ganhou'}
+                <p className={`font-sans text-[10px] uppercase tracking-[0.34em] text-gold-light ${winAlert.jackpot ? 'animate-jackpot-flash' : ''}`}>
+                  {tier?.label ?? 'Ganhou'}
                 </p>
                 <p className="font-display text-[34px] font-bold leading-none sm:text-[40px]" style={{ color: hex }}>
                   +{formatAmount(winAlert.amount)} tós
@@ -306,15 +404,38 @@ function MachineScreen({ m }: { m: SlotMachineMeta }) {
             >
               <div className="relative flex justify-center gap-2 sm:gap-4">
                 <span
-                  className="pointer-events-none absolute inset-x-1 top-1/2 z-10 h-[2px] -translate-y-1/2"
-                  style={{ background: `linear-gradient(90deg, transparent, ${hex}, transparent)` }}
+                  className={`pointer-events-none absolute inset-x-1 top-1/2 z-[14] h-[2px] -translate-y-1/2 ${won ? 'animate-payline-pulse' : ''}`}
+                  style={{
+                    background: `linear-gradient(90deg, transparent, ${hex}, transparent)`,
+                    boxShadow: won ? `0 0 12px ${hex}` : 'none',
+                  }}
                   aria-hidden
                 />
-                <Reel ids={allIds} target={targets[0]!} mode={modes[0]} won={won} accent={hex} glyphById={glyphById} />
-                <Reel ids={allIds} target={targets[1]!} mode={modes[1]} won={won} accent={hex} glyphById={glyphById} />
-                <Reel ids={allIds} target={targets[2]!} mode={modes[2]} won={won} accent={hex} glyphById={glyphById} />
+                <Reel ids={allIds} target={targets[0]!} mode={modes[0]} won={won} winning={winIndices.has(0)} accent={hex} glyphById={glyphById} />
+                <Reel ids={allIds} target={targets[1]!} mode={modes[1]} won={won} winning={winIndices.has(1)} accent={hex} glyphById={glyphById} />
+                <Reel ids={allIds} target={targets[2]!} mode={modes[2]} won={won} winning={winIndices.has(2)} accent={hex} glyphById={glyphById} />
                 {won && result && <WinCelebration key={result.id} jackpot={result.jackpot} />}
               </div>
+            </div>
+
+            {/* LCD credit meter — Créditos · Aposta · Ganho, like a real cabinet. */}
+            <div className="mx-auto mt-5 grid max-w-md grid-cols-3 gap-2">
+              {[
+                { label: 'Créditos', value: formatAmount(balance), win: false },
+                { label: 'Aposta', value: formatAmount(stake), win: false },
+                { label: 'Ganho', value: won && result ? `+${formatAmount(result.payout)}` : '—', win: won },
+              ].map((seg) => (
+                <div
+                  key={seg.label}
+                  className={`rounded border bg-black/55 px-2 py-1.5 text-center shadow-[inset_0_1px_6px_rgba(0,0,0,0.7)] ${seg.win ? 'animate-jackpot-flash' : ''}`}
+                  style={{ borderColor: seg.win ? hex : 'rgba(201,162,75,0.22)' }}
+                >
+                  <p className="font-sans text-[8px] uppercase tracking-[0.25em] text-muted-2">{seg.label}</p>
+                  <p className="font-mono text-base font-bold tabular-nums" style={{ color: seg.win ? hex : '#f3dca0' }}>
+                    {seg.value}
+                  </p>
+                </div>
+              ))}
             </div>
 
             {/* Outcome line */}

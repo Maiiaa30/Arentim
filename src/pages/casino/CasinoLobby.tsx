@@ -18,6 +18,8 @@ const TABLES: GameTile[] = [
 
 // Quick single-player rounds.
 const ARCADE: GameTile[] = [
+  { to: '/casino/plinko', name: 'Plinko', desc: 'Larga a bola pelos pinos — quanto mais à beira, maior o prémio.', art: 'plinko', badge: 'Novo', tone: 'from-chip-ruby/40 to-bg', range: '5 – 100 tós' },
+  { to: '/casino/balatro', name: 'Balatró', desc: 'Joga mãos de póquer para bater a meta. Pura perícia.', art: 'balatro', badge: 'Novo', tone: 'from-chip-navy/40 to-bg', range: '5 – 100 tós' },
   { to: '/casino/mines', name: 'Mines', desc: 'Revela diamantes e foge das minas. Retira a tempo.', art: 'mines', badge: 'Novo', tone: 'from-positive-felt/40 to-bg', range: '5 – 100 tós' },
   { to: '/casino/frango', name: 'Atravessa!', desc: 'A galinha atravessa as faixas — quanto mais longe, maior o prémio.', art: 'chicken', badge: 'Novo', tone: 'from-gold/30 to-bg', range: '5 – 100 tós' },
   { to: '/casino/wheel', name: 'Fita da Sorte', desc: 'A fita corre e pára no multiplicador — até 5×.', art: 'wheel', tone: 'from-gold/30 to-bg', range: '5 – 100 tós' },

@@ -161,7 +161,6 @@ export function RoulettePage() {
   }, [bets]);
 
   const bonusSet = useMemo(() => new Set(state?.bonus?.numbers ?? []), [state?.bonus]);
-  const bonusMult = state?.bonus?.mult ?? 2;
   const boardDisabled = !betting || !!mine;
 
   const jackpotWin = !!mine && mine.settled && (mine.payout >= Math.max(mine.stake * 6, 1) || mine.bonus_hit);
@@ -258,9 +257,9 @@ export function RoulettePage() {
         <div className="space-y-4">
           {bonusSet.size > 0 && (
             <div className="flex flex-wrap items-center justify-center gap-2 rounded-lg border border-gold/40 bg-gold/[0.08] px-3 py-2 text-center">
-              <span className="font-sans text-[11px] font-semibold uppercase tracking-[0.16em] text-gold">⭐ Números da sorte</span>
+              <span className="font-sans text-[11px] font-semibold uppercase tracking-[0.16em] text-gold">⭐ Números em destaque</span>
               <span className="flex gap-1.5">{[...bonusSet].map((n) => numberBadge(n, `lucky-${n}`))}</span>
-              <span className="font-sans text-[11px] text-muted">— um pleno num destes paga <span className="font-bold text-gold-light">{bonusMult}×</span></span>
+              <span className="font-sans text-[11px] text-muted">— os números a seguir nesta ronda</span>
             </div>
           )}
 

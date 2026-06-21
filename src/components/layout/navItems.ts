@@ -23,6 +23,8 @@ export const NAV: NavEntry[] = [
       { to: '/casino', label: 'Todos os jogos' },
       { to: '/casino/slots', label: 'Slots' },
       { to: '/casino/crash', label: 'Crash' },
+      { to: '/casino/plinko', label: 'Plinko' },
+      { to: '/casino/balatro', label: 'Balatró' },
       { to: '/casino/mines', label: 'Mines' },
       { to: '/casino/frango', label: 'Atravessa!' },
       { to: '/casino/corrida', label: 'Corrida de Cavalos' },

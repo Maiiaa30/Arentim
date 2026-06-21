@@ -24,7 +24,9 @@ export type GameArtKind =
   | 'mines'
   | 'tigrinho'
   | 'horse'
-  | 'chicken';
+  | 'chicken'
+  | 'plinko'
+  | 'balatro';
 
 const GOLD = '#C9A24B';
 const GOLD_LIGHT = '#f3dca0';
@@ -405,7 +407,13 @@ function Horse() {
     <div className="relative h-full overflow-hidden">
       <div className="absolute inset-x-0 bottom-4 h-px bg-gold/30" />
       <div className="absolute inset-x-0 bottom-7 h-px bg-gold/15" />
-      <span className="animate-ball absolute bottom-5 left-1/2 -translate-x-1/2 text-3xl">🏇</span>
+      {/* nested so position / X-flip / oscillation each own their transform —
+          the flip makes the left-facing 🏇 glyph face its direction of travel */}
+      <span className="absolute bottom-5 left-1/2 -translate-x-1/2">
+        <span className="inline-block" style={{ transform: 'scaleX(-1)' }}>
+          <span className="animate-ball inline-block text-3xl">🏇</span>
+        </span>
+      </span>
     </div>
   );
 }
@@ -418,6 +426,48 @@ function Chicken() {
       </div>
       <span className="animate-floaty absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-3xl">🐔</span>
       <span className="absolute right-3 top-3 text-lg">🚗</span>
+    </div>
+  );
+}
+
+function Plinko() {
+  // A peg triangle with a ball bouncing down into the bins.
+  const rows = [3, 4, 5, 6];
+  return (
+    <div className="relative flex h-full flex-col items-center justify-center gap-[5px] py-2">
+      <span className="animate-floaty absolute left-1/2 top-1 h-2.5 w-2.5 -translate-x-1/2 rounded-full" style={{ background: `radial-gradient(circle at 35% 30%, #fff, ${GOLD})`, boxShadow: `0 0 7px ${GOLD}` }} />
+      {rows.map((n, r) => (
+        <div key={r} className="flex gap-[10px]">
+          {Array.from({ length: n }, (_, i) => (
+            <span key={i} className="h-1.5 w-1.5 rounded-full bg-gold/55" />
+          ))}
+        </div>
+      ))}
+      <div className="mt-1 flex gap-[3px]">
+        {[RED, '#c47a2c', GOLD, '#2b6f4e', GOLD, '#c47a2c', RED].map((c, i) => (
+          <span key={i} className="h-4 w-3.5 rounded-sm" style={{ background: `linear-gradient(180deg, ${c}, rgba(0,0,0,0.5))` }} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function Balatro() {
+  // A fanned poker hand with a glowing "×mult" chip — the Balatro vibe.
+  return (
+    <div className="relative flex h-full items-center justify-center">
+      <div className="animate-floaty flex">
+        <MiniCard rank="A" suit="♠" className="-rotate-[14deg]" />
+        <MiniCard rank="K" suit="♥" red className="-ml-5 -rotate-[5deg]" />
+        <MiniCard rank="Q" suit="♠" className="-ml-5 rotate-[4deg]" />
+        <MiniCard rank="J" suit="♦" red className="-ml-5 rotate-[13deg]" />
+      </div>
+      <span
+        className="absolute -bottom-0.5 right-4 rounded px-1.5 py-0.5 font-display text-[11px] font-bold text-bg shadow"
+        style={{ background: `linear-gradient(160deg, ${GOLD_LIGHT}, ${GOLD})` }}
+      >
+        ×8
+      </span>
     </div>
   );
 }
@@ -439,6 +489,8 @@ const SCENES: Record<GameArtKind, () => JSX.Element> = {
   tigrinho: Tigrinho,
   horse: Horse,
   chicken: Chicken,
+  plinko: Plinko,
+  balatro: Balatro,
 };
 
 export function GameArt({ kind }: { kind: GameArtKind }) {
