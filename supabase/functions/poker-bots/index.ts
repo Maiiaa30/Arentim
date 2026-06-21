@@ -131,9 +131,13 @@ Deno.serve(async (req) => {
       const you = t.state.players.find((p) => p.id === 'you');
       const cashOut = you?.stack ?? 0;
       if (cashOut > 0) {
+        // Idempotency key tied to THIS table session (t.id is unique per sit, and
+        // a sit always creates a fresh row), so two concurrent `leave` requests
+        // can't double-credit the stack: the duplicate collides on
+        // transactions.idempotency_key and no-ops.
         await db.rpc('apply_ledger_entry', {
           p_user_id: user.id, p_type: 'win', p_amount: cashOut, p_game: 'poker',
-          p_note: 'poker cash-out', p_idempotency_key: null, p_wager: 0,
+          p_note: 'poker cash-out', p_idempotency_key: `poker-cashout-${t.id}`, p_wager: 0,
         });
       }
       await db.from('poker_bot_tables').update({ status: 'closed', state: t.state }).eq('id', t.id);
