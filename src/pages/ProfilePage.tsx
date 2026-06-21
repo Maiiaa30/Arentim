@@ -5,6 +5,7 @@ import { useChallenges } from '@/features/challenges/useChallenges';
 import { useTransactions } from '@/features/wallet/useTransactions';
 import { netResult, winRate } from '@/features/profile/stats';
 import { AchievementsGrid } from '@/features/profile/AchievementsGrid';
+import { AccountSecurity } from '@/features/auth/AccountSecurity';
 import { formatAmount, formatTos } from '@/lib/format';
 import { displayNameSchema } from '@/features/auth/schema';
 import { AnimatedNumber } from '@/components/AnimatedNumber';
@@ -141,6 +142,8 @@ export function ProfilePage() {
       </div>
 
       <AchievementsGrid profile={profile} />
+
+      <AccountSecurity />
 
       <div className="flex flex-wrap gap-5 sm:gap-[30px]">
         <div className="min-w-0 flex-[3_1_560px] space-y-3">
