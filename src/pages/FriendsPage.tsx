@@ -12,6 +12,7 @@ import { PlayerCard } from '@/features/friends/PlayerCard';
 import { useDuels, useDuelActions } from '@/features/friends/useDuels';
 import { DuelsPanel } from '@/features/friends/DuelsPanel';
 import { useAuth } from '@/features/auth/AuthProvider';
+import { UiIcon } from '@/components/icons/UiIcon';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { formatAmount } from '@/lib/format';
@@ -156,14 +157,14 @@ function FriendCard({ f, online, showBalance, myBalance, onRemove }: {
         <p className="mt-3 font-sans text-xs text-positive">{actionMsg}</p>
       ) : (
         <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1">
-          <button onClick={() => { setGiftOpen((v) => !v); setDuelOpen(false); setReqOpen(false); setGiftErr(null); }} className="font-sans text-xs text-gold hover:text-gold-light">
-            🎁 Oferecer
+          <button onClick={() => { setGiftOpen((v) => !v); setDuelOpen(false); setReqOpen(false); setGiftErr(null); }} className="flex items-center gap-1.5 font-sans text-xs text-gold hover:text-gold-light">
+            <UiIcon name="gift" className="h-3.5 w-3.5" /> Oferecer
           </button>
-          <button onClick={() => { setReqOpen((v) => !v); setGiftOpen(false); setDuelOpen(false); setGiftErr(null); }} className="font-sans text-xs text-gold hover:text-gold-light">
-            🙏 Pedir
+          <button onClick={() => { setReqOpen((v) => !v); setGiftOpen(false); setDuelOpen(false); setGiftErr(null); }} className="flex items-center gap-1.5 font-sans text-xs text-gold hover:text-gold-light">
+            <UiIcon name="request" className="h-3.5 w-3.5" /> Pedir
           </button>
-          <button onClick={() => { setDuelOpen((v) => !v); setGiftOpen(false); setReqOpen(false); setGiftErr(null); }} className="font-sans text-xs text-gold hover:text-gold-light">
-            ⚔️ Desafiar
+          <button onClick={() => { setDuelOpen((v) => !v); setGiftOpen(false); setReqOpen(false); setGiftErr(null); }} className="flex items-center gap-1.5 font-sans text-xs text-gold hover:text-gold-light">
+            <UiIcon name="duel" className="h-3.5 w-3.5" /> Desafiar
           </button>
           <button onClick={onRemove} className="ml-auto font-sans text-xs text-muted-2 hover:text-negative">Remover</button>
         </div>
