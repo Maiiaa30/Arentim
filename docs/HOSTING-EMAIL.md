@@ -1,5 +1,9 @@
 # Hosting & branded auth emails
 
+> **Using Cloudflare + Vercel + Resend?** Follow [`DEPLOY.md`](DEPLOY.md) for the
+> full, ordered, end-to-end walkthrough (DNS records, custom domain, SMTP, the
+> branded templates). This page is the conceptual background.
+
 Two separate concerns that people often conflate:
 
 - **Web host** — serves the built static frontend (`dist/`). Vercel or Cloudflare.
