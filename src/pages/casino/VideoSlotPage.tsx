@@ -378,7 +378,7 @@ function ReelColumn({
       <span className="pointer-events-none absolute inset-0 z-10 bg-gradient-to-b from-black/40 via-transparent to-black/50" />
 
       {mode === 'idle' ? (
-        <div className="grid grid-rows-3 h-full animate-pop">
+        <div className="animate-pop">
           {reelTarget.map((id, r) => cell(id, r, r, true))}
         </div>
       ) : mode === 'spin' ? (
@@ -389,7 +389,7 @@ function ReelColumn({
         <div
           key={landStrip.join('-')}
           className="will-change-transform"
-          style={{ animation: 'reel-land 0.85s cubic-bezier(0.15,0.85,0.25,1) forwards' }}
+          style={{ animation: 'reel-land-3 0.85s cubic-bezier(0.15,0.85,0.25,1) forwards' }}
         >
           {landStrip.map((id, i) => {
             const isResult = i >= landStrip.length - 3;
