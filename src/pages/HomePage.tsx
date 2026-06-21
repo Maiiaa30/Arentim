@@ -8,53 +8,24 @@ import { PlayerCard } from '@/features/friends/PlayerCard';
 import { DailyBonusCard } from '@/features/bonus/DailyBonusCard';
 import { LandingPage } from '@/pages/LandingPage';
 import { Button } from '@/components/ui/Button';
-import { Eyebrow, FramedPanel, RingAvatar, SectionHeader } from '@/components/ui/primitives';
-import { GameArt, type GameArtKind } from '@/features/casino/GameArt';
+import { Eyebrow, RingAvatar, SectionHeader } from '@/components/ui/primitives';
+import { HeroFrame } from '@/components/ui/HeroFrame';
+import { GameCard, type GameTile } from '@/features/casino/GameCard';
+import { WinPopup } from '@/features/sportsbook/WinPopup';
 import { formatTos } from '@/lib/format';
 
-interface GameTile {
-  to: string;
-  name: string;
-  desc: string;
-  art: GameArtKind;
-  badge?: string;
-  tone: string; // artwork gradient
-  cta?: string;
-}
-
 const GAMES: GameTile[] = [
+  { to: '/casino/mines', name: 'Mines', desc: 'Diamantes ou minas?', art: 'mines', badge: 'Novo', tone: 'from-positive-felt/40 to-bg' },
+  { to: '/casino/frango', name: 'Atravessa!', desc: 'A galinha atravessa — não morras.', art: 'chicken', badge: 'Novo', tone: 'from-gold/30 to-bg' },
+  { to: '/casino/crash', name: 'Crash', desc: 'Saia antes de rebentar.', art: 'crash', badge: 'Novo', tone: 'from-chip-ruby/40 to-bg' },
+  { to: '/casino/wheel', name: 'Fita da Sorte', desc: 'Pare no multiplicador certo.', art: 'wheel', badge: 'Novo', tone: 'from-gold/30 to-bg' },
   { to: '/casino/roulette', name: 'Roleta', desc: 'Roleta europeia, zero único.', art: 'roulette', badge: 'Em alta', tone: 'from-chip-ruby/40 to-bg' },
   { to: '/casino/blackjack', name: 'Blackjack', desc: 'O croupier pára nos 17.', art: 'blackjack', tone: 'from-positive-felt/40 to-bg' },
-  { to: '/casino/slots', name: 'Slots', desc: 'Cinco máquinas, jackpots secretos.', art: 'slots', badge: '5 máquinas', tone: 'from-gold/30 to-bg' },
-  { to: '/casino/coinflip', name: 'Moeda', desc: 'Cara ou coroa — dobro ou nada.', art: 'coinflip', badge: 'Novo', tone: 'from-gold-light/30 to-bg' },
-  { to: '/poker', name: "Hold'em", desc: 'Contra bots ou amigos.', art: 'poker', tone: 'from-chip-navy/40 to-bg' },
+  { to: '/casino/slots', name: 'Slots', desc: 'Cinco máquinas, pote progressivo.', art: 'slots', badge: '5 máquinas', tone: 'from-gold/30 to-bg' },
+  { to: '/poker', name: 'Poker', desc: 'Contra bots ou amigos.', art: 'poker', tone: 'from-chip-navy/40 to-bg' },
+  { to: '/casino/sobe-e-desce', name: 'Sobe e Desce', desc: 'Sobe, desce, ou sete.', art: 'sobedesce', badge: 'Novo', tone: 'from-positive-felt/40 to-bg' },
   { to: '/sportsbook', name: 'Futebol', desc: 'Primeira Liga e mais.', art: 'football', badge: 'Ao vivo', tone: 'from-positive-felt/30 to-bg', cta: 'Abrir' },
 ];
-
-function GameCard({ g }: { g: GameTile }) {
-  return (
-    <Link to={g.to} className="card card-hover focus-ring group flex flex-col overflow-hidden">
-      <div className={`relative h-[120px] bg-gradient-to-br ${g.tone}`}>
-        <GameArt kind={g.art} />
-        {g.badge && (
-          <span className="absolute left-3 top-3 rounded-full border border-gold/40 bg-bg/60 px-2 py-0.5 font-sans text-[9px] uppercase tracking-[0.18em] text-gold">
-            {g.badge}
-          </span>
-        )}
-      </div>
-      <div className="flex flex-1 flex-col p-4">
-        <h3 className="font-display text-[22px] font-semibold text-text group-hover:text-gold">{g.name}</h3>
-        <p className="mt-1 flex-1 font-sans text-[12.5px] text-muted">{g.desc}</p>
-        <div className="mt-3 flex items-center justify-between">
-          <span className="font-mono text-xs text-muted-2">5 – 500 tós</span>
-          <span className="rounded border border-gold/40 px-3 py-1 font-sans text-[10px] uppercase tracking-[0.18em] text-gold transition-colors group-hover:bg-gold group-hover:text-bg">
-            {g.cta ?? 'Entrar'}
-          </span>
-        </div>
-      </div>
-    </Link>
-  );
-}
 
 function HighRollers({ onSelect }: { onSelect: (id: string) => void }) {
   const { data } = useLeaderboard('global', 'net');
@@ -120,39 +91,40 @@ export function HomePage() {
   return (
     <div className="animate-fade-in space-y-10">
       {selected && <PlayerCard userId={selected} onClose={() => setSelected(null)} />}
+      <WinPopup />
       {user && <DailyBonusCard />}
 
-      <FramedPanel>
+      <HeroFrame>
         <div className="max-w-xl">
           <Eyebrow>Bem-vindo ao Arentim</Eyebrow>
-          <h1 className="mt-3 font-display text-[44px] font-medium leading-[1.04] text-text">
+          <h1 className="mt-3 font-display text-[44px] font-medium leading-[1.02] text-text sm:text-[52px]">
             A sorte está <span className="italic text-gold">lançada.</span>
           </h1>
           <p className="mt-4 font-sans text-[15px] leading-relaxed text-muted">
             Uma casa de jogos só para amigos. Cada conta começa com 500 Tostões. É tudo a brincar.
           </p>
           <div className="mt-7 flex flex-wrap gap-3">
-            <Link to="/casino/coinflip">
-              <Button variant="ghost">Lançar a Moeda</Button>
+            <Link to="/casino">
+              <Button variant="primary">Entrar no Casino</Button>
             </Link>
             <Link to="/sportsbook">
-              <Button variant="secondary">Ver Futebol</Button>
+              <Button variant="ghost">Ver Futebol</Button>
             </Link>
           </div>
         </div>
-      </FramedPanel>
+      </HeroFrame>
 
       <div className="flex flex-wrap gap-8">
-        <div className="min-w-[300px] flex-[3_1_600px] space-y-5">
+        <div className="min-w-0 flex-[3_1_600px] space-y-5">
           <SectionHeader title="As Mesas" right="Salão" />
-          <div className="grid grid-cols-[repeat(auto-fill,minmax(238px,1fr))] gap-[18px]">
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,238px),1fr))] gap-[18px]">
             {GAMES.map((g) => (
               <GameCard key={g.to} g={g} />
             ))}
           </div>
         </div>
         {user && (
-          <aside className="min-w-[296px] flex-[1_1_300px] space-y-8">
+          <aside className="min-w-0 flex-[1_1_300px] space-y-8">
             <HighRollers onSelect={setSelected} />
             <Circle onSelect={setSelected} />
           </aside>

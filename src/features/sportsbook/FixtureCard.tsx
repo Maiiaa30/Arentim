@@ -43,7 +43,7 @@ function OddsButton({ fixture, market, selection, label }: {
       onClick={() =>
         toggle({ fixtureId: fixture.id, fixtureLabel: `${fixture.home} v ${fixture.away}`, market, selection, odds })
       }
-      className={`focus-ring flex flex-1 flex-col items-center gap-0.5 rounded border px-2 py-1.5 transition-colors ${
+      className={`focus-ring flex min-h-[44px] min-w-[68px] flex-1 flex-col items-center justify-center gap-0.5 rounded border px-2 py-1.5 transition-colors ${
         active ? 'border-gold bg-gold/[0.18] text-gold' : 'border-border text-body hover:border-gold/60'
       }`}
     >
@@ -90,7 +90,7 @@ export function FixtureCard({ fixture }: { fixture: Fixture }) {
             <OddsButton fixture={fixture} market="1x2" selection="draw" label="X" />
             <OddsButton fixture={fixture} market="1x2" selection="away" label="2" />
           </div>
-          <div className="flex gap-1.5">
+          <div className="flex flex-wrap gap-1.5">
             <OddsButton fixture={fixture} market="ou25" selection="over" label={selectionLabel('ou25', 'over')} />
             <OddsButton fixture={fixture} market="ou25" selection="under" label={selectionLabel('ou25', 'under')} />
             <OddsButton fixture={fixture} market="btts" selection="yes" label="Ambas sim" />

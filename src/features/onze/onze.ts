@@ -26,6 +26,29 @@ export const FORMATIONS: Record<Formation, Position[]> = {
   '5-3-2': ['GK', 'LWB', 'CB', 'CB', 'CB', 'RWB', 'CM', 'CM', 'CM', 'ST', 'ST'],
 };
 
+/**
+ * Pitch coordinates (percent: x = left→right, y = top→bottom with the GK at the
+ * bottom) for each slot, index-aligned to FORMATIONS, so each position sits where
+ * it actually plays (wide backs out wide, holding mids deep, a CAM behind the ST…).
+ */
+export const FORMATION_COORDS: Record<Formation, { x: number; y: number }[]> = {
+  '4-3-3': [{ x: 50, y: 93 }, { x: 14, y: 72 }, { x: 37, y: 77 }, { x: 63, y: 77 }, { x: 86, y: 72 }, { x: 27, y: 50 }, { x: 50, y: 53 }, { x: 73, y: 50 }, { x: 16, y: 22 }, { x: 50, y: 15 }, { x: 84, y: 22 }],
+  '4-4-2': [{ x: 50, y: 93 }, { x: 14, y: 72 }, { x: 37, y: 77 }, { x: 63, y: 77 }, { x: 86, y: 72 }, { x: 14, y: 46 }, { x: 38, y: 50 }, { x: 62, y: 50 }, { x: 86, y: 46 }, { x: 37, y: 16 }, { x: 63, y: 16 }],
+  '4-2-3-1': [{ x: 50, y: 93 }, { x: 14, y: 73 }, { x: 37, y: 78 }, { x: 63, y: 78 }, { x: 86, y: 73 }, { x: 37, y: 57 }, { x: 63, y: 57 }, { x: 50, y: 34 }, { x: 16, y: 30 }, { x: 84, y: 30 }, { x: 50, y: 14 }],
+  '3-4-3': [{ x: 50, y: 93 }, { x: 28, y: 77 }, { x: 50, y: 79 }, { x: 72, y: 77 }, { x: 13, y: 48 }, { x: 38, y: 52 }, { x: 62, y: 52 }, { x: 87, y: 48 }, { x: 16, y: 20 }, { x: 50, y: 14 }, { x: 84, y: 20 }],
+  '3-5-2': [{ x: 50, y: 93 }, { x: 28, y: 77 }, { x: 50, y: 79 }, { x: 72, y: 77 }, { x: 11, y: 46 }, { x: 33, y: 52 }, { x: 50, y: 55 }, { x: 67, y: 52 }, { x: 89, y: 46 }, { x: 37, y: 16 }, { x: 63, y: 16 }],
+  '5-3-2': [{ x: 50, y: 93 }, { x: 9, y: 64 }, { x: 31, y: 78 }, { x: 50, y: 80 }, { x: 69, y: 78 }, { x: 91, y: 64 }, { x: 30, y: 50 }, { x: 50, y: 52 }, { x: 70, y: 50 }, { x: 37, y: 18 }, { x: 63, y: 18 }],
+};
+
+/** Teams ranked by squad strength with an expected finishing position — the
+ *  pre-season prediction shown when an 'epoca' simulation starts. */
+export interface Prediction { team: string; rating: number; pos: number; }
+export function predictTable(res: SeasonResult): Prediction[] {
+  return [...res.teams]
+    .sort((a, b) => b.rating - a.rating || a.team.localeCompare(b.team))
+    .map((t, i) => ({ team: t.team, rating: t.rating, pos: i + 1 }));
+}
+
 /** Which player positions can fill a given slot position (left/right kept apart). */
 const COMPAT: Record<Position, string[]> = {
   GK: ['GK'],

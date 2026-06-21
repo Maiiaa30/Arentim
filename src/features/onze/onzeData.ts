@@ -39,3 +39,7 @@ export const clubNames = (year: number): string[] => Object.keys(getSeason(year)
 /** Years available within an inclusive [start, end] range. */
 export const yearsInRange = (start: number, end: number): number[] =>
   YEARS.filter((y) => y >= Math.min(start, end) && y <= Math.max(start, end));
+
+/** Football-season label for a dataset year, e.g. 2021 -> "20/21". */
+export const seasonLabel = (y: number): string =>
+  `${String((y - 1) % 100).padStart(2, '0')}/${String(y % 100).padStart(2, '0')}`;

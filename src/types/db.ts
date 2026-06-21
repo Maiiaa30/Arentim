@@ -9,6 +9,8 @@ export type TransactionType = 'bonus' | 'bet' | 'win' | 'loss' | 'refund' | 'adj
 export type RouletteBetPayload = {
   kind: string;
   selection: number | null;
+  /** Covered numbers for split (2) / corner (4) bets. */
+  numbers?: number[];
   stake: number;
 };
 
@@ -101,6 +103,7 @@ export type PlaceBetResult = {
   combined_odds: number;
   potential_payout: number;
   balance: number;
+  replayed?: boolean;
 };
 
 export type UserSearchResult = { id: string; display_name: string; avatar_url: string | null };
@@ -257,6 +260,10 @@ export type SlotMachineMeta = {
   min_bet: number;
   max_bet: number;
   jackpot_symbol: string;
+  /** True for a progressive machine (shared, growing jackpot pool). */
+  progressive?: boolean;
+  /** The live progressive pool (only for progressive machines; null otherwise). */
+  jackpot_pool?: number | null;
   symbols: SlotSymbolMeta[];
   paytable: SlotPayRow[];
 };
@@ -268,8 +275,265 @@ export type SlotSpinResult = {
   multiplier: number;
   jackpot: boolean;
   payout: number;
+  /** New progressive pool value after the spin (progressive machines only). */
+  jackpot_pool?: number | null;
   balance: number;
   replayed: boolean;
+};
+
+/** Result returned by the play_dice RPC. */
+export type DiceResult = {
+  dice: [number, number];
+  sum: number;
+  won: boolean;
+  payout: number;
+  balance: number;
+  replayed: boolean;
+};
+
+/** A dealt Sobe e Desce round: the current rung + the two adapted multipliers. */
+export type HiloDealResult = {
+  current: number;
+  sobe_count: number;
+  desce_count: number;
+  sobe_mult: number;
+  desce_mult: number;
+};
+
+/** cups_start: where the ball goes + the exact swap sequence to animate. */
+export type CupsStartResult = {
+  start: number;
+  swaps: [number, number][];
+  multiplier: number;
+  balance: number;
+};
+
+/** cups_pick: settle which cup you chose. */
+export type CupsPickResult = {
+  prize: number;
+  picked: number;
+  won: boolean;
+  multiplier: number;
+  payout: number;
+  balance: number;
+};
+
+/** One row of the football betting leaderboard. */
+export type FootballLeaderRow = {
+  id: string;
+  name: string;
+  wagered: number;
+  won: number;
+  lost: number;
+  net: number;
+  bets: number;
+};
+
+/** Result of the play_highlow RPC (single-die High/Low). */
+export type HighLowResult = {
+  die: number;
+  won: boolean;
+  payout: number;
+  balance: number;
+  replayed: boolean;
+};
+
+/** Result of a settled Sobe e Desce bet. */
+export type HiloBetResult = {
+  current: number;
+  next: number;
+  won: boolean;
+  mult: number;
+  payout: number;
+  balance: number;
+};
+
+/** Result returned by the play_wheel RPC. */
+export type WheelResult = {
+  index: number;
+  multiplier: number;
+  payout: number;
+  balance: number;
+  replayed: boolean;
+};
+
+/** Result of crash_start: a launched round the client then animates. */
+export type CrashStartResult = {
+  round_id: number;
+  started_at: string;
+  auto_target: number | null;
+  balance: number;
+};
+
+/** Live read of a flying crash round (polled for the animation). */
+export type CrashStateResult = {
+  phase: 'none' | 'flying' | 'busted' | 'settled';
+  mult?: number;
+  crash?: number;
+  won?: boolean;
+  payout?: number;
+};
+
+/** Authoritative settle of a crash round (manual or auto cash-out / bust). */
+export type CrashSettleResult = {
+  won: boolean;
+  mult: number;
+  crash: number;
+  payout: number;
+  balance: number;
+  replayed: boolean;
+};
+
+/** A bet row in the shared Crash room (no hidden info — readable by everyone). */
+export type CrashBetRow = {
+  id: number;
+  room_id: number;
+  user_id: string;
+  display_name: string;
+  stake: number;
+  auto_target: number | null;
+  cashout: number | null;
+  payout: number;
+  settled: boolean;
+  created_at: string;
+};
+
+/** Masked snapshot of the shared Crash round (crash_room_now). */
+export type CrashRoomState = {
+  room_id: number;
+  status: 'betting' | 'flying' | 'busted';
+  server_now: string;
+  betting_ends_at: string;
+  fly_start_at: string;
+  bust_at: string | null;
+  mult: number | null;
+  crash: number | null;
+  mine: {
+    stake: number;
+    auto_target: number | null;
+    settled: boolean;
+    cashout: number | null;
+    payout: number;
+  } | null;
+};
+
+export type CrashRoomBetResult = { ok?: boolean; balance: number };
+export type CrashRoomCashoutResult = {
+  won: boolean;
+  mult: number;
+  crash: number | null;
+  payout: number;
+  balance: number;
+  replayed?: boolean;
+};
+
+/** A slip row in the shared Roulette table (no hidden info). */
+export type RouletteRoomBetRow = {
+  id: number;
+  room_id: number;
+  user_id: string;
+  display_name: string;
+  bets: RouletteBetPayload[];
+  stake: number;
+  payout: number;
+  bonus_hit: boolean;
+  settled: boolean;
+  created_at: string;
+};
+
+/** Masked snapshot of the shared Roulette round (roulette_room_now). */
+export type RouletteRoomState = {
+  room_id: number;
+  status: 'betting' | 'spinning' | 'done';
+  server_now: string;
+  betting_ends_at: string;
+  spin_start_at: string;
+  reveal_at: string;
+  /** Hidden (null) until betting closes. */
+  number: number | null;
+  bonus: RouletteBonus | null;
+  mine: {
+    bets: RouletteBetPayload[];
+    stake: number;
+    settled: boolean;
+    payout: number;
+    bonus_hit: boolean;
+  } | null;
+};
+
+export type RouletteRoomBetResult = { ok?: boolean; balance: number; stake: number };
+
+/** A bet row in the shared horse-race room. */
+export type HorseBetRow = {
+  id: number;
+  room_id: number;
+  user_id: string;
+  display_name: string;
+  horse: number;
+  stake: number;
+  payout: number;
+  settled: boolean;
+  created_at: string;
+};
+
+/** Masked snapshot of the shared horse race (horse_room_now). */
+export type HorseRoomState = {
+  room_id: number;
+  status: 'betting' | 'racing' | 'done';
+  server_now: string;
+  betting_ends_at: string;
+  race_start_at: string;
+  finish_at: string;
+  odds: number[];
+  winner: number | null;
+  mine: { horse: number; stake: number; settled: boolean; payout: number } | null;
+};
+
+/** A head-to-head duel row (duel_list RPC). */
+export type DuelRow = {
+  id: number;
+  role: 'challenger' | 'opponent';
+  other_id: string;
+  other_name: string;
+  stake: number;
+  game: string;
+  status: 'pending' | 'settled' | 'declined' | 'cancelled';
+  challenger_roll: number | null;
+  opponent_roll: number | null;
+  winner: string | null;
+  my_roll: number | null;
+  their_roll: number | null;
+  created_at: string;
+};
+
+export type DuelRespondResult = {
+  status: 'declined' | 'settled';
+  challenger_roll?: number;
+  opponent_roll?: number;
+  winner?: string;
+  won?: boolean;
+  balance?: number;
+};
+
+/** Live casino-lobby activity (casino_activity RPC). */
+export type CasinoActivity = {
+  crash: { players: number; friends: number };
+  roulette: { players: number; friends: number };
+  horse?: { players: number; friends: number };
+  recent: { name: string; game: string | null; amount: number; at: string; is_me: boolean }[];
+};
+
+/** A row in the per-user notification inbox (header bell). */
+export type NotificationRow = {
+  id: number;
+  user_id: string;
+  type: string;
+  title: string;
+  body: string | null;
+  link: string | null;
+  data: Record<string, unknown>;
+  read_at: string | null;
+  created_at: string;
 };
 
 /** Result returned by the claim_daily_bonus RPC. */
@@ -280,6 +544,9 @@ export type DailyBonusResult = {
   balance: number;
 };
 
+/** The round's lucky numbers + bonus multiple (roulette mini-game). */
+export type RouletteBonus = { numbers: number[]; mult: number };
+
 /** Result object returned by the play_roulette RPC. */
 export type RouletteSpinResult = {
   round_id: number;
@@ -288,6 +555,10 @@ export type RouletteSpinResult = {
   payout: number;
   balance: number;
   results: RouletteBetResult[];
+  /** The next round's lucky numbers (re-rolled after this spin). */
+  bonus?: RouletteBonus | null;
+  /** True if a straight bet landed on a lucky number (paid double). */
+  bonus_hit?: boolean;
   replayed: boolean;
 };
 
@@ -310,6 +581,7 @@ export type Profile = {
   last_online: string | null;
   last_rescue_date: string | null;
   suspended: boolean;
+  suspended_until: string | null;
 };
 
 export type Announcement = {
@@ -341,6 +613,73 @@ export type Transaction = {
   idempotency_key: string | null;
   created_at: string;
 };
+
+/** Mines: masked round snapshot + pick/cash-out results. */
+export type MinesState = {
+  mines: number;
+  picks: number[];
+  multiplier: number;
+  next_multiplier?: number;
+  balance: number;
+};
+export type MinesPickResult = {
+  safe: boolean;
+  cell: number;
+  picks?: number[];
+  multiplier?: number;
+  next_multiplier?: number;
+  cashed?: boolean;
+  payout?: number;
+  mines?: number[];
+  balance?: number;
+};
+export type MinesCashoutResult = {
+  payout: number;
+  multiplier: number;
+  picks: number[];
+  mines: number[];
+  balance: number;
+};
+
+/** Tigrinho (3×3 tiger slot). */
+export type TigrinhoResult = {
+  grid: number[];
+  wins: { row: number; symbol: number; amount: number }[];
+  payout: number;
+  multiplier: number;
+  balance: number;
+  replayed: boolean;
+};
+
+/** Corrida de Cavalos. */
+export type HorseResult = {
+  winner: number;
+  horse: number;
+  won: boolean;
+  payout: number;
+  odds: number[];
+  balance: number;
+  replayed: boolean;
+};
+
+/** Frango na Estrada (chicken). */
+export type ChickenState = {
+  difficulty: string;
+  step: number;
+  multiplier: number;
+  next_multiplier?: number;
+  balance: number;
+};
+export type ChickenStepResult = {
+  alive: boolean;
+  lane: number;
+  multiplier?: number;
+  next_multiplier?: number;
+  cashed?: boolean;
+  payout?: number;
+  balance?: number;
+};
+export type ChickenCashoutResult = { payout: number; multiplier: number; lane: number; balance: number };
 
 /** Minimal shape consumed by the typed Supabase client. */
 export type Database = {
@@ -400,6 +739,30 @@ export type Database = {
         Update: Partial<{ title: string; description: string; metric: string; target: number; reward: number; track: string; active: boolean }>;
         Relationships: [];
       };
+      notifications: {
+        Row: NotificationRow;
+        Insert: Partial<NotificationRow> & { user_id: string; type: string; title: string };
+        Update: Partial<NotificationRow>;
+        Relationships: [];
+      };
+      crash_bets: {
+        Row: CrashBetRow;
+        Insert: Partial<CrashBetRow> & { room_id: number; user_id: string; display_name: string; stake: number };
+        Update: Partial<CrashBetRow>;
+        Relationships: [];
+      };
+      roulette_room_bets: {
+        Row: RouletteRoomBetRow;
+        Insert: Partial<RouletteRoomBetRow> & { room_id: number; user_id: string; display_name: string; bets: RouletteBetPayload[]; stake: number };
+        Update: Partial<RouletteRoomBetRow>;
+        Relationships: [];
+      };
+      horse_bets: {
+        Row: HorseBetRow;
+        Insert: Partial<HorseBetRow> & { room_id: number; user_id: string; display_name: string; horse: number; stake: number };
+        Update: Partial<HorseBetRow>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
@@ -414,6 +777,10 @@ export type Database = {
       play_roulette: {
         Args: { p_bets: RouletteBetPayload[]; p_idempotency_key: string | null };
         Returns: RouletteSpinResult;
+      };
+      roulette_get_bonus: {
+        Args: Record<string, never>;
+        Returns: RouletteBonus;
       };
       claim_daily_bonus: {
         Args: Record<string, never>;
@@ -435,6 +802,178 @@ export type Database = {
         Args: { p_machine: string; p_stake: number; p_idempotency_key: string | null };
         Returns: SlotSpinResult;
       };
+      play_dice: {
+        Args: { p_stake: number; p_pick: string; p_idempotency_key: string | null };
+        Returns: DiceResult;
+      };
+      cups_start: {
+        Args: { p_stake: number };
+        Returns: CupsStartResult;
+      };
+      cups_pick: {
+        Args: { p_picked: number };
+        Returns: CupsPickResult;
+      };
+      mines_start: {
+        Args: { p_stake: number; p_mines: number };
+        Returns: MinesState;
+      };
+      mines_pick: {
+        Args: { p_cell: number };
+        Returns: MinesPickResult;
+      };
+      mines_cashout: {
+        Args: Record<string, never>;
+        Returns: MinesCashoutResult;
+      };
+      play_tigrinho: {
+        Args: { p_stake: number; p_idempotency_key?: string };
+        Returns: TigrinhoResult;
+      };
+      play_horse: {
+        Args: { p_stake: number; p_horse: number; p_idempotency_key?: string };
+        Returns: HorseResult;
+      };
+      chicken_start: {
+        Args: { p_stake: number; p_difficulty?: string };
+        Returns: ChickenState;
+      };
+      chicken_step: {
+        Args: Record<string, never>;
+        Returns: ChickenStepResult;
+      };
+      chicken_cashout: {
+        Args: Record<string, never>;
+        Returns: ChickenCashoutResult;
+      };
+      play_highlow: {
+        Args: { p_stake: number; p_pick: string; p_idempotency_key: string | null };
+        Returns: HighLowResult;
+      };
+      football_leaderboard: {
+        Args: Record<string, never>;
+        Returns: FootballLeaderRow[];
+      };
+      hilo_deal: {
+        Args: Record<string, never>;
+        Returns: HiloDealResult;
+      };
+      hilo_bet: {
+        Args: { p_stake: number; p_pick: string };
+        Returns: HiloBetResult;
+      };
+      play_wheel: {
+        Args: { p_stake: number; p_idempotency_key: string | null };
+        Returns: WheelResult;
+      };
+      horse_room_now: {
+        Args: Record<string, never>;
+        Returns: HorseRoomState;
+      };
+      horse_room_bet: {
+        Args: { p_room_id: number; p_horse: number; p_stake: number };
+        Returns: { ok?: boolean; balance: number };
+      };
+      horse_room_history: {
+        Args: Record<string, never>;
+        Returns: number[];
+      };
+      crash_start: {
+        Args: { p_stake: number; p_auto_target: number | null };
+        Returns: CrashStartResult;
+      };
+      crash_state: {
+        Args: { p_round_id: number };
+        Returns: CrashStateResult;
+      };
+      crash_cashout: {
+        Args: { p_round_id: number };
+        Returns: CrashSettleResult;
+      };
+      crash_history: {
+        Args: Record<string, never>;
+        Returns: number[];
+      };
+      crash_room_now: {
+        Args: Record<string, never>;
+        Returns: CrashRoomState;
+      };
+      crash_room_bet: {
+        Args: { p_room_id: number; p_stake: number; p_auto_target: number | null };
+        Returns: CrashRoomBetResult;
+      };
+      crash_room_cashout: {
+        Args: { p_room_id: number };
+        Returns: CrashRoomCashoutResult;
+      };
+      crash_room_history: {
+        Args: Record<string, never>;
+        Returns: number[];
+      };
+      roulette_room_now: {
+        Args: Record<string, never>;
+        Returns: RouletteRoomState;
+      };
+      roulette_room_bet: {
+        Args: { p_room_id: number; p_bets: RouletteBetPayload[] };
+        Returns: RouletteRoomBetResult;
+      };
+      roulette_room_history: {
+        Args: Record<string, never>;
+        Returns: number[];
+      };
+      list_notifications: {
+        Args: { p_limit: number };
+        Returns: NotificationRow[];
+      };
+      notifications_unread_count: {
+        Args: Record<string, never>;
+        Returns: number;
+      };
+      mark_notifications_read: {
+        Args: { p_ids: number[] | null };
+        Returns: undefined;
+      };
+      casino_activity: {
+        Args: Record<string, never>;
+        Returns: CasinoActivity;
+      };
+      gift_tos: {
+        Args: { p_to: string; p_amount: number };
+        Returns: { balance: number; amount: number };
+      };
+      duel_create: {
+        Args: { p_opponent: string; p_stake: number; p_game?: string };
+        Returns: { duel_id: number; balance: number };
+      };
+      duel_respond: {
+        Args: { p_duel_id: number; p_accept: boolean };
+        Returns: DuelRespondResult;
+      };
+      duel_cancel: {
+        Args: { p_duel_id: number };
+        Returns: { balance: number };
+      };
+      duel_list: {
+        Args: Record<string, never>;
+        Returns: DuelRow[];
+      };
+      duel_record: {
+        Args: { p_other: string };
+        Returns: { wins: number; losses: number; total: number };
+      };
+      request_tos: {
+        Args: { p_from: string; p_amount: number };
+        Returns: undefined;
+      };
+      cashout_bet: {
+        Args: { p_bet_id: number };
+        Returns: { refund: number; balance: number };
+      };
+      admin_reset_season: {
+        Args: Record<string, never>;
+        Returns: string;
+      };
       bj_deal: {
         Args: { p_stake: number };
         Returns: BlackjackView;
@@ -448,7 +987,7 @@ export type Database = {
         Returns: BlackjackView | null;
       };
       place_bet: {
-        Args: { p_selections: BetSelectionInput[]; p_stake: number };
+        Args: { p_selections: BetSelectionInput[]; p_stake: number; p_idempotency_key?: string };
         Returns: PlaceBetResult;
       };
       admin_settle_fixture: {
@@ -483,6 +1022,10 @@ export type Database = {
         Args: { p_scope: string; p_metric: string };
         Returns: LeaderboardRow[];
       };
+      season_leaderboard: {
+        Args: { p_scope: string };
+        Returns: LeaderboardRow[];
+      };
       onze_leaderboard: {
         Args: { p_scope: string };
         Returns: OnzeLeaderboardRow[];
@@ -497,6 +1040,10 @@ export type Database = {
       list_my_poker_tables: {
         Args: Record<string, never>;
         Returns: MyPokerTable[];
+      };
+      list_my_sueca_tables: {
+        Args: Record<string, never>;
+        Returns: { table_id: number; code: string; status: string; player_count: number; is_host: boolean }[];
       };
       username_available: {
         Args: { p_name: string };
@@ -529,6 +1076,14 @@ export type Database = {
       admin_set_suspended: {
         Args: { p_user: string; p_suspended: boolean; p_reason: string };
         Returns: undefined;
+      };
+      admin_suspend_until: {
+        Args: { p_user: string; p_minutes: number; p_reason: string };
+        Returns: string | null;
+      };
+      admin_stats: {
+        Args: Record<string, never>;
+        Returns: Record<string, unknown>;
       };
       admin_set_odds: {
         Args: { p_fixture: number; p_odds: Record<string, Record<string, number>> };

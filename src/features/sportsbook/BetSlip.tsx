@@ -30,9 +30,12 @@ export function BetSlip() {
     setMsg(null);
     if (items.length === 0 || stake <= 0 || overStake) return;
     try {
+      // One key per submission, reused across any auto-retry so the server
+      // can't double-debit the same slip (audit H1).
       const res = await placeBet.mutateAsync({
         selections: items.map((i) => ({ fixture_id: i.fixtureId, market: i.market, selection: i.selection })),
         stake,
+        idempotencyKey: crypto.randomUUID(),
       });
       clear();
       setMsg({ text: `Aposta registada — retorno potencial ${formatTos(res.potential_payout)}.`, tone: 'win' });

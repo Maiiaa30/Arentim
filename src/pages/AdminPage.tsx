@@ -5,17 +5,21 @@ import {
   useAdminChallenges,
   useAdminFixtures,
   useAdminPlayers,
+  useAdminStats,
   useAdminActionsMutations,
+  type AdminStats,
+  type AdminTop,
 } from '@/features/admin/useAdmin';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Eyebrow } from '@/components/ui/primitives';
 import { formatAmount } from '@/lib/format';
-import type { Profile } from '@/types/db';
+import type { AdminAction, Profile } from '@/types/db';
 
-type Tab = 'players' | 'sportsbook' | 'challenges' | 'broadcast' | 'logs';
+type Tab = 'overview' | 'players' | 'sportsbook' | 'challenges' | 'broadcast' | 'logs';
 
 const TAB_LABEL: Record<Tab, string> = {
+  overview: 'Resumo',
   players: 'Jogadores',
   sportsbook: 'Futebol',
   challenges: 'Desafios',
@@ -23,8 +27,81 @@ const TAB_LABEL: Record<Tab, string> = {
   logs: 'Registo',
 };
 
+/** A single KPI tile. */
+function Stat({ label, value, sub, accent }: { label: string; value: string; sub?: string; accent?: boolean }) {
+  return (
+    <div className="card p-4">
+      <p className="font-sans text-[10.5px] font-medium uppercase tracking-[0.16em] text-muted-2">{label}</p>
+      <p className={`mt-1 font-display text-[26px] font-semibold leading-none tabular-nums ${accent ? 'text-gold' : 'text-text'}`}>
+        {value}
+      </p>
+      {sub && <p className="mt-1 font-sans text-[11px] text-muted">{sub}</p>}
+    </div>
+  );
+}
+
+/** A small ranked list (top balances / wagered / recent signups). */
+function TopList({ title, rows, valueOf }: { title: string; rows: AdminTop[]; valueOf: (r: AdminTop) => string }) {
+  return (
+    <div className="card p-4">
+      <p className="mb-2 font-sans text-[10.5px] font-medium uppercase tracking-[0.16em] text-muted-2">{title}</p>
+      {rows.length === 0 ? (
+        <p className="py-2 font-sans text-sm text-muted-2">Sem dados ainda.</p>
+      ) : (
+        <ul className="space-y-1.5">
+          {rows.map((r, i) => (
+            <li key={r.id} className="flex items-center justify-between gap-2 text-sm">
+              <span className="truncate text-text">
+                <span className="mr-2 font-mono text-muted-2">{i + 1}.</span>
+                {r.display_name}
+              </span>
+              <span className="shrink-0 font-mono tabular-nums text-gold">{valueOf(r)}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+export function Overview({ stats }: { stats: AdminStats | undefined }) {
+  if (!stats) return <p className="py-10 text-center text-sm text-muted-2">A carregar métricas…</p>;
+  const n = (v: number) => v.toLocaleString('pt-PT');
+  return (
+    <div className="space-y-5">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+        <Stat label="Utilizadores" value={n(stats.users_total)} sub={`+${n(stats.users_new_today)} hoje · +${n(stats.users_new_7d)} em 7 dias`} />
+        <Stat label="Online agora" value={n(stats.online_now)} sub={`${n(stats.active_24h)} ativos em 24h`} accent />
+        <Stat label="Ativos (7 dias)" value={n(stats.active_7d)} sub="entraram esta semana" />
+        <Stat label="Apostadores" value={n(stats.bettors)} sub="já fizeram pelo menos uma aposta" />
+        <Stat label="Saldo em circulação" value={formatAmount(stats.balance_total)} sub="Tostões em todas as carteiras" accent />
+        <Stat label="Total apostado" value={formatAmount(stats.wagered_total)} sub={`${formatAmount(stats.won_total)} devolvidos`} />
+        <Stat label="Jogos jogados" value={n(stats.games_total)} sub="casino + poker" />
+        <Stat label="Suspensos" value={n(stats.suspended)} sub={`${n(stats.admins)} administradores`} />
+        <Stat label="Apostas (futebol)" value={n(stats.sports_bets_total)} sub={`+${n(stats.sports_bets_today)} hoje · ${n(stats.sports_bets_open)} abertas`} />
+        <Stat label="Stake em futebol" value={formatAmount(stats.sports_stake_total)} sub="total apostado em jogos" />
+      </div>
+      <div className="grid gap-3 lg:grid-cols-3">
+        <TopList title="Maiores saldos" rows={stats.top_balances} valueOf={(r) => formatAmount(r.balance ?? 0)} />
+        <TopList title="Mais apostaram" rows={stats.top_wagered} valueOf={(r) => formatAmount(r.total_wagered ?? 0)} />
+        <TopList
+          title="Inscrições recentes"
+          rows={stats.recent_signups}
+          valueOf={(r) => (r.created_at ? new Date(r.created_at).toLocaleDateString('pt-PT', { day: 'numeric', month: 'short' }) : '')}
+        />
+      </div>
+    </div>
+  );
+}
+
+const TEMP_BLOCKS: { label: string; minutes: number }[] = [
+  { label: '1 h', minutes: 60 },
+  { label: '24 h', minutes: 1440 },
+  { label: '7 dias', minutes: 10080 },
+];
+
 function PlayerActions({ player }: { player: Profile }) {
-  const { adjustBalance, setStreak, setSuspended } = useAdminActionsMutations();
+  const { adjustBalance, setStreak, setSuspended, suspendUntil } = useAdminActionsMutations();
   const [amount, setAmount] = useState(0);
   const [reason, setReason] = useState('');
   const [streak, setStreakVal] = useState(player.streak_count);
@@ -35,10 +112,21 @@ function PlayerActions({ player }: { player: Profile }) {
     return true;
   };
 
+  const tempUntil = player.suspended_until ? new Date(player.suspended_until) : null;
+  const tempActive = !!tempUntil && tempUntil.getTime() > Date.now();
+
   return (
     <div className="card space-y-3 p-4">
       <div className="flex items-center justify-between">
-        <p className="font-medium text-text">{player.display_name}{player.suspended && <span className="ml-2 text-xs text-negative">suspenso</span>}</p>
+        <p className="font-medium text-text">
+          {player.display_name}
+          {player.suspended && <span className="ml-2 text-xs text-negative">suspenso</span>}
+          {tempActive && (
+            <span className="ml-2 text-xs text-negative">
+              bloqueado até {tempUntil!.toLocaleString('pt-PT', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+            </span>
+          )}
+        </p>
         <span className="font-mono text-sm tabular-nums text-gold">{formatAmount(player.balance)}</span>
       </div>
       <Input id="reason" label="Motivo (obrigatório)" value={reason} onChange={(e) => setReason(e.target.value)} />
@@ -63,9 +151,28 @@ function PlayerActions({ player }: { player: Profile }) {
         </Button>
       </div>
 
+      {/* Temporary block — auto-expires, no manual unsuspend needed. */}
+      <div>
+        <p className="mb-1.5 font-sans text-[10.5px] font-medium uppercase tracking-[0.16em] text-muted-2">Bloqueio temporário</p>
+        <div className="flex flex-wrap gap-2">
+          {TEMP_BLOCKS.map((b) => (
+            <Button key={b.minutes} variant="secondary" className="!px-3 !py-1.5"
+              onClick={async () => { if (!guardReason()) return; await suspendUntil.mutateAsync({ user: player.id, minutes: b.minutes, reason }); setMsg(`Bloqueado por ${b.label}.`); }}>
+              {b.label}
+            </Button>
+          ))}
+          {tempActive && (
+            <Button variant="ghost" className="!px-3 !py-1.5"
+              onClick={async () => { if (!guardReason()) return; await suspendUntil.mutateAsync({ user: player.id, minutes: 0, reason }); setMsg('Bloqueio temporário levantado.'); }}>
+              Levantar
+            </Button>
+          )}
+        </div>
+      </div>
+
       <Button variant={player.suspended ? 'secondary' : 'danger'}
         onClick={async () => { if (!guardReason()) return; await setSuspended.mutateAsync({ user: player.id, suspended: !player.suspended, reason }); setMsg(player.suspended ? 'Reativado.' : 'Suspenso.'); }}>
-        {player.suspended ? 'Reativar' : 'Suspender'}
+        {player.suspended ? 'Reativar (permanente)' : 'Suspender (permanente)'}
       </Button>
       {msg && <p className="font-sans text-sm text-positive">{msg}</p>}
     </div>
@@ -74,15 +181,17 @@ function PlayerActions({ player }: { player: Profile }) {
 
 export function AdminPage() {
   const { data: profile, isLoading } = useProfile();
-  const [tab, setTab] = useState<Tab>('players');
+  const [tab, setTab] = useState<Tab>('overview');
   const [query, setQuery] = useState('');
   const [selected, setSelected] = useState<Profile | null>(null);
 
+  const { data: stats } = useAdminStats();
   const { data: players } = useAdminPlayers(query);
   const { data: fixtures } = useAdminFixtures();
   const { data: challenges } = useAdminChallenges();
   const { data: actions } = useAdminActions();
-  const { settleFixture, broadcast, upsertChallenge } = useAdminActionsMutations();
+  const { settleFixture, broadcast, upsertChallenge, resetSeason } = useAdminActionsMutations();
+  const [seasonMsg, setSeasonMsg] = useState<string | null>(null);
 
   const [bTitle, setBTitle] = useState('');
   const [bBody, setBBody] = useState('');
@@ -93,7 +202,7 @@ export function AdminPage() {
     return <p className="py-12 text-center text-negative">Apenas administradores.</p>;
   }
 
-  const tabs: Tab[] = ['players', 'sportsbook', 'challenges', 'broadcast', 'logs'];
+  const tabs: Tab[] = ['overview', 'players', 'sportsbook', 'challenges', 'broadcast', 'logs'];
 
   return (
     <div className="animate-fade-in space-y-5">
@@ -109,6 +218,37 @@ export function AdminPage() {
           </button>
         ))}
       </div>
+
+      {tab === 'overview' && (
+        <div className="space-y-5">
+          <Overview stats={stats} />
+          <div className="card flex flex-wrap items-center justify-between gap-3 p-5">
+            <div>
+              <p className="font-display text-base font-medium text-text">Temporada</p>
+              <p className="font-sans text-[12px] text-muted-2">
+                Reinicia a tabela da temporada — o resultado de jogo passa a contar a partir de agora.
+              </p>
+              {seasonMsg && <p className="mt-1 font-sans text-[12px] text-positive">{seasonMsg}</p>}
+            </div>
+            <Button
+              variant="secondary"
+              disabled={resetSeason.isPending}
+              onClick={async () => {
+                if (!window.confirm('Reiniciar a temporada agora?')) return;
+                setSeasonMsg(null);
+                try {
+                  await resetSeason.mutateAsync();
+                  setSeasonMsg('Temporada reiniciada.');
+                } catch {
+                  setSeasonMsg('Não foi possível reiniciar.');
+                }
+              }}
+            >
+              {resetSeason.isPending ? 'A reiniciar…' : 'Repor temporada'}
+            </Button>
+          </div>
+        </div>
+      )}
 
       {tab === 'players' && (
         <div className="grid gap-4 lg:grid-cols-2">
@@ -154,17 +294,76 @@ export function AdminPage() {
         </div>
       )}
 
-      {tab === 'logs' && (
-        <div className="space-y-1">
-          {(actions ?? []).map((a) => (
-            <div key={a.id} className="break-words rounded bg-surface px-3 py-2 text-xs">
-              <span className="font-medium text-text">{a.action}</span>
-              <span className="text-muted-2"> · {new Date(a.created_at).toLocaleString('pt-PT')}</span>
-              {a.detail && <span className="break-all font-mono text-muted-2"> · {JSON.stringify(a.detail)}</span>}
+      {tab === 'logs' && <LogsView actions={actions ?? []} players={players ?? []} />}
+    </div>
+  );
+}
+
+/** Action → (label, accent tone) for the audit log. */
+const LOG_META: Record<string, { label: string; tone: string }> = {
+  adjust_balance: { label: 'Ajuste de saldo', tone: 'bg-gold' },
+  set_streak: { label: 'Sequência', tone: 'bg-muted-2' },
+  suspend: { label: 'Suspensão', tone: 'bg-negative' },
+  unsuspend: { label: 'Reativação', tone: 'bg-positive' },
+  suspend_temp: { label: 'Bloqueio temporário', tone: 'bg-negative' },
+  settle_fixture: { label: 'Liquidação de jogo', tone: 'bg-positive' },
+  set_odds: { label: 'Odds', tone: 'bg-muted-2' },
+  upsert_challenge: { label: 'Desafio', tone: 'bg-muted-2' },
+  broadcast: { label: 'Anúncio', tone: 'bg-gold' },
+};
+
+function relativeTime(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime();
+  const m = Math.round(diff / 60000);
+  if (m < 1) return 'agora';
+  if (m < 60) return `há ${m} min`;
+  const h = Math.round(m / 60);
+  if (h < 24) return `há ${h} h`;
+  return new Date(iso).toLocaleDateString('pt-PT', { day: 'numeric', month: 'short' });
+}
+
+/** Human summary of an action's detail payload. */
+function logSummary(action: string, detail: Record<string, unknown> | null): string {
+  const d = detail ?? {};
+  const n = (v: unknown) => (typeof v === 'number' ? v.toLocaleString('pt-PT') : String(v ?? ''));
+  switch (action) {
+    case 'adjust_balance': return `${Number(d.amount) >= 0 ? '+' : ''}${n(d.amount)} Tt`;
+    case 'set_streak': return `${n(d.streak)} dias`;
+    case 'suspend_temp': return `${n(d.minutes)} min`;
+    case 'settle_fixture': return `resultado ${n(d.score)}`;
+    case 'upsert_challenge': return `${n(d.key)} · prémio ${n(d.reward)}`;
+    case 'broadcast': return `“${n(d.title)}”`;
+    default: return '';
+  }
+}
+
+function LogsView({ actions, players }: { actions: AdminAction[]; players: Profile[] }) {
+  const nameById = new Map(players.map((p) => [p.id, p.display_name]));
+  if (actions.length === 0) return <p className="py-10 text-center text-sm text-muted-2">Sem registos ainda.</p>;
+  return (
+    <div className="overflow-hidden rounded-lg border border-border">
+      {actions.map((a, i) => {
+        const meta = LOG_META[a.action] ?? { label: a.action, tone: 'bg-muted-2' };
+        const summary = logSummary(a.action, a.detail);
+        const reason = a.detail && typeof a.detail.reason === 'string' ? a.detail.reason : null;
+        const target = a.target_user_id ? nameById.get(a.target_user_id) : null;
+        return (
+          <div key={a.id} className={`flex items-start gap-3 px-3 py-2.5 ${i % 2 ? 'bg-surface/40' : ''}`}>
+            <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${meta.tone}`} aria-hidden />
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-baseline gap-x-2">
+                <span className="font-sans text-sm font-medium text-text">{meta.label}</span>
+                {summary && <span className="font-mono text-xs text-gold">{summary}</span>}
+                {target && <span className="font-sans text-xs text-muted">· {target}</span>}
+              </div>
+              {reason && <p className="truncate font-sans text-xs text-muted-2">{reason}</p>}
             </div>
-          ))}
-        </div>
-      )}
+            <span className="shrink-0 font-sans text-[11px] text-muted-2" title={new Date(a.created_at).toLocaleString('pt-PT')}>
+              {relativeTime(a.created_at)}
+            </span>
+          </div>
+        );
+      })}
     </div>
   );
 }

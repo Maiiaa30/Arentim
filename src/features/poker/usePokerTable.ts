@@ -11,6 +11,17 @@ interface TableResponse {
   host?: boolean;
   table_id?: number;
   code?: string;
+  /** Intermediate snapshots (one per bot action) to replay with a delay. */
+  trail?: PokerView[];
+  /** ISO deadline for the player currently to act (null when none/bot). */
+  turnDeadline?: string | null;
+}
+
+/** Args for creating a private table: buy-in plus how many bot seats to fill. */
+export interface CreateTableArgs {
+  buyIn: number;
+  botCount: number;
+  difficulty: 'easy' | 'medium' | 'hard';
 }
 
 const call = (body: Record<string, unknown>): Promise<TableResponse> =>
@@ -49,7 +60,8 @@ export function usePokerTableActions() {
   };
 
   const create = useMutation({
-    mutationFn: (buyIn: number) => call({ op: 'create', buyIn }),
+    mutationFn: (v: CreateTableArgs) =>
+      call({ op: 'create', buyIn: v.buyIn, botCount: v.botCount, difficulty: v.difficulty }),
     onSuccess: refreshBalance,
   });
   const join = useMutation({

@@ -69,6 +69,8 @@ export default {
         reel: { '0%': { transform: 'translateY(0)' }, '100%': { transform: 'translateY(-50%)' } },
         coin3d: { '0%': { transform: 'rotateY(0deg)' }, '100%': { transform: 'rotateY(360deg)' } },
         floaty: { '0%,100%': { transform: 'translateY(0)' }, '50%': { transform: 'translateY(-5px)' } },
+        // Drifting clouds behind the crash chart (slow parallax sway).
+        drift: { '0%,100%': { transform: 'translateX(0)' }, '50%': { transform: 'translateX(-16px)' } },
         ball: {
           '0%,100%': { transform: 'translate(-26px,6px)' },
           '50%': { transform: 'translate(26px,-6px)' },
@@ -78,6 +80,11 @@ export default {
           '0%': { opacity: '0', transform: 'scale(0.7)' },
           '60%': { transform: 'scale(1.06)' },
           '100%': { opacity: '1', transform: 'scale(1)' },
+        },
+        // A card dealt onto the table — slides down from the dealer with a flick.
+        deal: {
+          '0%': { opacity: '0', transform: 'translateY(-26px) rotate(-8deg) scale(0.92)' },
+          '100%': { opacity: '1', transform: 'translateY(0) rotate(0) scale(1)' },
         },
         'reel-spin': { '0%': { transform: 'translateY(0)' }, '100%': { transform: 'translateY(-66.6667%)' } },
         // Seamless reel scroll: strip is 3 identical copies, so -33.3333% = one copy.
@@ -99,6 +106,19 @@ export default {
           '30%,70%': { transform: 'translateX(2px)' },
           '50%': { transform: 'translateX(-2px)' },
         },
+        'dice-tumble': {
+          '0%': { transform: 'translateY(0) rotate(0deg) scale(1)' },
+          '20%': { transform: 'translateY(-16px) rotate(85deg) scale(1.07)' },
+          '45%': { transform: 'translateY(0) rotate(185deg) scale(0.95)' },
+          '70%': { transform: 'translateY(-10px) rotate(255deg) scale(1.05)' },
+          '100%': { transform: 'translateY(0) rotate(360deg) scale(1)' },
+        },
+        'win-burst': {
+          '0%': { transform: 'scale(0.6)', opacity: '0' },
+          '40%': { transform: 'scale(1.08)', opacity: '1' },
+          '70%': { transform: 'scale(0.98)' },
+          '100%': { transform: 'scale(1)', opacity: '1' },
+        },
       },
       animation: {
         'fade-in': 'fade-in 0.25s cubic-bezier(0.22,0.61,0.36,1)',
@@ -108,13 +128,17 @@ export default {
         reel: 'reel 2.4s linear infinite',
         coin3d: 'coin3d 2.4s linear infinite',
         floaty: 'floaty 3.4s ease-in-out infinite',
+        drift: 'drift 12s ease-in-out infinite',
         ball: 'ball 3s ease-in-out infinite',
         pop: 'pop 0.4s cubic-bezier(0.22,0.61,0.36,1)',
+        deal: 'deal 0.32s cubic-bezier(0.22,0.61,0.36,1) both',
         'reel-spin': 'reel-spin 0.22s linear infinite',
         'reel-roll': 'reel-roll 0.45s linear infinite',
         glow: 'glow 1.8s ease-in-out infinite',
         'jackpot-flash': 'jackpot-flash 0.7s ease-in-out infinite',
         shake: 'shake 0.5s ease-in-out',
+        'dice-tumble': 'dice-tumble 0.55s cubic-bezier(0.5,0.05,0.4,0.95) infinite',
+        'win-burst': 'win-burst 0.55s cubic-bezier(0.22,0.61,0.36,1) both',
       },
     },
   },

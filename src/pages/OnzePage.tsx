@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/Button';
 import { Eyebrow, RingAvatar, SectionHeader } from '@/components/ui/primitives';
 import {
   FORMATIONS,
+  FORMATION_COORDS,
   YOUR_TEAM,
   type Formation,
   type GamePlayer,
@@ -14,7 +15,7 @@ import {
   buildOffers,
   latestIn,
   posEligible,
-  posLine,
+  predictTable,
   rateXI,
   rosterOf,
   simulateSeason,
@@ -22,11 +23,30 @@ import {
   standingsAfter,
   yourMatch,
 } from '@/features/onze/onze';
-import { MAX_YEAR, MIN_YEAR, YEARS, type Line } from '@/features/onze/onzeData';
+import { MAX_YEAR, MIN_YEAR, YEARS, seasonLabel } from '@/features/onze/onzeData';
 import { useOnzeLeaderboard, useSubmitOnzeScore, type OnzeScope } from '@/features/onze/useOnze';
 
 type Phase = 'setup' | 'draft' | 'result';
-const LINE_ORDER: Line[] = ['FW', 'MF', 'DF', 'GK'];
+
+/** Subtle vertical-pitch markings (own goal at the bottom). */
+function PitchLines() {
+  return (
+    <svg viewBox="0 0 100 140" preserveAspectRatio="none" className="pointer-events-none absolute inset-0 h-full w-full" aria-hidden>
+      <g fill="none" stroke="rgba(255,255,255,0.13)" strokeWidth="0.5">
+        <rect x="2" y="2" width="96" height="136" rx="1" />
+        <line x1="2" y1="70" x2="98" y2="70" />
+        <circle cx="50" cy="70" r="11" />
+        <circle cx="50" cy="70" r="0.8" fill="rgba(255,255,255,0.2)" />
+        {/* bottom box (own goal) */}
+        <rect x="26" y="118" width="48" height="20" />
+        <rect x="40" y="131" width="20" height="7" />
+        {/* top box (attack) */}
+        <rect x="26" y="2" width="48" height="20" />
+        <rect x="40" y="2" width="20" height="7" />
+      </g>
+    </svg>
+  );
+}
 
 function Face({ p, size = 40 }: { p: GamePlayer; size?: number }) {
   const [err, setErr] = useState(false);
@@ -77,7 +97,7 @@ function Leaderboard() {
 export function OnzePage() {
   const [mode, setMode] = useState<Mode>('epoca');
   const [formation, setFormation] = useState<Formation>('4-3-3');
-  const [startY, setStartY] = useState(Math.max(MIN_YEAR, MAX_YEAR - 6));
+  const [startY, setStartY] = useState(MIN_YEAR); // default: use all available seasons
   const [endY, setEndY] = useState(MAX_YEAR);
   const [almanac, setAlmanac] = useState(false);
 
@@ -213,7 +233,7 @@ export function OnzePage() {
         </p>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_300px]">
+      <div className="space-y-6">
         <div className="space-y-5">
           {phase === 'setup' && (
             <div className="card space-y-5 p-6">
@@ -229,13 +249,13 @@ export function OnzePage() {
                 <label className="block">
                   <span className="mb-1.5 block font-sans text-[10.5px] font-medium uppercase tracking-[0.18em] text-muted-2">De</span>
                   <select value={startY} onChange={(e) => setStartY(Number(e.target.value))} className="focus-ring w-full rounded border border-border bg-surface px-3 py-2 font-mono text-sm text-text">
-                    {YEARS.map((y) => <option key={y} value={y}>{y}</option>)}
+                    {YEARS.map((y) => <option key={y} value={y}>{seasonLabel(y)}</option>)}
                   </select>
                 </label>
                 <label className="block">
                   <span className="mb-1.5 block font-sans text-[10.5px] font-medium uppercase tracking-[0.18em] text-muted-2">Até</span>
                   <select value={endY} onChange={(e) => setEndY(Number(e.target.value))} className="focus-ring w-full rounded border border-border bg-surface px-3 py-2 font-mono text-sm text-text">
-                    {YEARS.map((y) => <option key={y} value={y}>{y}</option>)}
+                    {YEARS.map((y) => <option key={y} value={y}>{seasonLabel(y)}</option>)}
                   </select>
                 </label>
               </div>
@@ -258,64 +278,62 @@ export function OnzePage() {
           )}
 
           {phase !== 'setup' && (
-            <>
-              {/* Pitch */}
-              <div className="felt felt-rail mx-auto w-full max-w-xl space-y-4 rounded-lg p-4 sm:p-6">
-                <div className="flex items-center justify-between">
+            <div className="grid gap-5 lg:grid-cols-[minmax(360px,440px)_minmax(0,1fr)] lg:items-start">
+              {/* Pitch (left) — each slot sits at its real position on the field. */}
+              <div className="felt felt-rail w-full rounded-lg p-3 sm:p-4">
+                <div className="mb-2 flex items-center justify-between">
                   <span className="font-mono text-xs text-gold-light">{formation}</span>
                   <span className="font-sans text-xs text-muted">{almanac ? 'Almanaque' : `Equipa ${live.total} · Química +${live.chemistry}`}</span>
                 </div>
-                {LINE_ORDER.map((line) => {
-                  const idxs = slots.map((pos, i) => (posLine(pos) === line ? i : -1)).filter((i) => i >= 0);
-                  if (idxs.length === 0) return null;
-                  return (
-                    <div key={line} className="flex flex-wrap justify-center gap-2 sm:gap-3">
-                      {idxs.map((i) => {
-                        const p = picks[i];
-                        const canPlace = phase === 'draft' && !!armed && !p && posEligible(slots[i]!, armed);
-                        const dim = phase === 'draft' && !!armed && !p && !posEligible(slots[i]!, armed);
-                        return (
-                          <button
-                            key={i}
-                            type="button"
-                            onClick={() => {
-                              if (phase !== 'draft') return;
-                              if (armed) { if (canPlace) place(armed, i); }
-                              else if (p) clearSlot(i);
-                            }}
-                            title={canPlace ? 'Colocar aqui' : p ? 'Tocar para remover' : slots[i]}
-                            className={`relative flex h-[78px] w-[88px] flex-col items-center justify-center gap-0.5 rounded-md border-2 px-1 text-center transition-all ${
-                              canPlace ? 'animate-glow cursor-pointer border-gold bg-gold/20'
-                              : dim ? 'border-border/20 bg-bg/20 opacity-35'
-                              : p ? 'border-gold/40 bg-bg/55 hover:border-negative/60'
-                              : 'border-gold/25 bg-bg/40'
-                            }`}
-                          >
-                            <span className="absolute left-1.5 top-1 font-mono text-[8px] font-semibold text-gold/70">{slots[i]}</span>
-                            {p ? (
-                              <>
-                                <Face p={p} size={28} />
-                                <span className="line-clamp-1 w-full px-0.5 font-sans text-[10px] leading-tight text-text">{p.name}</span>
-                                {p.year && <span className="font-mono text-[8px] text-muted-2">{p.year}</span>}
-                              </>
-                            ) : (
-                              <span className="font-display text-base font-medium text-muted-2">{slots[i]}</span>
-                            )}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  );
-                })}
+                <div className="relative mx-auto w-full" style={{ aspectRatio: '5 / 7' }}>
+                  <PitchLines />
+                  {slots.map((pos, i) => {
+                    const p = picks[i];
+                    const c = FORMATION_COORDS[formation][i]!;
+                    const canPlace = phase === 'draft' && !!armed && !p && posEligible(pos, armed);
+                    const dim = phase === 'draft' && !!armed && !p && !posEligible(pos, armed);
+                    return (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => {
+                          if (phase !== 'draft') return;
+                          if (armed) { if (canPlace) place(armed, i); }
+                          else if (p) clearSlot(i);
+                        }}
+                        title={canPlace ? 'Colocar aqui' : p ? 'Tocar para remover' : pos}
+                        style={{ left: `${c.x}%`, top: `${c.y}%` }}
+                        className="absolute flex w-[18%] min-w-[52px] max-w-[68px] -translate-x-1/2 -translate-y-1/2 flex-col items-center"
+                      >
+                        <span className={`flex aspect-square w-full items-center justify-center rounded-full border-2 transition-all ${
+                          canPlace ? 'animate-glow cursor-pointer border-gold bg-gold/25'
+                          : dim ? 'border-border/20 bg-bg/20 opacity-30'
+                          : p ? 'border-gold/50 bg-bg/70 hover:border-negative/60'
+                          : 'border-dashed border-gold/30 bg-bg/30'
+                        }`}>
+                          {p ? <Face p={p} size={34} /> : <span className="font-display text-sm font-medium text-muted-2">{pos}</span>}
+                        </span>
+                        {p ? (
+                          <span className="mt-0.5 w-full rounded bg-black/55 px-1 text-center">
+                            <span className="block truncate font-sans text-[10px] leading-tight text-text">{p.name}</span>
+                            {!almanac && <span className="font-mono text-[9px] font-semibold text-gold">{p.rating}{p.year ? ` · ${seasonLabel(p.year)}` : ''}</span>}
+                          </span>
+                        ) : (
+                          <span className="mt-0.5 font-mono text-[8px] font-semibold uppercase tracking-wider text-gold/70">{pos}</span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
               {phase === 'draft' ? (
-                <div className="mx-auto w-full max-w-xl card space-y-3 p-4 sm:p-5">
+                <div className="card space-y-3 p-4 sm:p-5">
                   {offer && (
                     <>
                       <div className="flex items-center justify-between gap-2">
                         <p className="min-w-0 truncate font-sans text-sm font-medium text-text">
-                          A tua equipa: {offer.club} <span className="font-mono text-gold">· {offer.year}</span>
+                          A tua equipa: {offer.club} <span className="font-mono text-gold">· {seasonLabel(offer.year)}</span>
                         </p>
                         <span className="shrink-0 font-sans text-[10px] uppercase tracking-wider text-muted-2">{xi.length}/11</span>
                       </div>
@@ -329,8 +347,15 @@ export function OnzePage() {
                         <p className="font-sans text-[11px] text-muted-2">Escolha um jogador — só pode tirar um de cada clube.</p>
                       )}
 
-                      <div className="grid max-h-[340px] gap-2 overflow-y-auto sm:grid-cols-2">
-                        {roster.map((p) => {
+                      <div className="grid max-h-[460px] gap-2 overflow-y-auto sm:grid-cols-2">
+                        {[...roster]
+                          .sort((a, b) => {
+                            const ua = openEligible(a).length > 0 ? 1 : 0;
+                            const ub = openEligible(b).length > 0 ? 1 : 0;
+                            if (ua !== ub) return ub - ua;
+                            return b.rating - a.rating;
+                          })
+                          .map((p) => {
                           const usable = openEligible(p).length > 0;
                           const isArmed = armed?.id === p.id;
                           return (
@@ -360,7 +385,7 @@ export function OnzePage() {
                   </Button>
                 </div>
               ) : mode === 'sete' && sete ? (
-                <div className="mx-auto w-full max-w-xl card space-y-4 p-6 text-center">
+                <div className="card space-y-4 p-6 text-center">
                   <p className="font-sans text-[10px] uppercase tracking-[0.3em] text-muted-2">Resultado</p>
                   <p className={`font-display text-3xl font-bold ${sete.champion ? 'text-gold' : 'text-text'}`}>{sete.champion ? '✦ 7–0 · CAMPEÃO ✦' : sete.record}</p>
                   <p className="font-sans text-sm text-muted">Equipa {sete.rating.total} · química +{sete.rating.chemistry} · {sete.score} pts</p>
@@ -369,12 +394,31 @@ export function OnzePage() {
                       <span key={r.round} title={`${r.opponent} (${r.opponentRating})${r.boss ? ' · Lendas' : ''}`} className={`flex h-7 w-7 items-center justify-center rounded text-xs font-bold ${r.win ? 'bg-positive text-bg' : 'bg-negative text-white'} ${r.boss ? 'ring-2 ring-gold' : ''}`}>{r.win ? 'V' : 'D'}</span>
                     ))}
                   </div>
+
+                  {/* The XI you fielded, with each player's rating. */}
+                  <div className="border-t border-border pt-4 text-left">
+                    <p className="mb-2 text-center font-sans text-[10px] uppercase tracking-[0.3em] text-muted-2">O teu onze</p>
+                    <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">
+                      {[...xi].sort((a, b) => b.rating - a.rating).map((p) => (
+                        <div key={p.id} className="flex items-center gap-2 rounded border border-border bg-surface px-2 py-1.5">
+                          <Face p={p} size={26} />
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate font-sans text-[11px] text-text">{p.name}</span>
+                            <span className="font-sans text-[9px] uppercase tracking-wider text-muted-2">{p.pos}</span>
+                          </span>
+                          <span className="shrink-0 font-mono text-sm font-semibold text-gold">{p.rating}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
                   <Button variant="secondary" onClick={() => setPhase('setup')} className="w-full">Jogar outra vez</Button>
                 </div>
               ) : season ? (
-                <div className="mx-auto w-full max-w-xl">
+                <div className="min-w-0">
                   <SeasonView
                     season={season} step={step} auto={auto} over={seasonOver} table={tableUpTo} lastMatch={lastMatch}
+                    predicted={predictTable(season)}
                     onNext={() => setStep((s) => Math.min(season.jornadas.length, s + 1))}
                     onAuto={() => setAuto((v) => !v)}
                     onSkip={() => { setAuto(false); setStep(season.jornadas.length); }}
@@ -382,25 +426,29 @@ export function OnzePage() {
                   />
                 </div>
               ) : null}
-            </>
+            </div>
           )}
         </div>
 
-        <aside className="lg:pt-2"><Leaderboard /></aside>
+        {/* Leaderboard moved to the bottom, full-width. */}
+        <div className="mx-auto w-full max-w-2xl border-t border-border pt-5"><Leaderboard /></div>
       </div>
     </div>
   );
 }
 
 function SeasonView({
-  season, step, auto, over, table, lastMatch, onNext, onAuto, onSkip, onAgain,
+  season, step, auto, over, table, lastMatch, predicted, onNext, onAuto, onSkip, onAgain,
 }: {
   season: SeasonResult; step: number; auto: boolean; over: boolean;
   table: ReturnType<typeof standingsAfter>; lastMatch: ReturnType<typeof yourMatch>;
+  predicted: ReturnType<typeof predictTable>;
   onNext: () => void; onAuto: () => void; onSkip: () => void; onAgain: () => void;
 }) {
   const total = season.jornadas.length;
   const myPos = over ? table.findIndex((r) => r.team === YOUR_TEAM) + 1 : 0;
+  const myExpected = predicted.find((r) => r.team === YOUR_TEAM)?.pos ?? 0;
+  const [view, setView] = useState<'tabela' | 'prog'>('tabela');
   return (
     <div className="card space-y-4 p-4 sm:p-5">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -428,22 +476,62 @@ function SeasonView({
           {lastMatch.scorers.length > 0 && <p className="mt-1 font-sans text-[11px] text-muted-2">{lastMatch.scorers.map((s) => `${s.minute}' ${s.name}`).join(' · ')}</p>}
         </div>
       ) : (
-        <p className="py-2 text-center font-sans text-sm text-muted-2">Carregue em Seguinte para começar a época.</p>
+        <p className="py-1 text-center font-sans text-sm text-muted-2">
+          Prognóstico antes do apito inicial — o teu XI parte como{' '}
+          <span className="font-semibold text-gold">{myExpected}.º favorito</span>. Carregue em Seguinte para começar.
+        </p>
       )}
-      <div className="overflow-hidden rounded border border-border">
-        <div className="grid grid-cols-[24px_1fr_28px_28px_32px] gap-2 border-b border-border bg-surface px-3 py-1.5 font-sans text-[9px] uppercase tracking-wider text-muted-2">
-          <span>#</span><span>Clube</span><span className="text-center">DG</span><span className="text-center">J</span><span className="text-center">Pts</span>
-        </div>
-        <div className="max-h-[420px] overflow-y-auto">
-          {table.map((r, i) => (
-            <div key={r.team} className={`grid grid-cols-[24px_1fr_28px_28px_32px] items-center gap-2 border-b border-border/50 px-3 py-1.5 text-sm ${r.team === YOUR_TEAM ? 'bg-gold/[0.1]' : ''}`}>
-              <span className={`font-display ${i < 4 ? 'text-positive' : i >= table.length - 3 ? 'text-negative' : 'text-muted-2'}`}>{i + 1}</span>
-              <span className={`truncate font-sans ${r.team === YOUR_TEAM ? 'font-semibold text-gold' : 'text-body'}`}>{r.team}</span>
-              <span className="text-center font-mono text-xs text-muted-2">{r.GD > 0 ? `+${r.GD}` : r.GD}</span>
-              <span className="text-center font-mono text-xs text-muted-2">{r.P}</span>
-              <span className="text-center font-mono font-semibold text-text">{r.PTS}</span>
-            </div>
+
+      {/* Ranking — available at any time: live table or the pre-season prediction. */}
+      <div>
+        <div className="mb-2 flex gap-1.5">
+          {([['tabela', 'Classificação'], ['prog', 'Prognóstico']] as const).map(([k, label]) => (
+            <button
+              key={k}
+              onClick={() => setView(k)}
+              className={`focus-ring rounded-full px-3 py-1 font-sans text-[11px] font-medium uppercase tracking-wider transition-colors ${
+                view === k ? 'bg-gold text-bg' : 'border border-border text-muted-2 hover:text-text'
+              }`}
+            >
+              {label}
+            </button>
           ))}
+        </div>
+
+        <div className="overflow-hidden rounded border border-border">
+          {view === 'tabela' ? (
+            <>
+              <div className="grid grid-cols-[26px_1fr_40px_30px_38px] gap-1.5 border-b border-border bg-surface px-3 py-1.5 font-sans text-[9px] uppercase tracking-wider text-muted-2">
+                <span>#</span><span>Clube</span><span className="text-right">DG</span><span className="text-right">J</span><span className="text-right">Pts</span>
+              </div>
+              <div className="max-h-[440px] overflow-y-auto">
+                {table.map((r, i) => (
+                  <div key={r.team} className={`grid grid-cols-[26px_1fr_40px_30px_38px] items-center gap-1.5 border-b border-border/50 px-3 py-1.5 text-sm ${r.team === YOUR_TEAM ? 'bg-gold/[0.1]' : ''}`}>
+                    <span className={`font-display ${i < 4 ? 'text-positive' : i >= table.length - 3 ? 'text-negative' : 'text-muted-2'}`}>{i + 1}</span>
+                    <span className={`truncate font-sans ${r.team === YOUR_TEAM ? 'font-semibold text-gold' : 'text-body'}`}>{r.team}</span>
+                    <span className="text-right font-mono text-xs text-muted-2">{r.GD > 0 ? `+${r.GD}` : r.GD}</span>
+                    <span className="text-right font-mono text-xs text-muted-2">{r.P}</span>
+                    <span className="text-right font-mono font-semibold text-text">{r.PTS}</span>
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="grid grid-cols-[26px_1fr_48px] gap-1.5 border-b border-border bg-surface px-3 py-1.5 font-sans text-[9px] uppercase tracking-wider text-muted-2">
+                <span>#</span><span>Classificação esperada</span><span className="text-right">Força</span>
+              </div>
+              <div className="max-h-[440px] overflow-y-auto">
+                {predicted.map((r) => (
+                  <div key={r.team} className={`grid grid-cols-[26px_1fr_48px] items-center gap-1.5 border-b border-border/50 px-3 py-1.5 text-sm ${r.team === YOUR_TEAM ? 'bg-gold/[0.1]' : ''}`}>
+                    <span className={`font-display ${r.pos <= 4 ? 'text-positive' : r.pos > predicted.length - 3 ? 'text-negative' : 'text-muted-2'}`}>{r.pos}</span>
+                    <span className={`truncate font-sans ${r.team === YOUR_TEAM ? 'font-semibold text-gold' : 'text-body'}`}>{r.team}</span>
+                    <span className="text-right font-mono text-xs text-gold">{r.rating}</span>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>

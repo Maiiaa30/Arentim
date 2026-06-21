@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/features/auth/AuthProvider';
+import { profileKey } from '@/features/profile/useProfile';
 import type { FriendRequest, FriendRow, UserSearchResult } from '@/types/db';
 
 export function useFriends() {
@@ -78,4 +79,31 @@ export function useFriendActions() {
   });
 
   return { sendRequest, respond, remove };
+}
+
+/** Ask a friend for Tostões — drops a request notification (no money moves). */
+export function useRequestTos() {
+  return useMutation({
+    mutationFn: async (input: { from: string; amount: number }) => {
+      const { error } = await supabase.rpc('request_tos', { p_from: input.from, p_amount: input.amount });
+      if (error) throw error;
+    },
+  });
+}
+
+/** Gift Tostões to a friend (atomic transfer via the gift_tos RPC). */
+export function useGiftTos() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { to: string; amount: number }) => {
+      const { data, error } = await supabase.rpc('gift_tos', { p_to: input.to, p_amount: input.amount });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: profileKey(user?.id) });
+      void qc.invalidateQueries({ queryKey: ['friends', user?.id] });
+    },
+  });
 }

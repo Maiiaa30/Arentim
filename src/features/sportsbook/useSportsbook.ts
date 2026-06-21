@@ -84,7 +84,9 @@ export function useFixtures() {
 }
 
 export interface BetWithLegs extends Bet {
-  legs: (BetSelectionRow & { fixture?: Pick<Fixture, 'home' | 'away' | 'status'> })[];
+  legs: (BetSelectionRow & {
+    fixture?: Pick<Fixture, 'home' | 'away' | 'status' | 'home_score' | 'away_score'>;
+  })[];
 }
 
 /** The signed-in user's bets with their legs and fixture names. */
@@ -111,7 +113,7 @@ export function useMyBets() {
       const fixtureIds = [...new Set(legs.map((l) => l.fixture_id))];
       const { data: fixtures, error: fxErr } = await supabase
         .from('fixtures')
-        .select('id, home, away, status')
+        .select('id, home, away, status, home_score, away_score')
         .in('id', fixtureIds);
       if (fxErr) throw fxErr;
 
@@ -122,7 +124,18 @@ export function useMyBets() {
           .filter((l) => l.bet_id === b.id)
           .map((l) => {
             const fx = fxById.get(l.fixture_id);
-            return fx ? { ...l, fixture: { home: fx.home, away: fx.away, status: fx.status } } : l;
+            return fx
+              ? {
+                  ...l,
+                  fixture: {
+                    home: fx.home,
+                    away: fx.away,
+                    status: fx.status,
+                    home_score: fx.home_score,
+                    away_score: fx.away_score,
+                  },
+                }
+              : l;
           }),
       }));
     },
@@ -136,11 +149,32 @@ export function usePlaceBet() {
     mutationFn: async (input: {
       selections: BetSelectionInput[];
       stake: number;
+      /** Stable per-submission key so a retry can't double-debit (audit H1). */
+      idempotencyKey: string;
     }): Promise<PlaceBetResult> => {
       const { data, error } = await supabase.rpc('place_bet', {
         p_selections: input.selections,
         p_stake: input.stake,
+        p_idempotency_key: input.idempotencyKey,
       });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: profileKey(user?.id) });
+      void qc.invalidateQueries({ queryKey: ['bets', user?.id] });
+      void qc.invalidateQueries({ queryKey: ['transactions', user?.id] });
+    },
+  });
+}
+
+/** Early cash-out: sell a still-pending, pre-kickoff bet back for 90% of stake. */
+export function useCashoutBet() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (betId: number) => {
+      const { data, error } = await supabase.rpc('cashout_bet', { p_bet_id: betId });
       if (error) throw error;
       return data;
     },

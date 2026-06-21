@@ -2,31 +2,13 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useProfile } from '@/features/profile/useProfile';
 import { useBlackjack, useBlackjackCurrent } from '@/features/casino/useBlackjack';
-import { PlayingCard } from '@/features/casino/PlayingCard';
+import { BlackjackTable } from '@/features/casino/BlackjackTable';
 import { StakeChips } from '@/features/casino/StakeChips';
 import { WinCelebration } from '@/features/casino/WinCelebration';
-import { Chip } from '@/features/casino/Chip';
 import { Button } from '@/components/ui/Button';
 import { Eyebrow } from '@/components/ui/primitives';
 import { formatAmount } from '@/lib/format';
 import type { BlackjackView } from '@/types/db';
-
-/** Cards animate in with a small staggered pop as they're dealt. */
-function DealtCard({ card, i }: { card: number | null; i: number }) {
-  return (
-    <span className="inline-block animate-pop" style={{ animationDelay: `${i * 70}ms` }}>
-      <PlayingCard card={card} />
-    </span>
-  );
-}
-
-const outcomeLabel: Record<string, { text: string; tone: string }> = {
-  win: { text: 'Ganhou', tone: 'text-positive' },
-  blackjack: { text: 'Blackjack!', tone: 'text-gold' },
-  push: { text: 'Empate', tone: 'text-muted' },
-  lose: { text: 'Perdeu', tone: 'text-negative' },
-  busted: { text: 'Rebentou', tone: 'text-negative' },
-};
 
 export function BlackjackPage() {
   const { data: profile } = useProfile();
@@ -45,7 +27,10 @@ export function BlackjackPage() {
   const balance = profile?.balance ?? 0;
   const busy = deal.isPending || act.isPending;
   const inPlay = view?.status === 'player_turn';
-  const showBetting = !view || view.status === 'complete';
+  const complete = view?.status === 'complete';
+  const showBetting = !view || complete;
+  const won = complete && view.payout > 0;
+  const isBlackjackWin = complete && view.hands.some((h) => h.status === 'blackjack');
 
   async function onDeal() {
     if (busy || stake > balance) return;
@@ -71,6 +56,8 @@ export function BlackjackPage() {
 
   return (
     <div className="animate-fade-in space-y-6">
+      {won && <WinCelebration key={view.hand_id} jackpot={isBlackjackWin} />}
+
       <div>
         <Link to="/casino" className="font-sans text-sm text-muted-2 hover:text-text">← Casino</Link>
         <Eyebrow className="mt-3">O Salão</Eyebrow>
@@ -78,96 +65,126 @@ export function BlackjackPage() {
         <p className="mt-2 font-sans text-sm text-muted">O croupier pára nos 17 · blackjack paga 3:2</p>
       </div>
 
-      <div className="felt felt-rail relative space-y-8 overflow-hidden rounded-lg p-6">
-        {view?.status === 'complete' && view.payout > 0 && (
-          <WinCelebration key={view.hand_id} jackpot={view.hands.some((h) => h.status === 'blackjack')} />
-        )}
-        {view ? (
-          <>
-            {/* Dealer */}
-            <div>
-              <p className="mb-2 font-sans text-sm text-muted">
-                Croupier {view.dealer_total !== null && <span className="text-text">· {view.dealer_total}</span>}
+      <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+        {/* The felt table */}
+        <BlackjackTable view={view} inPlay={!!inPlay} pendingStake={view ? 0 : stake}>
+          {/* Result banner */}
+          {complete && (
+            <div className="text-center">
+              <p
+                className={`font-display text-xl font-bold ${won ? 'text-positive' : 'text-muted'}`}
+              >
+                {won
+                  ? `Devolvido ${formatAmount(view.payout)} Tostões`
+                  : 'Sem retorno nesta mão'}
               </p>
-              <div className="flex gap-2">
-                {view.dealer.map((c, i) => (
-                  <DealtCard key={i} card={c} i={i} />
-                ))}
-                {view.dealer_hidden && <DealtCard card={null} i={view.dealer.length} />}
-              </div>
+            </div>
+          )}
+
+          {/* In-play actions, anchored to the felt */}
+          {inPlay && view?.options && (
+            <div className="mt-2 flex flex-wrap justify-center gap-2">
+              <Button variant="primary" onClick={() => onAction('hit')} disabled={busy || !view.options.can_hit}>
+                Pedir
+              </Button>
+              <Button variant="secondary" onClick={() => onAction('stand')} disabled={busy || !view.options.can_stand}>
+                Ficar
+              </Button>
+              <Button variant="secondary" onClick={() => onAction('double')} disabled={busy || !view.options.can_double}>
+                Dobrar
+              </Button>
+              <Button variant="secondary" onClick={() => onAction('split')} disabled={busy || !view.options.can_split}>
+                Dividir
+              </Button>
+            </div>
+          )}
+
+          {!view && (
+            <p className="text-center font-sans text-sm text-emerald-100/55">
+              Escolha a aposta e distribua para começar.
+            </p>
+          )}
+        </BlackjackTable>
+
+        {/* Side rail — betting + house rules */}
+        <div className="space-y-4">
+          <div className="card space-y-4 p-5">
+            <div className="flex items-center justify-between">
+              <span className="font-display text-sm uppercase tracking-[0.16em] text-muted">
+                {complete ? 'Nova mão' : 'A sua aposta'}
+              </span>
+              <span className="font-mono text-lg font-semibold tabular-nums text-gold-light">
+                {formatAmount(stake)}
+              </span>
             </div>
 
-            {/* Player hands */}
-            <div className="space-y-4">
-              {view.hands.map((hand, i) => {
-                const isActive = inPlay && i === view.active;
-                const oc = outcomeLabel[hand.status];
-                return (
-                  <div
-                    key={i}
-                    className={`rounded p-3 transition-colors ${
-                      isActive ? 'bg-gold/[0.07] ring-1 ring-gold/40' : ''
-                    }`}
+            {showBetting ? (
+              <>
+                <StakeChips stake={stake} onChange={setStake} balance={balance} disabled={busy} />
+                {/* Custom bet — type any amount up to the balance. */}
+                <div className="flex items-center gap-1.5">
+                  <input
+                    type="number"
+                    min={1}
+                    max={balance}
+                    value={stake}
+                    disabled={busy}
+                    onChange={(e) => setStake(Math.max(1, Math.floor(Number(e.target.value) || 0)))}
+                    aria-label="Aposta personalizada"
+                    className="focus-ring w-full rounded border border-border bg-bg px-2.5 py-1.5 text-right font-mono text-sm text-text disabled:opacity-50"
+                  />
+                  <button
+                    type="button"
+                    disabled={busy || balance < 1}
+                    onClick={() => setStake(balance)}
+                    className="focus-ring shrink-0 rounded-full border border-border px-3 py-1.5 font-sans text-[11px] uppercase tracking-wider text-muted-2 hover:text-text disabled:opacity-40"
                   >
-                    <p className="mb-2 font-sans text-sm text-muted">
-                      {view.hands.length > 1 ? `Mão ${i + 1}` : 'Você'} ·{' '}
-                      <span className="text-text">{hand.total}</span>
-                      {view.status === 'complete' && oc && (
-                        <span className={`ml-2 font-semibold ${oc.tone}`}>{oc.text}</span>
-                      )}
-                    </p>
-                    <div className="flex gap-2">
-                      {hand.cards.map((c, j) => (
-                        <DealtCard key={j} card={c} i={j} />
-                      ))}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Result */}
-            {view.status === 'complete' && (
-              <p className={`text-center font-display text-lg font-bold ${view.payout > 0 ? 'text-positive' : 'text-muted'}`}>
-                {view.payout > 0 ? `Devolvido ${formatAmount(view.payout)} Tostões` : 'Sem retorno nesta mão'}
+                    Máx
+                  </button>
+                </div>
+                <Button
+                  variant="primary"
+                  onClick={onDeal}
+                  disabled={busy || stake > balance || stake < 1}
+                  className="w-full"
+                >
+                  {busy
+                    ? 'A distribuir…'
+                    : complete
+                      ? `Distribuir de novo · ${formatAmount(stake)}`
+                      : `Distribuir · ${formatAmount(stake)}`}
+                </Button>
+                {stake > balance && (
+                  <p className="font-sans text-xs text-negative">Tostões insuficientes para esta aposta.</p>
+                )}
+              </>
+            ) : (
+              <p className="font-sans text-sm text-muted">
+                Mão a decorrer — use as ações na mesa.
               </p>
             )}
 
-            {/* Actions */}
-            {inPlay && view.options && (
-              <div className="flex flex-wrap justify-center gap-2">
-                <Button variant="primary" onClick={() => onAction('hit')} disabled={busy || !view.options.can_hit}>Pedir</Button>
-                <Button variant="secondary" onClick={() => onAction('stand')} disabled={busy || !view.options.can_stand}>
-                  Ficar
-                </Button>
-                <Button variant="secondary" onClick={() => onAction('double')} disabled={busy || !view.options.can_double}>
-                  Dobrar
-                </Button>
-                <Button variant="secondary" onClick={() => onAction('split')} disabled={busy || !view.options.can_split}>
-                  Dividir
-                </Button>
-              </div>
-            )}
-          </>
-        ) : (
-          <p className="py-8 text-center font-sans text-muted">Faça uma aposta para distribuir.</p>
-        )}
-
-        {/* Betting */}
-        {showBetting && (
-          <div className="space-y-3 border-t border-border pt-6">
-            <div className="flex items-center justify-center gap-3">
-              <Chip value={stake} size={50} />
-              <span className="font-display text-lg text-text">Aposta · {formatAmount(stake)}</span>
-            </div>
-            <StakeChips stake={stake} onChange={setStake} balance={balance} disabled={busy} />
-            <Button variant="primary" onClick={onDeal} disabled={busy || stake > balance} className="w-full">
-              {busy ? 'A distribuir…' : view?.status === 'complete' ? `Distribuir de novo · ${formatAmount(stake)}` : `Distribuir · ${formatAmount(stake)}`}
-            </Button>
+            {error && <p className="font-sans text-sm text-negative">{error}</p>}
           </div>
-        )}
 
-        {error && <p className="text-center font-sans text-sm text-negative">{error}</p>}
+          <div className="card space-y-2 p-5">
+            <span className="font-display text-sm uppercase tracking-[0.16em] text-muted">Regras da casa</span>
+            <ul className="space-y-1.5 font-sans text-sm text-muted">
+              <li className="flex justify-between gap-3">
+                <span>Blackjack paga</span>
+                <span className="font-mono font-semibold text-gold-light">3:2</span>
+              </li>
+              <li className="flex justify-between gap-3">
+                <span>Croupier pára nos</span>
+                <span className="font-mono font-semibold text-gold-light">17</span>
+              </li>
+              <li className="flex justify-between gap-3">
+                <span>Vitória paga</span>
+                <span className="font-mono font-semibold text-gold-light">1:1</span>
+              </li>
+            </ul>
+          </div>
+        </div>
       </div>
     </div>
   );

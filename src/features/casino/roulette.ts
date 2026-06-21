@@ -9,6 +9,8 @@ export type RouletteColor = 'green' | 'red' | 'black';
 
 export type RouletteBetKind =
   | 'straight'
+  | 'split'
+  | 'corner'
   | 'red'
   | 'black'
   | 'even'
@@ -26,6 +28,8 @@ export interface RouletteBet {
   kind: RouletteBetKind;
   /** Only used by 'straight' (the chosen number 0–36). */
   selection: number | null;
+  /** Covered numbers for 'split' (2) and 'corner' (4). */
+  numbers?: number[];
   /** Whole-integer Tostões. */
   stake: number;
 }
@@ -50,6 +54,10 @@ export function multiplierFor(kind: RouletteBetKind): number {
   switch (kind) {
     case 'straight':
       return 36;
+    case 'split':
+      return 18;
+    case 'corner':
+      return 9;
     case 'dozen1':
     case 'dozen2':
     case 'dozen3':
@@ -67,6 +75,9 @@ export function isWinningBet(kind: RouletteBetKind, selection: number | null, n:
   switch (kind) {
     case 'straight':
       return selection === n;
+    case 'split':
+    case 'corner':
+      return false; // covered numbers live on the bet; resolved in betReturn
     case 'red':
       return n !== 0 && RED_NUMBERS.has(n);
     case 'black':
@@ -96,6 +107,9 @@ export function isWinningBet(kind: RouletteBetKind, selection: number | null, n:
 
 /** Total return for one bet against outcome `n` (0 if it lost). */
 export function betReturn(bet: RouletteBet, n: number): number {
+  if (bet.kind === 'split' || bet.kind === 'corner') {
+    return bet.numbers?.includes(n) ? bet.stake * multiplierFor(bet.kind) : 0;
+  }
   return isWinningBet(bet.kind, bet.selection, n) ? bet.stake * multiplierFor(bet.kind) : 0;
 }
 
@@ -107,4 +121,10 @@ export function slipPayout(bets: readonly RouletteBet[], n: number): number {
 /** Total staked across a slip. */
 export function totalStake(bets: readonly RouletteBet[]): number {
   return bets.reduce((sum, b) => sum + b.stake, 0);
+}
+
+/** A stable cell key identifying a bet position (for chip stacks + dedup). */
+export function betCellKey(kind: RouletteBetKind, selection: number | null, numbers?: number[]): string {
+  if (numbers && numbers.length) return `${kind}:${[...numbers].sort((a, b) => a - b).join('-')}`;
+  return `${kind}:${selection}`;
 }

@@ -100,17 +100,29 @@ Uses the same `FOOTBALL_DATA_TOKEN` / `SYNC_SECRET` secrets as `sync-fixtures`.
 supabase functions deploy poll-live-scores
 ```
 
-Schedule it more frequently during live windows (cron's minimum is 1 minute):
+Schedule it more frequently during live windows (cron's minimum is 1 minute).
+**Like `sync-fixtures`, the call needs all three headers** — the gateway
+`apikey` + `Authorization` (publishable/anon key) *and* the function's own
+`x-sync-secret`. Without the first two the Supabase gateway rejects the request
+with `UNAUTHORIZED_NO_AUTH_HEADER` before the function runs, so scores silently
+never update:
 
 ```sql
 select cron.schedule(
   'poll-live-scores', '* * * * *',
   $$ select net.http_post(
        url := 'https://kactlxdjoxjrqhmkjtfj.functions.supabase.co/poll-live-scores',
-       headers := jsonb_build_object('x-sync-secret', '<SYNC_SECRET>')
+       headers := jsonb_build_object(
+         'apikey', '<VITE_SUPABASE_ANON_KEY>',
+         'Authorization', 'Bearer <VITE_SUPABASE_ANON_KEY>',
+         'x-sync-secret', '<SYNC_SECRET>')
      ); $$
 );
 ```
+
+> If a `poll-live-scores` job already exists with the wrong headers, replace it:
+> `select cron.unschedule('poll-live-scores');` then re-run the block above.
+> Verify runs in `select * from cron.job_run_details order by start_time desc;`.
 
 ## generate-content (optional AI)
 

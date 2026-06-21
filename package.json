@@ -17,6 +17,8 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "db:migrate": "node scripts/migrate.mjs",
+    "db:reset": "node scripts/reset-database.mjs",
+    "deploy:functions": "node scripts/deploy-functions.mjs",
     "check:secrets": "node scripts/check-bundle-secrets.mjs"
   },
   "dependencies": {

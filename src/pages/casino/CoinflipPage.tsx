@@ -106,15 +106,23 @@ export function CoinflipPage() {
   const [outcome, setOutcome] = useState<CoinSide | null>(null);
   const [won, setWon] = useState<boolean | null>(null);
   const [flipping, setFlipping] = useState(false);
-  const [rotation, setRotation] = useState(0); // accumulated rotateX degrees
   const [spinId, setSpinId] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [restAngle, setRestAngle] = useState(0); // resting rotateX (face shown when idle)
   const timer = useRef<number | null>(null);
+  const coinRef = useRef<HTMLDivElement>(null);
+  const angleRef = useRef(0); // the coin's current resting rotateX, in degrees
 
   useEffect(() => () => { if (timer.current) window.clearTimeout(timer.current); }, []);
 
   const balance = profile?.balance ?? 0;
   const tooPoor = stake > balance;
+
+  const FLIP_MS = 1200;
+
+  // Which face is up at rest (heads near 0°, tails near 180°).
+  const restParity = (((restAngle % 360) + 360) % 360);
+  const headsUp = restParity < 90 || restParity >= 270;
 
   async function flip() {
     if (flipping || stake > balance) return;
@@ -124,20 +132,41 @@ export function CoinflipPage() {
     setFlipping(true);
     try {
       const res = await coinflip.mutateAsync({ stake, choice });
-      // Land the coin on the real outcome: several full turns, ending on the
-      // heads (0°) or tails (180°) face. Always rotate forward from here.
-      setRotation((r) => {
-        const base = r + 360 * 5;
-        const faceTarget = res.outcome === 'heads' ? 0 : 180;
-        const aligned = base - (base % 360) + faceTarget;
-        return aligned <= r ? aligned + 360 : aligned;
-      });
+
+      // Land on the real outcome. Heads shows at a multiple of 360°, tails at
+      // 180°. We animate with the Web Animations API (NOT a CSS transition):
+      // transitions interpolate between computed *matrices*, so a whole-turn
+      // rotation (1800°) collapses to identity and the coin never spins. WAAPI
+      // interpolates the angle itself, so every turn is visible.
+      const prev = angleRef.current;
+      const faceTarget = res.outcome === 'heads' ? 0 : 180;
+      let target = prev + 360 * 6; // six full tumbles for drama
+      target += (((faceTarget - (target % 360)) % 360) + 360) % 360; // align to face
+      const mid = prev + (target - prev) / 2;
+      angleRef.current = target;
+
+      const el = coinRef.current;
+      el?.getAnimations().forEach((a) => a.cancel()); // clear any stale fills
+      const anim = el?.animate?.(
+        [
+          { transform: `translateY(0px) scale(1) rotateX(${prev}deg)` },
+          { transform: `translateY(-96px) scale(1.12) rotateX(${mid}deg)`, offset: 0.5 },
+          { transform: `translateY(0px) scale(1) rotateX(${target}deg)` },
+        ],
+        { duration: FLIP_MS, easing: 'cubic-bezier(0.33,0.0,0.2,1)', fill: 'forwards' },
+      );
+
       timer.current = window.setTimeout(() => {
+        // Bake the landing pose into the inline transform and hand off from the
+        // animation, so the resting face is correct (and reliable even if the
+        // tab was backgrounded and the spin animation was throttled).
+        setRestAngle(target);
+        anim?.cancel();
         setOutcome(res.outcome);
         setWon(res.won);
         setFlipping(false);
         if (res.won) setSpinId((n) => n + 1);
-      }, 1000);
+      }, FLIP_MS);
     } catch (e) {
       setFlipping(false);
       setError(e instanceof Error ? e.message : 'O lançamento falhou.');
@@ -162,22 +191,31 @@ export function CoinflipPage() {
           A sua chamada · {SIDE_LABEL[choice]}
         </p>
 
-        {/* Coin + its cast shadow */}
+        {/* Coin + its cast shadow. NO `filter` on the coin or any ancestor of
+            it: a filter rasterises (flattens) its 3D subtree, which kills
+            backface-visibility and shows both faces (it always landed on
+            Coroa). Depth comes from the cast-shadow ellipse below instead. */}
         <div className="relative flex h-44 items-center justify-center [perspective:900px] sm:h-52">
           <div
+            ref={coinRef}
             className="relative h-32 w-32 [transform-style:preserve-3d] sm:h-40 sm:w-40"
-            style={{
-              transform: `rotateX(${rotation}deg)`,
-              transition: 'transform 1s cubic-bezier(0.2,0.7,0.2,1)',
-              filter: 'drop-shadow(0 14px 18px rgba(0,0,0,0.55))',
-            }}
+            style={{ transform: `rotateX(${restAngle}deg)` }}
           >
-            {/* Cara (heads) */}
-            <div className="absolute inset-0 [backface-visibility:hidden]">
+            {/* Both faces flip together in 3D (backface-visibility hides the one
+                facing away). As a guarantee against any 3D-flattening quirk, the
+                resting face is ALSO pinned by opacity — so when idle only the
+                actual result side is ever shown. During the flip both show so it
+                reads as a spinning coin. */}
+            <div
+              className="absolute inset-0 [backface-visibility:hidden] transition-opacity"
+              style={{ opacity: flipping || headsUp ? 1 : 0 }}
+            >
               <CoinFace side="heads" />
             </div>
-            {/* Coroa (tails) — pre-rotated to the back face */}
-            <div className="absolute inset-0 [backface-visibility:hidden] [transform:rotateX(180deg)]">
+            <div
+              className="absolute inset-0 [backface-visibility:hidden] [transform:rotateX(180deg)] transition-opacity"
+              style={{ opacity: flipping || !headsUp ? 1 : 0 }}
+            >
               <CoinFace side="tails" />
             </div>
           </div>

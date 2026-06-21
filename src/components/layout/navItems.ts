@@ -20,8 +20,17 @@ export const NAV: NavEntry[] = [
   {
     label: 'Casino',
     items: [
-      { to: '/casino', label: 'Casino' },
+      { to: '/casino', label: 'Todos os jogos' },
       { to: '/casino/slots', label: 'Slots' },
+      { to: '/casino/crash', label: 'Crash' },
+      { to: '/casino/mines', label: 'Mines' },
+      { to: '/casino/frango', label: 'Atravessa!' },
+      { to: '/casino/corrida', label: 'Corrida de Cavalos' },
+      { to: '/casino/wheel', label: 'Fita da Sorte' },
+      { to: '/casino/chest', label: 'Jogo dos Copos' },
+      { to: '/casino/dice', label: 'Dados' },
+      { to: '/casino/maior-menor', label: 'Maior ou Menor' },
+      { to: '/casino/sobe-e-desce', label: 'Sobe e Desce' },
     ],
   },
   {
@@ -32,7 +41,8 @@ export const NAV: NavEntry[] = [
       { to: '/onze', label: 'Onze de Ouro' },
     ],
   },
-  { to: '/poker', label: 'Póquer' },
+  { to: '/poker', label: 'Poker' },
+  { to: '/sueca', label: 'Sueca' },
   { to: '/friends', label: 'Amigos' },
   { to: '/challenges', label: 'Desafios' },
 ];

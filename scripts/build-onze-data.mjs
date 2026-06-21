@@ -2,11 +2,16 @@
 /**
  * Build the Onze de Ouro player dataset (REAL data).
  *
- * Source: lbenz730/fifa_model — per-season FIFA player ratings scraped from
- * fifaindex.com (seasons 2005–2020), fields: name, rating (overall), club,
- * preferred_positions, headshot_url, nationality. We download each season,
- * filter to Liga Portugal clubs, normalise, and write a compact JSON bundled in
- * the app. Run: `node scripts/build-onze-data.mjs` (re-run to refresh).
+ * Sources (all open, raw-CSV, unauthenticated — downloaded at build time):
+ *   - 2005–2020: lbenz730/fifa_model (fifaindex scrape) — name, rating, club,
+ *     preferred_positions, nationality.
+ *   - 2021–2024: BM0ohamed/EAFC-data-visualisation — one sofifa-schema
+ *     male_players.csv split on its `fifa_version` column.
+ *   - 2025: hasan69-cry/fc25-dataset (futbin-style schema, remapped).
+ *   - 2026: ismailoksuz/EAFC26-DataHub (sofifa-schema, league_name filter).
+ * Every season is filtered to Liga Portugal clubs via the precise canonClub()
+ * allowlist, normalised, and written to one compact JSON bundled in the app.
+ * Run: `node scripts/build-onze-data.mjs` (re-run to refresh).
  *
  * Data © fifaindex.com / EA Sports ratings — used here for a non-commercial,
  * play-money fan project.
@@ -28,6 +33,18 @@ const LINE = {
 };
 
 const norm = (s) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[.]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+
+/** Decode HTML entities the source CSVs leak into names (e.g. "N&#39;Doye"). */
+const cleanName = (s) =>
+  (s || '')
+    .replace(/&#x([0-9a-f]+);/gi, (_, c) => String.fromCharCode(parseInt(c, 16)))
+    .replace(/&#(\d+);/g, (_, c) => String.fromCharCode(Number(c)))
+    .replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+    .replace(/&[a-z]+;/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+/** Drop placeholder/junk entries (empty, or a 1–2 letter all-caps code like "MT"). */
+const isJunkName = (n) => !n || n.length < 2 || /^[A-Z]{1,2}$/.test(n);
 
 /**
  * Map a raw club string to its canonical Liga Portugal name, or null if it's
@@ -134,10 +151,11 @@ for (const year of YEARS) {
     if (!club) continue;
     const rating = parseInt(row[iRating], 10);
     const lines = linesFor(row[iPos] || '');
-    if (!Number.isFinite(rating) || lines.length === 0) continue;
+    const name = cleanName(row[iName]);
+    if (!Number.isFinite(rating) || lines.length === 0 || isJunkName(name)) continue;
     clubsSeen.add(club);
     (clubs[club] ??= []).push({
-      n: row[iName],
+      n: name,
       r: rating,
       p: row[iPos],
       l: lines,
@@ -148,6 +166,83 @@ for (const year of YEARS) {
 
   byYear[year] = buildClubs(clubs);
   console.log(`${year}: ${Object.keys(byYear[year]).length} clubs, ${Object.values(byYear[year]).reduce((s, c) => s + c.players.length, 0)} players`);
+}
+
+// Mid seasons 2021–2024 (FIFA 21–24) from a sofifa-schema combined mirror
+// (BM0ohamed/EAFC-data-visualisation). Same columns as the EAFC26 source plus a
+// `fifa_version` column we split on; clubs filtered by the precise canonClub()
+// allowlist (no league-string dependency, consistent with the 2005–2020 path).
+try {
+  const res = await fetch('https://raw.githubusercontent.com/BM0ohamed/EAFC-data-visualisation/main/src/dataset/male_players.csv');
+  if (res.ok) {
+    const rows = parseCSV(await res.text());
+    const h = rows[0];
+    const ix = (k) => h.indexOf(k);
+    const jVer = ix('fifa_version'), jName = ix('short_name'), jRating = ix('overall'),
+      jClub = ix('club_name'), jPos = ix('player_positions'), jNat = ix('nationality_name');
+    const WANT = [21, 22, 23, 24];
+    const byVer = {}; // year -> { club: players[] }
+    for (let r = 1; r < rows.length; r++) {
+      const row = rows[r];
+      if (!row || row.length < h.length) continue;
+      const ver = parseInt(row[jVer], 10);
+      if (!WANT.includes(ver)) continue;
+      const club = canonClub(row[jClub] || '');
+      if (!club) continue;
+      const rating = parseInt(row[jRating], 10);
+      const posStr = (row[jPos] || '').replace(/,\s*/g, '/'); // normalise to slash form
+      const lines = linesFor(posStr);
+      const name = cleanName(row[jName]);
+      if (!Number.isFinite(rating) || lines.length === 0 || isJunkName(name)) continue;
+      clubsSeen.add(club);
+      ((byVer[2000 + ver] ??= {})[club] ??= []).push({ n: name, r: rating, p: posStr, l: lines, ph: null, nat: row[jNat] || null });
+    }
+    for (const ver of WANT) {
+      const year = 2000 + ver;
+      if (!byVer[year]) { console.log(`! ${year}: no rows`); continue; }
+      byYear[year] = buildClubs(byVer[year]);
+      console.log(`${year}: ${Object.keys(byYear[year]).length} clubs, ${Object.values(byYear[year]).reduce((s, c) => s + c.players.length, 0)} players`);
+    }
+  } else {
+    console.log('! 2021-2024:', res.status);
+  }
+} catch (e) {
+  console.log('! 2021-2024:', String(e));
+}
+
+// Season 2025 (EA FC 25) from the futbin-style fc25-dataset — different schema
+// (Name/OVR/Team, single Position + comma-listed Alternative positions); remap
+// to our shape. canonClub() handles the modern club names.
+try {
+  const res = await fetch('https://raw.githubusercontent.com/hasan69-cry/fc25-dataset/main/male_players.csv');
+  if (res.ok) {
+    const rows = parseCSV(await res.text());
+    const h = rows[0];
+    const ix = (k) => h.indexOf(k);
+    const jName = ix('Name'), jRating = ix('OVR'), jClub = ix('Team'),
+      jPos = ix('Position'), jAlt = ix('Alternative positions'), jNat = ix('Nation');
+    const clubs = {};
+    for (let r = 1; r < rows.length; r++) {
+      const row = rows[r];
+      if (!row || row.length < h.length) continue;
+      const club = canonClub(row[jClub] || '');
+      if (!club) continue;
+      const rating = parseInt(row[jRating], 10);
+      const posStr = [row[jPos], ...(row[jAlt] || '').split(',')]
+        .map((s) => s.trim()).filter(Boolean).join('/');
+      const lines = linesFor(posStr);
+      const name = cleanName(row[jName]);
+      if (!Number.isFinite(rating) || lines.length === 0 || isJunkName(name)) continue;
+      clubsSeen.add(club);
+      (clubs[club] ??= []).push({ n: name, r: rating, p: posStr, l: lines, ph: null, nat: row[jNat] || null });
+    }
+    byYear[2025] = buildClubs(clubs);
+    console.log(`2025: ${Object.keys(byYear[2025]).length} clubs, ${Object.values(byYear[2025]).reduce((s, c) => s + c.players.length, 0)} players`);
+  } else {
+    console.log('! 2025:', res.status);
+  }
+} catch (e) {
+  console.log('! 2025:', String(e));
 }
 
 // Recent season (FC26 / 2025–26) from the sofifa-style EAFC26 dataset — uses a
@@ -170,9 +265,10 @@ try {
       const rating = parseInt(row[jRating], 10);
       const posStr = (row[jPos] || '').replace(/,\s*/g, '/'); // normalise to slash form
       const lines = linesFor(posStr);
-      if (!Number.isFinite(rating) || lines.length === 0) continue;
+      const name = cleanName(row[jName]);
+      if (!Number.isFinite(rating) || lines.length === 0 || isJunkName(name)) continue;
       clubsSeen.add(club);
-      (clubs[club] ??= []).push({ n: row[jName], r: rating, p: posStr, l: lines, ph: null, nat: row[jNat] || null });
+      (clubs[club] ??= []).push({ n: name, r: rating, p: posStr, l: lines, ph: null, nat: row[jNat] || null });
     }
     byYear[2026] = buildClubs(clubs);
     console.log(`2026: ${Object.keys(byYear[2026]).length} clubs, ${Object.values(byYear[2026]).reduce((s, c) => s + c.players.length, 0)} players`);

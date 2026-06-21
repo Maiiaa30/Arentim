@@ -9,20 +9,31 @@ balance is an in-app currency called **Tostões**. The interface is in
 
 ## Features
 
-- **Accounts & wallet** — email/password auth, profile with lifetime stats, an
-  integer-only Tostões ledger where every bet/win/bonus/adjustment reconciles.
+- **Accounts & wallet** — email/password auth, profile with lifetime stats,
+  achievements, and an integer-only Tostões ledger where every
+  bet/win/bonus/adjustment reconciles.
 - **Daily bonus** — play-gated, escalating streak (must play to keep the streak).
-- **Casino** — Roleta, Blackjack (pedir/ficar/dobrar/dividir), Slots, and Moeda
-  (coin-flip), all settled server-side with a CSPRNG.
+- **Casino** — Roleta, Blackjack (pedir/ficar/dobrar/dividir), Slots (5 themed
+  machines + a progressive jackpot), Moeda, Dados, Maior ou Menor, Sobe e Desce,
+  Fita da Sorte, Jogo dos Copos — all settled server-side with a CSPRNG.
+- **Live multiplayer rooms** — **Crash** and **Roleta** run as shared rooms:
+  one global round everyone watches in sync (server-authoritative, advisory-locked,
+  hidden values masked until safe), with live player panels.
 - **Sportsbook (Futebol)** — Primeira Liga & World Cup fixtures, 1·X·2 /
   over-under / both-teams-to-score markets, singles + accumulators (the
-  **Boletim** bet slip), live scores, and automatic settlement.
-- **Poker (Póquer)** — Texas Hold'em vs AI bots and private multiplayer tables
-  with friends (invite codes, bot-fill), with a server-authoritative dealer.
-- **Social** — friend requests, online presence, and global/friends leaderboards.
+  **Boletim** bet slip), early cash-out on pending bets, live scores, automatic
+  settlement, and a betting leaderboard.
+- **Poker (Póquer)** & **Sueca** — Hold'em vs AI bots + private multiplayer
+  tables, and the Portuguese trick-taking game vs bots or 2v2 with friends.
+- **Onze de Ouro** — pick a Portuguese XI from real Liga Portugal squads (2005–2026).
+- **Social** — friend requests, online presence, gifting/requesting Tostões,
+  head-to-head **duels**, a notification bell, and realtime updates (no reloads).
+- **Leaderboards** — all-time (net / biggest win / streak) + a monthly **season**
+  board that resets on the 1st, global or friends-scoped.
 - **Challenges (Desafios)** — recovery (anti-stuck rescue) and high-roller
   milestones + badges.
-- **Admin** — role-gated, fully audited player/economy/sportsbook management.
+- **Admin** — role-gated, fully audited player/economy/sportsbook management,
+  with a KPI dashboard and a season reset.
 - **AI content** — optional Gemini Flash match previews (text-only, untrusted).
 
 ## Design
@@ -116,6 +127,7 @@ applied, Edge Functions deployed). To exercise it yourself:
 | `npm test` / `test:e2e`                 | Vitest unit/integration / Playwright e2e      |
 | `npm run db:migrate`                    | Apply pending SQL migrations                  |
 | `npm run check:secrets`                 | Fail if a secret leaked into the built bundle |
+| `npm run db:reset -- --yes`             | **Wipe ALL players & gameplay data** before a fresh launch (keeps config: catalogs, slot machines, fixtures). Irreversible. |
 
 ## Quality gate
 

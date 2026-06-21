@@ -7,6 +7,7 @@ import { FeaturedMatch } from '@/features/sportsbook/FeaturedMatch';
 import { LiveFixtures } from '@/features/sportsbook/LiveFixtures';
 import { BetSlip } from '@/features/sportsbook/BetSlip';
 import { MyBets } from '@/features/sportsbook/MyBets';
+import { FootballLeaderboard } from '@/features/sportsbook/FootballLeaderboard';
 import type { Fixture } from '@/types/db';
 
 type Tab = 'fixtures' | 'bets';
@@ -111,8 +112,8 @@ export function SportsbookPage() {
       {tab === 'bets' ? (
         <MyBets />
       ) : (
-        <div className="flex flex-wrap gap-[30px]">
-          <div className="min-w-[300px] flex-[3_1_600px] space-y-6">
+        <div className="flex flex-wrap gap-6 sm:gap-[30px]">
+          <div className="min-w-0 flex-[3_1_600px] space-y-6">
             <FeaturedMatch />
             <LiveFixtures />
             {isLoading ? (
@@ -173,8 +174,9 @@ export function SportsbookPage() {
               </>
             )}
           </div>
-          <aside className="min-w-[296px] flex-[1_1_300px]">
+          <aside className="min-w-0 flex-[1_1_300px] space-y-6">
             <BetSlip />
+            <FootballLeaderboard />
           </aside>
         </div>
       )}
