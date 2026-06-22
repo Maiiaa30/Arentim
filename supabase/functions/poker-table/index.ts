@@ -195,13 +195,33 @@ Deno.serve(async (req) => {
       if (!state.handOver) return json({ error: 'hand in progress — try again shortly' }, 409);
       if (state.players.length >= 9) return json({ error: 'table full' }, 409);
 
+      // Claim the seat via the membership PK FIRST. This is the serialization
+      // point: if a second request (e.g. a second browser tab on the same
+      // account) is joining concurrently, exactly one INSERT wins — the loser
+      // gets a unique-violation and returns the current view WITHOUT buying in
+      // again. Fixes the "sit twice / double buy-in from two tabs" bug.
+      const claim = await db.from('poker_table_members').insert({ table_id: row.id, user_id: user.id }).select('joined_at');
+      if (claim.error) {
+        const { data: fresh } = await db.from('poker_tables').select('state').eq('id', row.id).maybeSingle();
+        const cur = (fresh?.state ?? state) as TableState;
+        return json({ table_id: row.id, view: viewFor(cur, user.id) });
+      }
+
+      // We own the seat. Debit once — idempotency-keyed to THIS seat-session
+      // (table + user + join time) so a retry can't double-charge, while a later
+      // legitimate re-join (new join time) still pays a fresh buy-in.
+      const joinedAt = claim.data?.[0]?.joined_at ?? '0';
       const { error: debit } = await db.rpc('apply_ledger_entry', {
-        p_user_id: user.id, p_type: 'bet', p_amount: -row.buy_in, p_game: 'poker', p_note: 'poker table buy-in', p_idempotency_key: null, p_wager: row.buy_in,
+        p_user_id: user.id, p_type: 'bet', p_amount: -row.buy_in, p_game: 'poker', p_note: 'poker table buy-in',
+        p_idempotency_key: `poker-buyin-${row.id}-${user.id}-${joinedAt}`, p_wager: row.buy_in,
       });
-      if (debit) return json({ error: 'insufficient balance' }, 400);
+      if (debit) {
+        // Couldn't pay — release the seat claim so they can retry after topping up.
+        await db.from('poker_table_members').delete().eq('table_id', row.id).eq('user_id', user.id);
+        return json({ error: 'insufficient balance' }, 400);
+      }
       addPlayer(state, { id: user.id, name: await name(), isBot: false, difficulty: 'medium', stack: row.buy_in });
       await persist(row.id, state);
-      await db.from('poker_table_members').upsert({ table_id: row.id, user_id: user.id });
       return json({ table_id: row.id, view: viewFor(state, user.id) });
     }
 
