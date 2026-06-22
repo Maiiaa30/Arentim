@@ -1,6 +1,10 @@
 import { Eyebrow, FramedPanel, SectionHeader } from '@/components/ui/primitives';
 import { CasinoActivity } from '@/features/casino/CasinoActivity';
 import { GameCard, type GameTile } from '@/features/casino/GameCard';
+import { useGameSwitches } from '@/features/admin/useAdmin';
+
+/** A game tile's switch key is the last path segment ('/casino/crash' → 'crash'). */
+const switchKey = (g: GameTile) => g.to.split('/').filter(Boolean).pop() ?? '';
 
 // Shared live rooms — one global round everyone watches together.
 const LIVE: GameTile[] = [
@@ -44,6 +48,10 @@ function Section({ title, right, games, featured }: { title: string; right?: str
 }
 
 export function CasinoLobby() {
+  const { data: switches } = useGameSwitches();
+  const off = new Set((switches ?? []).filter((s) => !s.enabled).map((s) => s.key));
+  const show = (games: GameTile[]) => games.filter((g) => !off.has(switchKey(g)));
+
   return (
     <div className="animate-fade-in space-y-12">
       <FramedPanel>
@@ -61,9 +69,9 @@ export function CasinoLobby() {
 
       <CasinoActivity />
 
-      <Section title="Ao vivo" right="Multijogador" games={LIVE} featured />
-      <Section title="Mesas & Máquinas" right="Clássicos" games={TABLES} />
-      <Section title="Arcada" right="Uma jogada" games={ARCADE} />
+      {show(LIVE).length > 0 && <Section title="Ao vivo" right="Multijogador" games={show(LIVE)} featured />}
+      {show(TABLES).length > 0 && <Section title="Mesas & Máquinas" right="Clássicos" games={show(TABLES)} />}
+      {show(ARCADE).length > 0 && <Section title="Arcada" right="Uma jogada" games={show(ARCADE)} />}
     </div>
   );
 }

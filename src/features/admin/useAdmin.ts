@@ -3,9 +3,11 @@ import { supabase } from '@/lib/supabase';
 import type {
   AdminAction,
   AdminAnnouncement,
+  AdminMachine,
   AdminPlayerBet,
   AdminPlayerTransaction,
   Fixture,
+  GameSwitch,
   Profile,
 } from '@/types/db';
 
@@ -164,6 +166,57 @@ export function useSetAnnouncementActive() {
       void qc.invalidateQueries({ queryKey: ['admin-actions'] });
     },
   });
+}
+
+/** Whole-game on/off switches — read by the casino lobby AND the admin panel. */
+export function useGameSwitches() {
+  return useQuery({
+    queryKey: ['game-switches'] as const,
+    staleTime: 60_000,
+    queryFn: async (): Promise<GameSwitch[]> => {
+      const { data, error } = await supabase.rpc('list_game_switches');
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+}
+
+/** Admin list of every slot machine with its enable flag. */
+export function useAdminMachines() {
+  return useQuery({
+    queryKey: ['admin-machines'] as const,
+    queryFn: async (): Promise<AdminMachine[]> => {
+      const { data, error } = await supabase.rpc('admin_list_machines');
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+}
+
+/** Toggle a whole game or a single slot machine on/off (admin). */
+export function useGameToggles() {
+  const qc = useQueryClient();
+  const refresh = () => {
+    void qc.invalidateQueries({ queryKey: ['game-switches'] });
+    void qc.invalidateQueries({ queryKey: ['admin-machines'] });
+    void qc.invalidateQueries({ queryKey: ['slot-machines'] });
+    void qc.invalidateQueries({ queryKey: ['admin-actions'] });
+  };
+  const setGameEnabled = useMutation({
+    mutationFn: async (v: { key: string; enabled: boolean }) => {
+      const { error } = await supabase.rpc('admin_set_game_enabled', { p_key: v.key, p_enabled: v.enabled });
+      if (error) throw error;
+    },
+    onSuccess: refresh,
+  });
+  const setMachineEnabled = useMutation({
+    mutationFn: async (v: { key: string; enabled: boolean }) => {
+      const { error } = await supabase.rpc('admin_set_machine_enabled', { p_key: v.key, p_enabled: v.enabled });
+      if (error) throw error;
+    },
+    onSuccess: refresh,
+  });
+  return { setGameEnabled, setMachineEnabled };
 }
 
 export function useAdminActionsMutations() {
