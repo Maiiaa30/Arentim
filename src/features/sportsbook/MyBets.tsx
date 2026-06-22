@@ -123,20 +123,38 @@ export function BetCard({ bet }: { bet: BetWithLegs }) {
         })}
       </ul>
 
-      <div className="mt-3 flex items-center justify-between border-t border-border pt-2.5 font-sans text-xs">
-        <span className="text-muted-2">
-          Aposta <span className="font-mono text-body">{formatAmount(bet.stake)}</span>
-        </span>
-        <span className="text-muted-2">
-          {bet.status === 'won' ? 'Ganhou ' : bet.status === 'lost' ? 'Retorno ' : 'Retorno possível '}
-          <span
-            className={`font-mono font-semibold ${
-              bet.status === 'won' ? 'text-positive' : bet.status === 'lost' ? 'text-muted-2 line-through' : 'text-gold'
+      {/* Clear at-a-glance summary: what you staked vs what you got / can get. */}
+      <div className="mt-3 grid grid-cols-2 gap-2 border-t border-border pt-3">
+        <div className="rounded-md bg-bg/50 px-3 py-2">
+          <p className="font-sans text-[10px] uppercase tracking-[0.14em] text-muted-2">Apostado</p>
+          <p className="font-mono text-lg font-semibold tabular-nums text-text">{formatAmount(bet.stake)}</p>
+        </div>
+        <div
+          className={`rounded-md px-3 py-2 text-right ${
+            bet.status === 'won' ? 'bg-positive/10' : bet.status === 'lost' ? 'bg-negative/10' : 'bg-gold/10'
+          }`}
+        >
+          <p className="font-sans text-[10px] uppercase tracking-[0.14em] text-muted-2">
+            {bet.status === 'won' ? 'Ganhaste' : bet.status === 'lost' ? 'Perdeste' : bet.status === 'void' ? 'Devolvido' : 'Retorno possível'}
+          </p>
+          <p
+            className={`font-mono text-lg font-bold tabular-nums ${
+              bet.status === 'won' ? 'text-positive' : bet.status === 'lost' ? 'text-negative' : 'text-gold'
             }`}
           >
-            {formatAmount(bet.potential_payout)}
-          </span>
-        </span>
+            {bet.status === 'won'
+              ? `+${formatAmount(bet.potential_payout)}`
+              : bet.status === 'lost'
+                ? `−${formatAmount(bet.stake)}`
+                : formatAmount(bet.potential_payout)}
+          </p>
+          {bet.status === 'won' && (
+            <p className="font-sans text-[11px] font-medium text-positive">lucro +{formatAmount(bet.potential_payout - bet.stake)}</p>
+          )}
+          {bet.status === 'pending' && (
+            <p className="font-sans text-[11px] text-muted-2">lucro +{formatAmount(bet.potential_payout - bet.stake)} · cota {Number(bet.combined_odds).toFixed(2)}</p>
+          )}
+        </div>
       </div>
 
       {sellable && (
