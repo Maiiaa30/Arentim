@@ -1,7 +1,9 @@
+import { useState, type KeyboardEvent } from 'react';
 import { useLiveFixtures } from './useSportsbook';
+import { MatchDetail } from './MatchDetail';
 import type { Fixture } from '@/types/db';
 
-function LiveRow({ fixture }: { fixture: Fixture }) {
+function LiveRow({ fixture, onSelect }: { fixture: Fixture; onSelect: () => void }) {
   const goals = Array.isArray(fixture.events)
     ? (fixture.events as { type?: string; minute?: number | null; team?: string | null }[]).filter(
         (e) => e.type?.toLowerCase() === 'goal',
@@ -9,7 +11,15 @@ function LiveRow({ fixture }: { fixture: Fixture }) {
     : [];
 
   return (
-    <div className="card p-4">
+    <div
+      className="card card-hover focus-ring cursor-pointer p-4"
+      role="button"
+      tabIndex={0}
+      onClick={onSelect}
+      onKeyDown={(e: KeyboardEvent) => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect(); }
+      }}
+    >
       <div className="flex items-center justify-between">
         <span className="flex items-center gap-2 text-xs font-semibold text-negative">
           <span className="relative flex h-2 w-2">
@@ -38,14 +48,17 @@ function LiveRow({ fixture }: { fixture: Fixture }) {
 
 export function LiveFixtures() {
   const { data: live } = useLiveFixtures();
+  const [selected, setSelected] = useState<Fixture | null>(null);
   if (!live || live.length === 0) return null;
 
   return (
     <section className="space-y-3">
+      {selected && <MatchDetail fixture={selected} onClose={() => setSelected(null)} />}
       <h2 className="font-display text-xl font-medium text-text">Ao vivo agora</h2>
+      <p className="-mt-1 font-sans text-[11px] text-muted-2">Toca num jogo para ver os detalhes ao vivo.</p>
       <div className="grid gap-3 sm:grid-cols-2">
         {live.map((f) => (
-          <LiveRow key={f.id} fixture={f} />
+          <LiveRow key={f.id} fixture={f} onSelect={() => setSelected(f)} />
         ))}
       </div>
     </section>
