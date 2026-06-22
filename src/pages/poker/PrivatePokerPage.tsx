@@ -357,27 +357,6 @@ export function PrivatePokerPage() {
         </div>
       )}
 
-      {/* Host admin panel — kick a player or bot */}
-      {!spectating && isHost && view.players.some((p) => p.id !== user?.id) && (
-        <div className="card space-y-2 p-4">
-          <p className="font-sans text-[10.5px] font-medium uppercase tracking-[0.18em] text-muted-2">Painel do anfitrião</p>
-          <ul className="space-y-1.5">
-            {view.players.filter((p) => p.id !== user?.id).map((p) => (
-              <li key={p.id} className="flex items-center justify-between gap-2 text-sm">
-                <span className="min-w-0 truncate font-sans text-text">
-                  {p.name} {p.isBot ? <span className="text-muted-2">· bot</span> : <span className="text-positive">· jogador</span>}
-                  <span className="ml-1 font-mono text-[11px] text-muted-2">{formatAmount(p.stack)}</span>
-                </span>
-                <Button variant="ghost" className="!px-3 !py-1.5" disabled={busy}
-                  onClick={() => wrap(() => kick.mutateAsync({ tableId, targetId: p.id }))}>
-                  Expulsar
-                </Button>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
       {/* Out of chips — rebuy from your Tostões balance (between hands only) */}
       {me && me.stack === 0 && view.handOver && (
         <div className="card space-y-3 border-gold/40 bg-gold/[0.06] p-4 text-center">
@@ -442,6 +421,30 @@ export function PrivatePokerPage() {
         </div>
       )}
       {spectating && error && <p className="text-center font-sans text-sm text-negative">{error}</p>}
+
+      {/* Host admin panel — collapsed + below the controls so it never pushes the
+          bet actions down the page. Open it to kick a player or bot. */}
+      {!spectating && isHost && view.players.some((p) => p.id !== user?.id) && (
+        <details className="card p-0">
+          <summary className="cursor-pointer px-4 py-3 font-sans text-[10.5px] font-medium uppercase tracking-[0.18em] text-muted-2">
+            Painel do anfitrião · gerir jogadores
+          </summary>
+          <ul className="space-y-1.5 px-4 pb-4">
+            {view.players.filter((p) => p.id !== user?.id).map((p) => (
+              <li key={p.id} className="flex items-center justify-between gap-2 text-sm">
+                <span className="min-w-0 truncate font-sans text-text">
+                  {p.name} {p.isBot ? <span className="text-muted-2">· bot</span> : <span className="text-positive">· jogador</span>}
+                  <span className="ml-1 font-mono text-[11px] text-muted-2">{formatAmount(p.stack)}</span>
+                </span>
+                <Button variant="ghost" className="!px-3 !py-1.5" disabled={busy}
+                  onClick={() => wrap(() => kick.mutateAsync({ tableId, targetId: p.id }))}>
+                  Expulsar
+                </Button>
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
 
       {view.log.length > 0 && <p className="text-center font-sans text-xs text-muted">{view.log.join(' · ')}</p>}
     </div>
