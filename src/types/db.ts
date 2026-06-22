@@ -650,6 +650,29 @@ export type GameSwitch = { key: string; label: string; enabled: boolean };
 /** Admin view of a slot machine with its enable flag. */
 export type AdminMachine = { key: string; name: string; enabled: boolean };
 
+/** Official broadcaster for a competition ("Onde ver"). */
+export type Broadcast = { league: string; channel: string; url: string | null };
+
+/** Per-team live match statistics (from the match-stats Edge Function). */
+export type LiveTeamStats = {
+  possession: string | number | null;
+  shots: number | string | null;
+  shotsOn: number | string | null;
+  corners: number | string | null;
+  fouls: number | string | null;
+  yellow: number | string | null;
+  red: number | string | null;
+  offsides: number | string | null;
+  passAcc: string | number | null;
+};
+export type MatchStats = { home: LiveTeamStats; away: LiveTeamStats };
+export type MatchStatsResponse = {
+  available: boolean;
+  reason?: string;
+  stats?: MatchStats | null;
+  cached?: boolean;
+};
+
 export type Transaction = {
   id: number;
   user_id: string;
@@ -1283,6 +1306,14 @@ export type Database = {
       };
       admin_set_machine_enabled: {
         Args: { p_key: string; p_enabled: boolean };
+        Returns: undefined;
+      };
+      list_broadcasts: {
+        Args: Record<string, never>;
+        Returns: Broadcast[];
+      };
+      admin_set_broadcast: {
+        Args: { p_league: string; p_channel: string; p_url: string };
         Returns: undefined;
       };
     };

@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import type { Fixture, TeamStat } from '@/types/db';
+import type { Fixture, MatchStats, TeamStat } from '@/types/db';
+import { useBroadcasts, useMatchStats } from './useSportsbook';
 
 /**
  * Match-detail popup for the Resultados page: teams + score/kickoff, the 1x2 /
@@ -98,6 +99,96 @@ function StatTable({ home, away, hName, aName }: { home?: TeamStat | null | unde
   );
 }
 
+/** "Onde ver" — the official broadcaster for this competition (if curated). */
+function OndeVer({ league }: { league: string }) {
+  const { data } = useBroadcasts();
+  const b = (data ?? []).find((x) => x.league === league);
+  if (!b) return null;
+  return (
+    <div className="flex items-center justify-between gap-2 rounded border border-border bg-surface px-3 py-2">
+      <span className="font-sans text-[10px] uppercase tracking-[0.18em] text-muted-2">Onde ver</span>
+      {b.url ? (
+        <a href={b.url} target="_blank" rel="noopener noreferrer" className="font-sans text-sm font-medium text-gold hover:underline">
+          {b.channel} ↗
+        </a>
+      ) : (
+        <span className="font-sans text-sm font-medium text-text">{b.channel}</span>
+      )}
+    </div>
+  );
+}
+
+const pct = (v: string | number | null): number | null => {
+  if (v == null) return null;
+  const n = typeof v === 'number' ? v : parseInt(String(v).replace('%', ''), 10);
+  return Number.isFinite(n) ? n : null;
+};
+const sval = (v: string | number | null): string => (v == null ? '—' : String(v));
+
+const STAT_ROWS: [string, keyof MatchStats['home']][] = [
+  ['Remates', 'shots'],
+  ['Remates à baliza', 'shotsOn'],
+  ['Cantos', 'corners'],
+  ['Faltas', 'fouls'],
+  ['Amarelos', 'yellow'],
+  ['Vermelhos', 'red'],
+  ['Foras de jogo', 'offsides'],
+  ['Passes certos', 'passAcc'],
+];
+
+function StatsBody({ s }: { s: MatchStats }) {
+  const ph = pct(s.home.possession);
+  const pa = pct(s.away.possession);
+  const rows = STAT_ROWS.filter(([, k]) => s.home[k] != null || s.away[k] != null);
+  return (
+    <div className="space-y-2.5 px-3 py-2.5">
+      {ph != null && pa != null && (
+        <div>
+          <div className="mb-1 flex items-center justify-between font-mono text-[11px] text-text">
+            <span>{ph}%</span>
+            <span className="font-sans text-[9px] uppercase tracking-[0.16em] text-muted-2">Posse de bola</span>
+            <span>{pa}%</span>
+          </div>
+          <div className="flex h-2 overflow-hidden rounded-full">
+            <div className="bg-gold" style={{ width: `${ph}%` }} />
+            <div className="bg-muted-2/40" style={{ width: `${pa}%` }} />
+          </div>
+        </div>
+      )}
+      {rows.map(([label, k]) => (
+        <div key={k} className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+          <span className="text-left font-mono text-sm tabular-nums text-text">{sval(s.home[k])}</span>
+          <span className="font-sans text-[9px] uppercase tracking-[0.16em] text-muted-2">{label}</span>
+          <span className="text-right font-mono text-sm tabular-nums text-text">{sval(s.away[k])}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** Live statistics panel — only fetched while the game is live. */
+function LiveStatsSection({ fixtureId, live }: { fixtureId: number; live: boolean }) {
+  const { data, isLoading } = useMatchStats(fixtureId, live);
+  if (!live) return null;
+  return (
+    <div className="overflow-hidden rounded border border-border">
+      <div className="flex items-center justify-between border-b border-border bg-surface px-3 py-2">
+        <span className="font-sans text-[10px] uppercase tracking-[0.18em] text-gold">Estatísticas ao vivo</span>
+        <span className="flex items-center gap-1 font-mono text-[10px] text-negative">
+          <span className="h-1.5 w-1.5 animate-livedot rounded-full bg-negative" /> ao vivo
+        </span>
+      </div>
+      {isLoading && !data ? (
+        <p className="px-3 py-4 text-center font-sans text-sm text-muted-2">A carregar estatísticas…</p>
+      ) : data?.available && data.stats ? (
+        <StatsBody s={data.stats} />
+      ) : (
+        <p className="px-3 py-4 text-center font-sans text-xs text-muted-2">Estatísticas em direto indisponíveis para este jogo.</p>
+      )}
+    </div>
+  );
+}
+
 export function MatchDetail({ fixture, onClose }: { fixture: Fixture; onClose: () => void }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
@@ -152,6 +243,8 @@ export function MatchDetail({ fixture, onClose }: { fixture: Fixture; onClose: (
         <p className="mt-3 text-center font-sans text-xs text-muted-2">{dateLabel(fixture.kickoff)}</p>
 
         <div className="mt-5 space-y-4">
+          <OndeVer league={fixture.league} />
+          <LiveStatsSection fixtureId={fixture.id} live={fixture.status === 'live'} />
           <StatTable home={fixture.stats?.home} away={fixture.stats?.away} hName={fixture.home} aName={fixture.away} />
 
           {fixture.odds && Object.keys(fixture.odds).length > 0 && (

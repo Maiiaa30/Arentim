@@ -219,6 +219,21 @@ export function useGameToggles() {
   return { setGameEnabled, setMachineEnabled };
 }
 
+/** Admin: set/clear the official broadcaster ("Onde ver") for a competition. */
+export function useSetBroadcast() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (v: { league: string; channel: string; url: string }) => {
+      const { error } = await supabase.rpc('admin_set_broadcast', { p_league: v.league, p_channel: v.channel, p_url: v.url });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['broadcasts'] });
+      void qc.invalidateQueries({ queryKey: ['admin-actions'] });
+    },
+  });
+}
+
 export function useAdminActionsMutations() {
   const qc = useQueryClient();
   const refresh = () => {
