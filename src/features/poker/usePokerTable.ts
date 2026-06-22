@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/features/auth/AuthProvider';
 import { profileKey } from '@/features/profile/useProfile';
 import { invokePoker } from './invoke';
-import type { MyPokerTable } from '@/types/db';
+import type { MyPokerTable, PublicPokerTable } from '@/types/db';
 import type { PokerView } from './types';
 
 interface TableResponse {
@@ -17,11 +17,21 @@ interface TableResponse {
   turnDeadline?: string | null;
 }
 
-/** Args for creating a private table: buy-in plus how many bot seats to fill. */
+/** Spectator snapshot of a public table (no membership, no hole cards). */
+export interface WatchResponse {
+  view: PokerView | null;
+  buyIn?: number;
+  /** True when there's an open seat you could sit at (between hands). */
+  seatsOpen?: boolean;
+  seated?: number;
+}
+
+/** Args for creating a table: buy-in, bot seats, difficulty, and public/private. */
 export interface CreateTableArgs {
   buyIn: number;
   botCount: number;
   difficulty: 'easy' | 'medium' | 'hard';
+  isPublic: boolean;
 }
 
 const call = (body: Record<string, unknown>): Promise<TableResponse> =>
@@ -38,6 +48,30 @@ export function useMyPokerTables() {
       if (error) throw error;
       return data;
     },
+  });
+}
+
+/** Open public tables anyone can browse, spectate, or sit at. */
+export function usePublicPokerTables() {
+  return useQuery({
+    queryKey: ['poker-public-tables'] as const,
+    refetchInterval: 5000,
+    queryFn: async (): Promise<PublicPokerTable[]> => {
+      const { data, error } = await supabase.rpc('list_public_poker_tables');
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+}
+
+/** Spectator poll for a public table (used when you're watching, not seated). */
+export function useWatchPokerTable(tableId: number | null) {
+  return useQuery({
+    queryKey: ['poker-watch', tableId] as const,
+    enabled: tableId != null,
+    refetchInterval: 1500,
+    refetchIntervalInBackground: true,
+    queryFn: () => invokePoker<WatchResponse>('poker-table', { op: 'watch', tableId }),
   });
 }
 
@@ -68,11 +102,21 @@ export function usePokerTableActions() {
 
   const create = useMutation({
     mutationFn: (v: CreateTableArgs) =>
-      call({ op: 'create', buyIn: v.buyIn, botCount: v.botCount, difficulty: v.difficulty }),
+      call({ op: 'create', buyIn: v.buyIn, botCount: v.botCount, difficulty: v.difficulty, isPublic: v.isPublic }),
     onSuccess: refreshBalance,
   });
   const join = useMutation({
     mutationFn: (code: string) => call({ op: 'join', code }),
+    onSuccess: refreshBalance,
+  });
+  /** Sit at a public table by id (from the lobby). */
+  const joinTable = useMutation({
+    mutationFn: (tableId: number) => call({ op: 'join', tableId }),
+    onSuccess: refreshBalance,
+  });
+  /** Host removes a player or bot. */
+  const kick = useMutation({
+    mutationFn: (v: { tableId: number; targetId: string }) => call({ op: 'kick', ...v }),
     onSuccess: refreshBalance,
   });
   const addBot = useMutation({
@@ -92,5 +136,5 @@ export function usePokerTableActions() {
     onSuccess: refreshBalance,
   });
 
-  return { create, join, addBot, start, deal, act, leave, rebuy };
+  return { create, join, joinTable, kick, addBot, start, deal, act, leave, rebuy };
 }

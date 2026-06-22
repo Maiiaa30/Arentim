@@ -182,6 +182,16 @@ export type MyPokerTable = {
   is_host: boolean;
 };
 
+export type PublicPokerTable = {
+  table_id: number;
+  code: string;
+  status: string;
+  host_name: string;
+  buy_in: number;
+  seats: number;
+  max_seats: number;
+};
+
 export type LeaderboardRow = {
   id: string;
   display_name: string;
@@ -1174,6 +1184,10 @@ export type Database = {
       list_my_poker_tables: {
         Args: Record<string, never>;
         Returns: MyPokerTable[];
+      };
+      list_public_poker_tables: {
+        Args: Record<string, never>;
+        Returns: PublicPokerTable[];
       };
       list_my_sueca_tables: {
         Args: Record<string, never>;

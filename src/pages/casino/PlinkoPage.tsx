@@ -48,25 +48,30 @@ export function PlinkoPage() {
   const [stake, setStake] = useState(25);
   const [rows, setRows] = useState<PlinkoRows>(12);
   const [risk, setRisk] = useState<PlinkoRisk>('medium');
-  const [dropping, setDropping] = useState(false);
-  const [ball, setBall] = useState<{ x: number; y: number } | null>(null);
+  // Several balls can be in flight at once (drop up to MAX_BALLS rapidly). Each
+  // ball animates on its own rAF loop and is removed when it lands.
+  const [balls, setBalls] = useState<{ id: number; x: number; y: number }[]>([]);
   const [result, setResult] = useState<PlinkoResult | null>(null);
   const [landedBin, setLandedBin] = useState<number | null>(null);
   const [winId, setWinId] = useState(0);
   const [error, setError] = useState<string | null>(null);
-  const raf = useRef<number | null>(null);
-  const timers = useRef<number[]>([]);
+  const ballSeq = useRef(0);
+  const rafs = useRef<Set<number>>(new Set());
 
   useEffect(
     () => () => {
-      if (raf.current) cancelAnimationFrame(raf.current);
-      timers.current.forEach((t) => window.clearTimeout(t));
+      rafs.current.forEach((id) => cancelAnimationFrame(id));
+      rafs.current.clear();
     },
     [],
   );
 
   const balance = profile?.balance ?? 0;
-  const tooPoor = stake > balance;
+  const inFlight = balls.length;
+  const MAX_BALLS = 8;
+  // Each in-flight ball already locked a stake; don't let the total exceed balance.
+  const tooPoor = stake > balance - inFlight * stake;
+  const settingsLocked = inFlight > 0;
   const mults = PLINKO_MULT[rows][risk];
   const rowHeight = (100 - TOP_Y) / (rows + 1);
 
@@ -76,9 +81,10 @@ export function PlinkoPage() {
     [rows],
   );
 
-  function animatePath(path: number[], bin: number, res: PlinkoResult) {
+  function animateBall(id: number, path: number[], bin: number, res: PlinkoResult) {
     // The ball visits one peg per row, drifting toward the landing bin. At row r
-    // its column = number of right-bounces so far.
+    // its column = number of right-bounces so far. (rows/risk are locked while
+    // any ball is in flight, so this geometry stays valid for every ball.)
     const points: { x: number; y: number }[] = [{ x: VB_W / 2, y: TOP_Y }];
     let col = 0;
     for (let r = 0; r < path.length; r++) {
@@ -97,37 +103,37 @@ export function PlinkoPage() {
       const t = Math.min(1, (now - segStart) / stepMs);
       // ease for a little bounce feel
       const e = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
-      setBall({ x: from.x + (to.x - from.x) * e, y: from.y + (to.y - from.y) * e });
+      const x = from.x + (to.x - from.x) * e;
+      const y = from.y + (to.y - from.y) * e;
+      setBalls((bs) => bs.map((b) => (b.id === id ? { ...b, x, y } : b)));
       if (t >= 1) {
         seg += 1;
         segStart = now;
         if (seg >= points.length - 1) {
-          setBall(points[points.length - 1]!);
+          setBalls((bs) => bs.filter((b) => b.id !== id));
           setLandedBin(bin);
-          setDropping(false);
           setResult(res);
           if (res.multiplier > 1) setWinId((n) => n + 1);
           return;
         }
       }
-      raf.current = requestAnimationFrame(tick);
+      const rid = requestAnimationFrame(tick);
+      rafs.current.add(rid);
     };
-    raf.current = requestAnimationFrame(tick);
+    const rid = requestAnimationFrame(tick);
+    rafs.current.add(rid);
   }
 
   async function drop() {
-    if (dropping || tooPoor) return;
+    if (tooPoor || balls.length >= MAX_BALLS) return;
     setError(null);
-    setResult(null);
-    setLandedBin(null);
-    setBall({ x: VB_W / 2, y: TOP_Y });
-    setDropping(true);
+    const id = (ballSeq.current += 1);
+    setBalls((bs) => [...bs, { id, x: VB_W / 2, y: TOP_Y }]);
     try {
       const res = await game.mutateAsync({ stake, rows, risk });
-      animatePath(res.path, res.bin, res);
+      animateBall(id, res.path, res.bin, res);
     } catch (e) {
-      setDropping(false);
-      setBall(null);
+      setBalls((bs) => bs.filter((b) => b.id !== id));
       setError(e instanceof Error ? e.message : 'A jogada falhou.');
     }
   }
@@ -163,16 +169,17 @@ export function PlinkoPage() {
               {pegs.map((p) => (
                 <circle key={p.key} cx={p.x} cy={p.y} r={rows >= 16 ? 0.8 : 1.1} fill="#d8c79a" opacity="0.85" />
               ))}
-              {ball && (
+              {balls.map((b) => (
                 <circle
-                  cx={ball.x}
-                  cy={ball.y}
+                  key={b.id}
+                  cx={b.x}
+                  cy={b.y}
                   r={rows >= 16 ? 1.6 : 2}
                   fill="#C9A24B"
                   stroke="#fff0b8"
                   strokeWidth="0.4"
                 />
-              )}
+              ))}
             </svg>
 
             {/* Bins */}
@@ -201,8 +208,10 @@ export function PlinkoPage() {
           </div>
 
           <div className="mt-5 flex min-h-[2.25rem] items-center justify-center px-2 text-center">
-            {dropping ? (
-              <p className="animate-pulse font-display text-lg italic text-gold-light">A cair…</p>
+            {inFlight > 0 ? (
+              <p className="animate-pulse font-display text-lg italic text-gold-light">
+                A cair{inFlight > 1 ? ` · ${inFlight} bolas` : '…'}
+              </p>
             ) : result ? (
               result.multiplier > 1 ? (
                 <p className="animate-pop font-display text-xl font-bold text-positive">
@@ -228,7 +237,7 @@ export function PlinkoPage() {
                 <button
                   key={r}
                   onClick={() => setRows(r)}
-                  disabled={dropping}
+                  disabled={settingsLocked}
                   className={`focus-ring rounded-lg border px-3 py-2 font-mono text-sm font-bold transition-colors disabled:opacity-40 ${
                     rows === r ? 'border-gold bg-gold text-bg' : 'border-border text-muted hover:text-text'
                   }`}
@@ -246,7 +255,7 @@ export function PlinkoPage() {
                 <button
                   key={r.id}
                   onClick={() => setRisk(r.id)}
-                  disabled={dropping}
+                  disabled={settingsLocked}
                   className={`focus-ring rounded-lg border px-3 py-2 font-sans text-sm font-semibold transition-colors disabled:opacity-40 ${
                     risk === r.id ? 'border-gold bg-gold/15 text-gold' : 'border-border text-muted hover:text-text'
                   }`}
@@ -259,12 +268,13 @@ export function PlinkoPage() {
 
           <div>
             <p className="mb-2 font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-2">Aposta</p>
-            <StakeChips stake={stake} onChange={setStake} balance={balance} disabled={dropping} />
+            <StakeChips stake={stake} onChange={setStake} balance={balance} disabled={settingsLocked} />
           </div>
 
-          <Button variant="primary" className="w-full" onClick={drop} disabled={dropping || tooPoor}>
-            {dropping ? 'A cair…' : 'Largar'}
+          <Button variant="primary" className="w-full" onClick={drop} disabled={tooPoor || inFlight >= MAX_BALLS}>
+            {inFlight >= MAX_BALLS ? 'Aguarda…' : inFlight > 0 ? `Largar outra (${inFlight})` : 'Largar'}
           </Button>
+          <p className="text-center font-sans text-[11px] text-muted-2">Podes largar várias bolas ao mesmo tempo (até {MAX_BALLS}).</p>
 
           {tooPoor && <p className="font-sans text-sm text-negative">Saldo insuficiente para esta aposta.</p>}
           {error && <p className="font-sans text-sm text-negative">{error}</p>}

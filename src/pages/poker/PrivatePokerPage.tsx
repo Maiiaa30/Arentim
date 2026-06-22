@@ -1,12 +1,14 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/features/auth/AuthProvider';
 import { useProfile } from '@/features/profile/useProfile';
 import {
   useMyPokerTables,
+  usePublicPokerTables,
   usePokerTableActions,
   usePokerTableState,
+  useWatchPokerTable,
 } from '@/features/poker/usePokerTable';
 import { PokerTable, ResultBanner } from '@/features/poker/PokerTable';
 import { PokerActionBar } from '@/features/poker/PokerActionBar';
@@ -35,7 +37,7 @@ const DIFFICULTY_LABEL: Record<'easy' | 'medium' | 'hard', string> = {
 };
 
 const BUYIN_PRESETS = [100, 200, 500, 1000, 2500];
-/** A private table seats 9; minus your own seat that's up to 8 bots. */
+/** A table seats 9; minus your own seat that's up to 8 bots. */
 const MAX_BOTS = 8;
 /** Random pause between each bot's replayed move, so they don't all act at once. */
 const botDelay = () => 480 + Math.random() * 1120;
@@ -45,32 +47,36 @@ export function PrivatePokerPage() {
   const { user } = useAuth();
   const { data: profile } = useProfile();
   const { data: myTables } = useMyPokerTables();
-  const { create, join, addBot, start, deal, act, leave, rebuy } = usePokerTableActions();
+  const { data: publicTables } = usePublicPokerTables();
+  const { create, join, joinTable, kick, addBot, start, deal, act, leave, rebuy } = usePokerTableActions();
   const qc = useQueryClient();
 
   const [tableId, setTableId] = useState<number | null>(null);
+  const [spectating, setSpectating] = useState(false);
   const [code, setCode] = useState('');
   const [joinCode, setJoinCode] = useState('');
   const [buyIn, setBuyIn] = useState(200);
   const [botCount, setBotCount] = useState(MAX_BOTS); // default: a full table
   const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
+  const [isPublic, setIsPublic] = useState(false);
   const [raiseTo, setRaiseTo] = useState(0);
   const [error, setError] = useState<string | null>(null);
   // While a trail is replaying we show these snapshots instead of the polled state.
   const [replayView, setReplayView] = useState<PokerView | null>(null);
   const [animating, setAnimating] = useState(false);
 
-  const { data: state } = usePokerTableState(tableId);
-  const polledView = state?.view ?? null;
+  // Members poll `state`; spectators (no seat) poll the public `watch` snapshot.
+  const memberState = usePokerTableState(spectating ? null : tableId);
+  const watchState = useWatchPokerTable(spectating ? tableId : null);
+  const polledView = (spectating ? watchState.data?.view : memberState.data?.view) ?? null;
   const view = replayView ?? polledView;
-  const isHost = state?.host ?? false;
+  const isHost = memberState.data?.host ?? false;
+  const seatsOpen = watchState.data?.seatsOpen ?? false;
+  const watchBuyIn = watchState.data?.buyIn ?? 0;
   const balance = profile?.balance ?? 0;
-  const busy = create.isPending || join.isPending || act.isPending || start.isPending || deal.isPending || addBot.isPending || leave.isPending || rebuy.isPending || animating;
-
-  // If already seated somewhere, auto-select it.
-  useEffect(() => {
-    if (tableId == null && myTables && myTables.length > 0) setTableId(myTables[0]!.table_id);
-  }, [myTables, tableId]);
+  const busy =
+    create.isPending || join.isPending || joinTable.isPending || kick.isPending || act.isPending ||
+    start.isPending || deal.isPending || addBot.isPending || leave.isPending || rebuy.isPending || animating;
 
   const wrap = async (fn: () => Promise<unknown>) => {
     setError(null);
@@ -106,51 +112,67 @@ export function PrivatePokerPage() {
       }
     });
 
+  const enterAsMember = (id: number, joinedCode = '') => { setTableId(id); setSpectating(false); setCode(joinedCode); setError(null); };
+
   async function onCreate() {
     if (buyIn > balance) return setError('Saldo insuficiente.');
     await wrap(async () => {
-      const res = await create.mutateAsync({ buyIn, botCount, difficulty });
-      setTableId(res.table_id ?? null);
-      setCode(res.code ?? '');
+      const res = await create.mutateAsync({ buyIn, botCount, difficulty, isPublic });
+      enterAsMember(res.table_id ?? 0, res.code ?? '');
     });
   }
-  async function onJoin() {
+  async function onJoinCode() {
     await wrap(async () => {
       const res = await join.mutateAsync(joinCode.toUpperCase().trim());
-      setTableId(res.table_id ?? null);
+      enterAsMember(res.table_id ?? 0);
     });
   }
+  async function onSit(id: number) {
+    await wrap(async () => {
+      const res = await joinTable.mutateAsync(id);
+      enterAsMember(res.table_id ?? id);
+    });
+  }
+  function onSpectate(id: number) { setTableId(id); setSpectating(true); setCode(''); setError(null); }
   async function onRebuy(amount: number) {
     if (tableId == null) return;
     await wrap(() => rebuy.mutateAsync({ tableId, amount }));
   }
+  function exitToLobby() {
+    setTableId(null);
+    setSpectating(false);
+    setCode('');
+    setReplayView(null);
+  }
   async function onLeave() {
     if (tableId == null) return;
+    if (spectating) { exitToLobby(); return; } // spectators have no seat to cash out
     const leftId = tableId;
     await wrap(async () => {
       await leave.mutateAsync(leftId);
-      // Drop the table from the seated list immediately so the "auto-select if
-      // already seated" effect below doesn't re-enter the table we just left
-      // (the list refetch lags behind, so without this you get pulled back in).
+      // Drop the table from the seated list immediately so a stale refetch can't
+      // pull us back in before the list catches up.
       qc.setQueryData(
         ['poker-tables', user?.id],
         (old: { table_id: number }[] | undefined) => old?.filter((t) => t.table_id !== leftId) ?? [],
       );
-      setTableId(null);
-      setCode('');
-      setReplayView(null);
+      exitToLobby();
     });
   }
 
   // ---- Lobby ----
+  // NOTE: we deliberately do NOT auto-enter a previously-seated table here. Doing
+  // that used to drop you straight into an old table without ever showing the
+  // create form ("entrei sem poder escolher as definições"). You now always land
+  // on the lobby and pick explicitly (create / code / public / resume).
   if (tableId == null || !view) {
     return (
       <div className="animate-fade-in space-y-8">
         <div>
           <Link to="/poker" className="font-sans text-sm text-muted-2 hover:text-text">← Poker</Link>
           <div className="mt-4">
-            <Eyebrow>Só para convidados</Eyebrow>
-            <h1 className="mt-2 font-display text-[40px] font-medium leading-[1.04] text-text">Mesa privada</h1>
+            <Eyebrow>Mesas</Eyebrow>
+            <h1 className="mt-2 font-display text-[40px] font-medium leading-[1.04] text-text">Mesas de poker</h1>
           </div>
         </div>
         <div className="grid gap-4 lg:grid-cols-2">
@@ -210,6 +232,14 @@ export function PrivatePokerPage() {
               </div>
             </div>
 
+            <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-border p-3">
+              <input type="checkbox" checked={isPublic} onChange={(e) => setIsPublic(e.target.checked)} className="mt-0.5 h-4 w-4 accent-gold" />
+              <span>
+                <span className="block font-sans text-sm font-medium text-text">Mesa pública</span>
+                <span className="block font-sans text-[11px] text-muted-2">Aparece no salão — qualquer pessoa pode assistir e sentar-se nos lugares livres. (Mantém também um código.)</span>
+              </span>
+            </label>
+
             <Button variant="primary" onClick={onCreate} disabled={busy || buyIn > balance || buyIn < 100} className="w-full">
               {create.isPending ? 'A criar…' : `Criar mesa · ${formatAmount(buyIn)}`}
             </Button>
@@ -219,14 +249,42 @@ export function PrivatePokerPage() {
             <h2 className="font-display text-lg font-semibold text-text">Entrar com um código</h2>
             <Input id="code" label="Código da mesa" placeholder="ABC123" value={joinCode}
               onChange={(e) => setJoinCode(e.target.value)} />
-            <Button variant="primary" onClick={onJoin} disabled={busy || joinCode.trim().length < 4} className="w-full">Entrar</Button>
+            <Button variant="primary" onClick={onJoinCode} disabled={busy || joinCode.trim().length < 4} className="w-full">Entrar</Button>
           </div>
         </div>
+
+        {/* Public lobby */}
+        <div className="space-y-2">
+          <h2 className="font-sans text-[10.5px] font-medium uppercase tracking-[0.18em] text-muted-2">Mesas públicas</h2>
+          {!publicTables || publicTables.length === 0 ? (
+            <p className="font-sans text-sm text-muted-2">Nenhuma mesa pública aberta. Cria uma e marca-a como pública.</p>
+          ) : (
+            publicTables.map((t) => {
+              const full = t.seats >= t.max_seats;
+              return (
+                <div key={t.table_id} className="card flex flex-wrap items-center justify-between gap-3 p-3">
+                  <span className="min-w-0 font-sans text-sm text-text">
+                    Mesa {t.code} · <span className="text-muted">{t.host_name}</span>
+                    <span className="ml-2 font-mono text-xs text-muted-2">{t.seats}/{t.max_seats} lugares · entrada {formatAmount(t.buy_in)}</span>
+                  </span>
+                  <div className="flex gap-2">
+                    <Button variant="ghost" className="!px-4 !py-2" onClick={() => onSpectate(t.table_id)}>Ver</Button>
+                    <Button variant="primary" className="!px-4 !py-2" disabled={busy || full || t.buy_in > balance}
+                      onClick={() => onSit(t.table_id)}>
+                      {full ? 'Cheia' : 'Sentar'}
+                    </Button>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+
         {myTables && myTables.length > 0 && (
           <div className="space-y-2">
             <h2 className="font-sans text-[10.5px] font-medium uppercase tracking-[0.18em] text-muted-2">As suas mesas</h2>
             {myTables.map((t) => (
-              <button key={t.table_id} onClick={() => setTableId(t.table_id)}
+              <button key={t.table_id} onClick={() => enterAsMember(t.table_id, t.code)}
                 className="card card-hover focus-ring flex w-full items-center justify-between p-3 text-left">
                 <span className="font-sans text-sm text-text">Mesa {t.code} · {t.player_count} sentados</span>
                 <span className="font-sans text-xs text-muted">{STATUS_LABEL[t.status] ?? t.status}{t.is_host ? ' · anfitrião' : ''}</span>
@@ -240,8 +298,8 @@ export function PrivatePokerPage() {
   }
 
   // ---- Table ----
-  const me = view.players.find((p) => p.id === user?.id);
-  const myTurn = view.toActId === user?.id && !view.handOver;
+  const me = spectating ? undefined : view.players.find((p) => p.id === user?.id);
+  const myTurn = !spectating && view.toActId === user?.id && !view.handOver;
   const owe = view.currentBet - (me?.committed ?? 0);
   const allInTo = (me?.stack ?? 0) + (me?.committed ?? 0);
   const minRaiseTo = Math.min(view.currentBet + view.minRaise, allInTo);
@@ -249,7 +307,7 @@ export function PrivatePokerPage() {
   const effRaiseTo = Math.max(minRaiseTo, Math.min(raiseTo || minRaiseTo, maxRaiseTo));
   const canRaise = allInTo > view.currentBet && !!myTurn;
   // Show the bet clock only on the live (non-replay) state, when it's our turn.
-  const turnDeadline = !replayView && myTurn ? state?.turnDeadline ?? null : null;
+  const turnDeadline = !replayView && myTurn ? memberState.data?.turnDeadline ?? null : null;
   const quickBets = canRaise
     ? (() => {
         const clamp = (n: number) => Math.max(minRaiseTo, Math.min(n, maxRaiseTo));
@@ -269,20 +327,56 @@ export function PrivatePokerPage() {
     <div className="animate-fade-in space-y-5">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h1 className="font-display text-[28px] font-medium text-text sm:text-[32px]">Mesa privada</h1>
+          <h1 className="font-display text-[28px] font-medium text-text sm:text-[32px]">{spectating ? 'A assistir' : 'Mesa de poker'}</h1>
           {code && <p className="font-sans text-sm text-muted">Código da mesa: <span className="font-mono font-semibold text-gold">{code}</span></p>}
+          {spectating && <p className="font-sans text-sm text-muted">Estás a ver esta mesa em direto.</p>}
         </div>
         <Button variant="secondary" onClick={onLeave} disabled={busy}>
-          {leave.isPending ? 'A sair…' : `Sair · ${formatAmount(me?.stack ?? 0)} tós`}
+          {spectating ? 'Sair' : leave.isPending ? 'A sair…' : `Sair · ${formatAmount(me?.stack ?? 0)} tós`}
         </Button>
       </div>
 
       <PokerTable
         view={view}
-        youId={user?.id ?? '__me__'}
+        youId={spectating ? '__spectator__' : user?.id ?? '__me__'}
         myTurn={!!myTurn}
         resultBanner={<ResultBanner view={view} />}
       />
+
+      {/* Spectator panel — sit when a seat frees up between hands */}
+      {spectating && (
+        <div className="card space-y-3 border-gold/30 bg-gold/[0.05] p-4 text-center">
+          <p className="font-display text-base font-medium text-text">Estás a assistir</p>
+          {seatsOpen ? (
+            <Button variant="primary" onClick={() => onSit(tableId)} disabled={busy || watchBuyIn > balance}>
+              {watchBuyIn > balance ? 'Saldo insuficiente' : `Sentar · entrada ${formatAmount(watchBuyIn)}`}
+            </Button>
+          ) : (
+            <p className="font-sans text-sm text-muted">Mesa cheia ou mão a decorrer — aguarda um lugar livre.</p>
+          )}
+        </div>
+      )}
+
+      {/* Host admin panel — kick a player or bot */}
+      {!spectating && isHost && view.players.some((p) => p.id !== user?.id) && (
+        <div className="card space-y-2 p-4">
+          <p className="font-sans text-[10.5px] font-medium uppercase tracking-[0.18em] text-muted-2">Painel do anfitrião</p>
+          <ul className="space-y-1.5">
+            {view.players.filter((p) => p.id !== user?.id).map((p) => (
+              <li key={p.id} className="flex items-center justify-between gap-2 text-sm">
+                <span className="min-w-0 truncate font-sans text-text">
+                  {p.name} {p.isBot ? <span className="text-muted-2">· bot</span> : <span className="text-positive">· jogador</span>}
+                  <span className="ml-1 font-mono text-[11px] text-muted-2">{formatAmount(p.stack)}</span>
+                </span>
+                <Button variant="ghost" className="!px-3 !py-1.5" disabled={busy}
+                  onClick={() => wrap(() => kick.mutateAsync({ tableId, targetId: p.id }))}>
+                  Expulsar
+                </Button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {/* Out of chips — rebuy from your Tostões balance (between hands only) */}
       {me && me.stack === 0 && view.handOver && (
@@ -306,43 +400,48 @@ export function PrivatePokerPage() {
         </div>
       )}
 
-      {/* Controls */}
-      <div className="card space-y-3 p-4">
-        {inLobby ? (
-          <div className="flex flex-wrap justify-center gap-2">
-            {isHost && <Button variant="secondary" onClick={() => wrap(() => addBot.mutateAsync({ tableId, difficulty }))} disabled={busy || view.players.length >= 9}>Adicionar bot</Button>}
-            {isHost && <Button variant="primary" onClick={() => runWithTrail(() => start.mutateAsync(tableId))} disabled={busy || view.players.length < 2}>Iniciar mão</Button>}
-            {!isHost && <p className="font-sans text-sm text-muted">À espera de o anfitrião iniciar…</p>}
-          </div>
-        ) : myTurn ? (
-          <div className="space-y-3">
-            {turnDeadline && <TurnTimer deadline={turnDeadline} />}
-            <PokerActionBar
-              owe={owe}
-              callAmount={Math.min(owe, me?.stack ?? 0)}
-              raiseTo={effRaiseTo}
-              minRaiseTo={minRaiseTo}
-              maxRaiseTo={maxRaiseTo}
-              canRaise={canRaise}
-              busy={busy}
-              quickBets={quickBets}
-              onFold={() => runWithTrail(() => act.mutateAsync({ tableId, action: 'fold', raiseTo: 0 }))}
-              onCheck={() => runWithTrail(() => act.mutateAsync({ tableId, action: 'check', raiseTo: 0 }))}
-              onCall={() => runWithTrail(() => act.mutateAsync({ tableId, action: 'call', raiseTo: 0 }))}
-              onRaise={() => runWithTrail(() => act.mutateAsync({ tableId, action: 'raise', raiseTo: effRaiseTo }))}
-              onRaiseChange={setRaiseTo}
-            />
-          </div>
-        ) : view.handOver ? (
-          <div className="flex justify-center gap-2">
-            {isHost ? <Button variant="primary" onClick={() => runWithTrail(() => deal.mutateAsync(tableId))} disabled={busy}>Próxima mão</Button>
-              : <p className="font-sans text-sm text-muted">Mão terminada — à espera do anfitrião.</p>}
-          </div>
-        ) : (
-          <p className="text-center font-sans text-sm text-muted">À espera de {view.players.find((p) => p.id === view.toActId)?.name ?? 'outros'}…</p>
-        )}
-        {error && <p className="text-center font-sans text-sm text-negative">{error}</p>}
-      </div>
+      {/* Controls — members only */}
+      {!spectating && (
+        <div className="card space-y-3 p-4">
+          {inLobby ? (
+            <div className="flex flex-wrap justify-center gap-2">
+              {isHost && <Button variant="secondary" onClick={() => wrap(() => addBot.mutateAsync({ tableId, difficulty }))} disabled={busy || view.players.length >= 9}>Adicionar bot</Button>}
+              {isHost && <Button variant="primary" onClick={() => runWithTrail(() => start.mutateAsync(tableId))} disabled={busy || view.players.length < 2}>Iniciar mão</Button>}
+              {!isHost && <p className="font-sans text-sm text-muted">À espera de o anfitrião iniciar…</p>}
+            </div>
+          ) : myTurn ? (
+            <div className="space-y-3">
+              {turnDeadline && <TurnTimer deadline={turnDeadline} />}
+              <PokerActionBar
+                owe={owe}
+                callAmount={Math.min(owe, me?.stack ?? 0)}
+                raiseTo={effRaiseTo}
+                minRaiseTo={minRaiseTo}
+                maxRaiseTo={maxRaiseTo}
+                canRaise={canRaise}
+                busy={busy}
+                quickBets={quickBets}
+                onFold={() => runWithTrail(() => act.mutateAsync({ tableId, action: 'fold', raiseTo: 0 }))}
+                onCheck={() => runWithTrail(() => act.mutateAsync({ tableId, action: 'check', raiseTo: 0 }))}
+                onCall={() => runWithTrail(() => act.mutateAsync({ tableId, action: 'call', raiseTo: 0 }))}
+                onRaise={() => runWithTrail(() => act.mutateAsync({ tableId, action: 'raise', raiseTo: effRaiseTo }))}
+                onRaiseChange={setRaiseTo}
+              />
+            </div>
+          ) : view.handOver ? (
+            // Any seated player can deal the next hand — so a table is never stuck
+            // waiting on a host who left.
+            <div className="flex justify-center gap-2">
+              {me ? <Button variant="primary" onClick={() => runWithTrail(() => deal.mutateAsync(tableId))} disabled={busy}>Próxima mão</Button>
+                : <p className="font-sans text-sm text-muted">Mão terminada.</p>}
+            </div>
+          ) : (
+            <p className="text-center font-sans text-sm text-muted">À espera de {view.players.find((p) => p.id === view.toActId)?.name ?? 'outros'}…</p>
+          )}
+          {error && <p className="text-center font-sans text-sm text-negative">{error}</p>}
+        </div>
+      )}
+      {spectating && error && <p className="text-center font-sans text-sm text-negative">{error}</p>}
 
       {view.log.length > 0 && <p className="text-center font-sans text-xs text-muted">{view.log.join(' · ')}</p>}
     </div>
