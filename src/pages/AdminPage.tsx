@@ -5,11 +5,14 @@ import {
   useAdminAnnouncements,
   useAdminChallenges,
   useAdminFixtures,
+  useAdminMachines,
   useAdminPlayers,
   useAdminPlayerBets,
   useAdminPlayerTransactions,
   useAdminStats,
   useAdminActionsMutations,
+  useGameSwitches,
+  useGameToggles,
   useSetAnnouncementActive,
   type AdminStats,
   type AdminTop,
@@ -20,11 +23,12 @@ import { Eyebrow } from '@/components/ui/primitives';
 import { formatAmount } from '@/lib/format';
 import type { AdminAction, AdminPlayerBet, AdminPlayerTransaction, Fixture, Profile } from '@/types/db';
 
-type Tab = 'overview' | 'players' | 'sportsbook' | 'challenges' | 'broadcast' | 'logs';
+type Tab = 'overview' | 'players' | 'casino' | 'sportsbook' | 'challenges' | 'broadcast' | 'logs';
 
 const TAB_LABEL: Record<Tab, string> = {
   overview: 'Resumo',
   players: 'Jogadores',
+  casino: 'Casino',
   sportsbook: 'Futebol',
   challenges: 'Desafios',
   broadcast: 'Anúncios',
@@ -404,7 +408,7 @@ export function AdminPage() {
     return <p className="py-12 text-center text-negative">Apenas administradores.</p>;
   }
 
-  const tabs: Tab[] = ['overview', 'players', 'sportsbook', 'challenges', 'broadcast', 'logs'];
+  const tabs: Tab[] = ['overview', 'players', 'casino', 'sportsbook', 'challenges', 'broadcast', 'logs'];
   const visiblePlayers = (players ?? []).filter((p) => matchesFilter(p, filter));
   const selected = visiblePlayers.find((p) => p.id === selectedId) ?? (players ?? []).find((p) => p.id === selectedId) ?? null;
 
@@ -492,6 +496,8 @@ export function AdminPage() {
         </div>
       )}
 
+      {tab === 'casino' && <CasinoToggles onToast={show} />}
+
       {tab === 'sportsbook' && (
         <div className="space-y-2">
           {(fixtures ?? []).map((f) => (
@@ -530,6 +536,66 @@ export function AdminPage() {
       )}
 
       {tab === 'logs' && <LogsView actions={actions ?? []} players={players ?? []} />}
+    </div>
+  );
+}
+
+/** A labelled on/off row with an Ativo/Desligado switch. */
+function ToggleRow({ label, enabled, busy, onToggle }: { label: string; enabled: boolean; busy: boolean; onToggle: () => void }) {
+  return (
+    <div className="flex items-center justify-between gap-2 rounded border border-border px-3 py-2">
+      <span className="min-w-0 truncate font-sans text-sm text-text">{label}</span>
+      <button
+        onClick={onToggle}
+        disabled={busy}
+        className={`focus-ring shrink-0 rounded-full px-3 py-1 font-sans text-[11px] font-semibold uppercase tracking-[0.12em] transition-colors disabled:opacity-50 ${
+          enabled ? 'bg-positive/15 text-positive ring-1 ring-positive/40' : 'bg-negative/15 text-negative ring-1 ring-negative/40'
+        }`}
+      >
+        {enabled ? 'Ativo' : 'Desligado'}
+      </button>
+    </div>
+  );
+}
+
+/** Casino tab: enable/disable whole games + individual slot machines. */
+function CasinoToggles({ onToast }: { onToast: (text: string, tone?: ToastTone) => void }) {
+  const { data: games } = useGameSwitches();
+  const { data: machines } = useAdminMachines();
+  const { setGameEnabled, setMachineEnabled } = useGameToggles();
+  const busy = setGameEnabled.isPending || setMachineEnabled.isPending;
+
+  const toggleGame = async (key: string, label: string, enabled: boolean) => {
+    try {
+      await setGameEnabled.mutateAsync({ key, enabled });
+      onToast(`${label} ${enabled ? 'ativado' : 'desativado'}.`);
+    } catch { onToast('Não foi possível alterar.', 'error'); }
+  };
+  const toggleMachine = async (key: string, name: string, enabled: boolean) => {
+    try {
+      await setMachineEnabled.mutateAsync({ key, enabled });
+      onToast(`${name} ${enabled ? 'ativada' : 'desativada'}.`);
+    } catch { onToast('Não foi possível alterar.', 'error'); }
+  };
+
+  return (
+    <div className="grid gap-4 lg:grid-cols-2">
+      <div className="card space-y-2 p-4">
+        <p className="font-display text-base font-medium text-text">Jogos</p>
+        <p className="font-sans text-[11px] text-muted-2">Desligar um jogo esconde-o do salão do casino.</p>
+        {(games ?? []).map((g) => (
+          <ToggleRow key={g.key} label={g.label} enabled={g.enabled} busy={busy} onToggle={() => toggleGame(g.key, g.label, !g.enabled)} />
+        ))}
+        {games && games.length === 0 && <p className="py-2 font-sans text-sm text-muted-2">Sem jogos (corre a migração).</p>}
+      </div>
+      <div className="card space-y-2 p-4">
+        <p className="font-display text-base font-medium text-text">Máquinas de slots</p>
+        <p className="font-sans text-[11px] text-muted-2">Desligar uma máquina remove-a da galeria de slots.</p>
+        {(machines ?? []).map((m) => (
+          <ToggleRow key={m.key} label={m.name} enabled={m.enabled} busy={busy} onToggle={() => toggleMachine(m.key, m.name, !m.enabled)} />
+        ))}
+        {machines && machines.length === 0 && <p className="py-2 font-sans text-sm text-muted-2">Sem máquinas.</p>}
+      </div>
     </div>
   );
 }

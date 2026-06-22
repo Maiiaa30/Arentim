@@ -645,6 +645,11 @@ export type AdminAnnouncement = {
   created_at: string;
 };
 
+/** A whole-game on/off switch shown in the casino lobby + admin. */
+export type GameSwitch = { key: string; label: string; enabled: boolean };
+/** Admin view of a slot machine with its enable flag. */
+export type AdminMachine = { key: string; name: string; enabled: boolean };
+
 export type Transaction = {
   id: number;
   user_id: string;
@@ -1262,6 +1267,22 @@ export type Database = {
       };
       admin_set_announcement_active: {
         Args: { p_id: number; p_active: boolean };
+        Returns: undefined;
+      };
+      list_game_switches: {
+        Args: Record<string, never>;
+        Returns: GameSwitch[];
+      };
+      admin_set_game_enabled: {
+        Args: { p_key: string; p_enabled: boolean };
+        Returns: undefined;
+      };
+      admin_list_machines: {
+        Args: Record<string, never>;
+        Returns: AdminMachine[];
+      };
+      admin_set_machine_enabled: {
+        Args: { p_key: string; p_enabled: boolean };
         Returns: undefined;
       };
     };
