@@ -14,6 +14,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4';
 import { corsHeaders } from '../_shared/cors.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
+const ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!;
 const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const STATS_KEY = Deno.env.get('FOOTBALL_STATS_KEY') ?? '';
 const API = 'https://v3.football.api-sports.io';
@@ -61,6 +62,14 @@ function build(t: ApiTeamStats) {
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
+
+  // Require an authenticated caller so the external stats quota can't be burned
+  // by anonymous traffic.
+  const authHeader = req.headers.get('Authorization') ?? '';
+  const userClient = createClient(SUPABASE_URL, ANON_KEY, { global: { headers: { Authorization: authHeader } } });
+  const { data: auth } = await userClient.auth.getUser();
+  if (!auth?.user) return json({ available: false, reason: 'unauthorized' }, 401);
+
   const db = createClient(SUPABASE_URL, SERVICE_KEY);
 
   let body: { fixtureId?: number };
