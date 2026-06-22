@@ -36,7 +36,7 @@ export function CrashPage() {
   const [displayMult, setDisplayMult] = useState(1);
   const [error, setError] = useState<string | null>(null);
   const [winId, setWinId] = useState(0);
-  const [result, setResult] = useState<{ won: boolean; mult: number; payout: number } | null>(null);
+  const [result, setResult] = useState<{ won: boolean; mult: number; payout: number; auto: boolean } | null>(null);
 
   const offsetRef = useRef(0);
   const settledRef = useRef(false);
@@ -86,7 +86,9 @@ export function CrashPage() {
     if (mine && mine.settled && !settledRef.current) {
       settledRef.current = true;
       const won = mine.payout > 0;
-      setResult({ won, mult: Number(mine.cashout ?? state?.crash ?? 1), payout: mine.payout });
+      // Reaching this effect (rather than doCashout) means the bet settled on its
+      // own — a win here is an automatic cash-out at the player's target.
+      setResult({ won, mult: Number(mine.cashout ?? state?.crash ?? 1), payout: mine.payout, auto: true });
       if (won) setWinId((n) => n + 1);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -121,7 +123,7 @@ export function CrashPage() {
     try {
       const res = await cashout.mutateAsync();
       settledRef.current = true;
-      setResult({ won: res.won, mult: res.mult, payout: res.payout });
+      setResult({ won: res.won, mult: res.mult, payout: res.payout, auto: false });
       if (res.won) setWinId((n) => n + 1);
     } catch {
       setError('A retirada falhou — tenta outra vez.');
@@ -166,6 +168,19 @@ export function CrashPage() {
 
           <div className="relative mx-auto h-72 w-full sm:h-80">
             <CrashGraph mult={displayMult} exploded={exploded} flying={flying} />
+
+            {/* Cash-out announcement — pops in when YOU leave the round (auto or manual). */}
+            {result?.won && (
+              <div
+                key={winId}
+                className="animate-win-burst pointer-events-none absolute left-1/2 top-2 z-20 -translate-x-1/2 rounded-full border border-positive/60 bg-positive/15 px-4 py-1.5 text-center shadow-[0_0_26px_rgba(31,138,91,0.5)] backdrop-blur-sm"
+              >
+                <p className="font-display text-sm font-bold text-positive sm:text-base">
+                  {result.auto ? '🤖 Saída automática' : '✓ Saíste'} a {result.mult.toFixed(2)}×
+                </p>
+                <p className="font-mono text-xs font-semibold text-positive">+{formatAmount(result.payout)} tós</p>
+              </div>
+            )}
             <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
               {betting ? (
                 <>

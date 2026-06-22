@@ -1,8 +1,78 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useDuels, useDuelActions } from './useDuels';
 import { Button } from '@/components/ui/Button';
 import { formatAmount } from '@/lib/format';
-import type { DuelRow } from '@/types/db';
+import type { DuelRow, DuelRespondResult } from '@/types/db';
+
+/** One rolling number panel (you / opponent). */
+function RollCard({ label, value, rolling, highlight }: { label: string; value: number; rolling: boolean; highlight: boolean }) {
+  return (
+    <div className={`rounded-xl border p-3 transition-colors ${highlight ? 'border-positive bg-positive/10' : 'border-border bg-bg/50'}`}>
+      <p className="truncate font-sans text-[11px] text-muted-2">{label}</p>
+      <p className={`font-mono text-4xl font-bold tabular-nums ${rolling ? 'text-muted' : highlight ? 'text-positive' : 'text-text'}`}>
+        {value}
+      </p>
+    </div>
+  );
+}
+
+/**
+ * Suspense modal for an accepted duel: the rolls cycle for a beat before landing
+ * on the real result, so the win/loss isn't an instant text flash.
+ */
+function DuelReveal({ result, opponentName, stake, onClose }: {
+  result: DuelRespondResult; opponentName: string; stake: number; onClose: () => void;
+}) {
+  const myFinal = result.opponent_roll ?? 0; // the accepter is the "opponent" seat
+  const theirFinal = result.challenger_roll ?? 0;
+  const won = result.won ?? false;
+  const [phase, setPhase] = useState<'rolling' | 'done'>('rolling');
+  const [my, setMy] = useState(1);
+  const [their, setTheir] = useState(1);
+
+  useEffect(() => {
+    const iv = setInterval(() => {
+      setMy(1 + Math.floor(Math.random() * 100));
+      setTheir(1 + Math.floor(Math.random() * 100));
+    }, 80);
+    const to = setTimeout(() => {
+      clearInterval(iv);
+      setMy(myFinal);
+      setTheir(theirFinal);
+      setPhase('done');
+    }, 1600);
+    return () => { clearInterval(iv); clearTimeout(to); };
+  }, [myFinal, theirFinal]);
+
+  return (
+    <div
+      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+      onClick={phase === 'done' ? onClose : undefined}
+    >
+      <div className="card animate-pop relative w-full max-w-sm overflow-hidden p-6 text-center" onClick={(e) => e.stopPropagation()}>
+        <p className="font-sans text-[10px] uppercase tracking-[0.2em] text-muted-2">Duelo · 1 a 100</p>
+        <div className="mt-4 grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+          <RollCard label="Tu" value={my} rolling={phase === 'rolling'} highlight={phase === 'done' && won} />
+          <span className="font-display text-lg text-muted-2">vs</span>
+          <RollCard label={opponentName} value={their} rolling={phase === 'rolling'} highlight={phase === 'done' && !won} />
+        </div>
+        {phase === 'rolling' ? (
+          <p className="mt-5 animate-floaty font-sans text-sm text-gold-light">A lançar os dados…</p>
+        ) : (
+          <div className="animate-win-burst mt-5">
+            <p className={`font-display text-2xl font-bold ${won ? 'text-positive' : 'text-negative'}`}>
+              {won ? '🏆 Ganhaste!' : 'Perdeste'}
+            </p>
+            <p className={`mt-1 font-mono text-sm font-semibold ${won ? 'text-positive' : 'text-negative'}`}>
+              {won ? `+${formatAmount(stake)}` : `−${formatAmount(stake)}`} tós
+            </p>
+            <Button variant="ghost" className="mt-4" onClick={onClose}>Fechar</Button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 function ResultLine({ d, meId }: { d: DuelRow; meId: string | undefined }) {
   if (d.status === 'settled') {
@@ -38,15 +108,14 @@ export function DuelsPanel({ meId }: { meId: string | undefined }) {
   const { data: duels } = useDuels();
   const { respond, cancel } = useDuelActions();
   const [flash, setFlash] = useState<string | null>(null);
+  const [reveal, setReveal] = useState<{ result: DuelRespondResult; name: string; stake: number } | null>(null);
 
-  async function accept(duelId: number) {
+  async function accept(d: DuelRow) {
     setFlash(null);
     try {
-      const r = await respond.mutateAsync({ duelId, accept: true });
-      // A duel settles instantly — show the roll outcome right away.
-      if (r.status === 'settled') {
-        setFlash(`${r.won ? '🏆 Ganhaste' : 'Perdeste'} — tiraste ${r.opponent_roll}, ele ${r.challenger_roll}.`);
-      }
+      const r = await respond.mutateAsync({ duelId: d.id, accept: true });
+      // A duel settles on accept; play the roll reveal instead of an instant flash.
+      if (r.status === 'settled') setReveal({ result: r, name: d.other_name, stake: d.stake });
     } catch {
       setFlash('Não foi possível responder ao duelo.');
     }
@@ -79,7 +148,7 @@ export function DuelsPanel({ meId }: { meId: string | undefined }) {
               </span>
               <div className="flex gap-2">
                 <Button variant="primary" className="!px-4 !py-2" disabled={respond.isPending}
-                  onClick={() => accept(d.id)}>
+                  onClick={() => accept(d)}>
                   Aceitar
                 </Button>
                 <Button variant="ghost" className="!px-4 !py-2" disabled={respond.isPending}
@@ -119,6 +188,15 @@ export function DuelsPanel({ meId }: { meId: string | undefined }) {
             <ResultLine key={d.id} d={d} meId={meId} />
           ))}
         </div>
+      )}
+
+      {reveal && (
+        <DuelReveal
+          result={reveal.result}
+          opponentName={reveal.name}
+          stake={reveal.stake}
+          onClose={() => setReveal(null)}
+        />
       )}
     </div>
   );

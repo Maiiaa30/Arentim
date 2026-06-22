@@ -72,6 +72,21 @@ function ChipStack({ amount, className = '' }: { amount: number; className?: str
   );
 }
 
+/** Small "human" marker shown on real-player seats (vs bots). */
+function RealPlayerDot({ className = '' }: { className?: string }) {
+  return (
+    <span
+      className={`flex items-center justify-center rounded-full bg-positive text-bg shadow-[0_1px_3px_rgba(0,0,0,0.6)] ring-2 ring-black/50 ${className}`}
+      title="Jogador real"
+      aria-label="Jogador real"
+    >
+      <svg viewBox="0 0 24 24" className="h-2.5 w-2.5" fill="currentColor" aria-hidden>
+        <path d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10Zm0 2c-5 0-9 2.5-9 6v2h18v-2c0-3.5-4-6-9-6Z" />
+      </svg>
+    </span>
+  );
+}
+
 /** Dealer "D" button disc. */
 function DealerButton({ className = '' }: { className?: string }) {
   return (
@@ -96,13 +111,16 @@ interface SeatProps {
   cardSize?: CardSize;
   /** Made hand shown at showdown (already translated), e.g. "Full". */
   handLabel?: string | undefined;
+  /** Tighten the seat for crowded tables (6+ opponents) so they don't overlap. */
+  dense?: boolean;
 }
 
 /** Compact seat used on the oval (avatar + name/stack + hole cards). */
-function OvalSeat({ p, isTurn, isYou, isButton, dealKey, cardSize = 'sm', handLabel }: SeatProps) {
+function OvalSeat({ p, isTurn, isYou, isButton, dealKey, cardSize = 'sm', handLabel, dense }: SeatProps) {
   const folded = p.status === 'folded' || p.status === 'out';
+  const width = isYou ? 'w-[136px]' : dense ? 'w-[92px]' : 'w-[110px]';
   return (
-    <div className={`relative flex ${isYou ? 'w-[136px]' : 'w-[112px]'} flex-col items-center ${folded ? 'opacity-50' : ''}`}>
+    <div className={`relative flex ${width} flex-col items-center ${folded ? 'opacity-50' : ''}`}>
       {isButton && <DealerButton className="absolute -right-1 -top-1 z-10 h-5 w-5 text-[10px]" />}
       {/* Hole cards sit just behind the plate (mucked when folded) */}
       <div className="mb-[-6px] flex gap-1">
@@ -121,11 +139,12 @@ function OvalSeat({ p, isTurn, isYou, isButton, dealKey, cardSize = 'sm', handLa
         ].join(' ')}
     >
         <span
-          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full font-display text-[12px] font-bold ${
+          className={`relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full font-display text-[12px] font-bold ${
             isYou ? 'bg-gold text-bg' : 'bg-surface text-gold ring-1 ring-gold/30'
           }`}
         >
           {initials(p.name)}
+          {!p.isBot && <RealPlayerDot className="absolute -bottom-1 -right-1 h-3.5 w-3.5" />}
         </span>
         <span className="min-w-0 flex-1">
           <span className="block truncate font-sans text-[11.5px] font-medium leading-tight text-text">{p.name}</span>
@@ -159,11 +178,12 @@ function StackedSeat({ p, isTurn, isYou, isButton, dealKey, cardSize = 'sm', han
       ].join(' ')}
     >
       <span
-        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full font-display text-[13px] font-bold ${
+        className={`relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full font-display text-[13px] font-bold ${
           isYou ? 'bg-gold text-bg' : 'bg-surface text-gold ring-1 ring-gold/30'
         }`}
       >
         {initials(p.name)}
+        {!p.isBot && <RealPlayerDot className="absolute -bottom-1 -right-1 h-4 w-4" />}
       </span>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5">
@@ -253,10 +273,21 @@ const RAIL: Record<number, { left: number; top: number }[]> = {
 };
 
 export function PokerTable({ view, youId, myTurn, resultBanner }: PokerTableProps) {
-  const opponents = view.players.filter((p) => p.id !== youId);
+  // Lay opponents out around the table in true seat order starting just after the
+  // hero, so the circular seating is preserved for every viewer (your real table
+  // neighbours stay your on-screen neighbours). Without this rotation each client
+  // just filtered itself out of the raw array, so the same player landed in a
+  // different spot depending on who was looking — "Tomás no topo numa conta, à
+  // esquerda noutra".
+  const youIdx = view.players.findIndex((p) => p.id === youId);
+  const opponents =
+    youIdx >= 0
+      ? [...view.players.slice(youIdx + 1), ...view.players.slice(0, youIdx)]
+      : view.players.filter((p) => p.id !== youId);
   const you = view.players.find((p) => p.id === youId);
   const street = STREET_LABEL[view.street] ?? view.street;
   const rail = RAIL[Math.min(8, Math.max(1, opponents.length))] ?? RAIL[8]!;
+  const dense = opponents.length >= 6;
 
   // At showdown the engine reveals each contender's made hand — show its name.
   const handById = new Map((view.result?.reveal ?? []).map((r) => [r.id, handPt(r.hand)]));
@@ -274,7 +305,7 @@ export function PokerTable({ view, youId, myTurn, resultBanner }: PokerTableProp
     <div>
       {/* ---- Oval table (tablet / desktop) ---- */}
       <div className="hidden sm:block">
-        <div className="felt felt-rail relative mx-auto aspect-[16/11] w-full max-w-3xl overflow-hidden rounded-[48%/60%] p-6">
+        <div className="felt felt-rail relative mx-auto aspect-[16/11] w-full max-w-4xl overflow-hidden rounded-[48%/60%] p-6">
           {/* Inner rail line for depth */}
           <div className="pointer-events-none absolute inset-4 rounded-[48%/60%] border border-gold/10" aria-hidden />
           <div className="pointer-events-none absolute inset-8 rounded-[48%/60%] border border-black/20" aria-hidden />
@@ -303,7 +334,7 @@ export function PokerTable({ view, youId, myTurn, resultBanner }: PokerTableProp
                 className="absolute -translate-x-1/2 -translate-y-1/2"
                 style={{ left: `${pos.left}%`, top: `${pos.top}%` }}
               >
-                <OvalSeat p={p} isTurn={view.toActId === p.id && !view.handOver} isYou={false} isButton={view.button === p.id} dealKey={dealKey} handLabel={handById.get(p.id)} />
+                <OvalSeat p={p} isTurn={view.toActId === p.id && !view.handOver} isYou={false} isButton={view.button === p.id} dealKey={dealKey} handLabel={handById.get(p.id)} dense={dense} />
                 {p.committed > 0 && (
                   <div className="absolute left-1/2 top-full mt-1 -translate-x-1/2">
                     <ChipStack amount={p.committed} />

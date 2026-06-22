@@ -41,12 +41,19 @@ export function useMyPokerTables() {
   });
 }
 
-/** Live table state, polled so all seats stay in sync (no row exposure). */
+/**
+ * Live table state, polled so all seats stay in sync (the table row is never
+ * exposed to clients — hole cards stay server-side — so we can't use Realtime).
+ * Polls a bit faster than before and KEEPS polling when the tab is in the
+ * background, so a second player watching from another window/tab doesn't go
+ * stale ("não está live nas 2 contas").
+ */
 export function usePokerTableState(tableId: number | null) {
   return useQuery({
     queryKey: ['poker-table', tableId] as const,
     enabled: tableId != null,
-    refetchInterval: 2000,
+    refetchInterval: 1300,
+    refetchIntervalInBackground: true,
     queryFn: () => call({ op: 'state', tableId }),
   });
 }

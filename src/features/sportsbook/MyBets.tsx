@@ -61,8 +61,21 @@ export function BetCard({ bet }: { bet: BetWithLegs }) {
     setErr(null);
     try {
       await cashout.mutateAsync(bet.id);
-    } catch {
-      setErr('Já não dá para vender esta aposta.');
+    } catch (e) {
+      // Surface the real reason so it's clear why a sale was refused, instead of
+      // a one-size-fits-all message.
+      const msg = e instanceof Error ? e.message : '';
+      setErr(
+        msg.includes('início dos jogos')
+          ? 'Um dos jogos já começou — já não dá para vender.'
+          : msg.includes('já liquidada')
+            ? 'Esta aposta já foi liquidada.'
+            : msg.includes('não encontrada')
+              ? 'Aposta não encontrada.'
+              : /function|schema cache|does not exist/i.test(msg)
+                ? 'A venda antecipada ainda não está disponível.'
+                : 'Já não dá para vender esta aposta.',
+      );
     }
   }
 
