@@ -14,14 +14,19 @@ import {
   useGameSwitches,
   useGameToggles,
   useSetAnnouncementActive,
+  useSetBroadcast,
   type AdminStats,
   type AdminTop,
 } from '@/features/admin/useAdmin';
+import { useBroadcasts } from '@/features/sportsbook/useSportsbook';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Eyebrow } from '@/components/ui/primitives';
 import { formatAmount } from '@/lib/format';
 import type { AdminAction, AdminPlayerBet, AdminPlayerTransaction, Fixture, Profile } from '@/types/db';
+
+/** The competitions we sync (matches footballData.ts FD_COMPETITIONS names). */
+const LEAGUES = ['Liga Portugal', 'Liga dos Campeões', 'Premier League', 'La Liga', 'Serie A', 'Bundesliga', 'Campeonato do Mundo'];
 
 type Tab = 'overview' | 'players' | 'casino' | 'sportsbook' | 'challenges' | 'broadcast' | 'logs';
 
@@ -499,10 +504,13 @@ export function AdminPage() {
       {tab === 'casino' && <CasinoToggles onToast={show} />}
 
       {tab === 'sportsbook' && (
-        <div className="space-y-2">
-          {(fixtures ?? []).map((f) => (
-            <FixtureRow key={f.id} fixture={f} onSettle={settleFixture.mutateAsync} onSetOdds={setOdds.mutateAsync} onToast={show} />
-          ))}
+        <div className="space-y-5">
+          <BroadcastsEditor onToast={show} />
+          <div className="space-y-2">
+            {(fixtures ?? []).map((f) => (
+              <FixtureRow key={f.id} fixture={f} onSettle={settleFixture.mutateAsync} onSetOdds={setOdds.mutateAsync} onToast={show} />
+            ))}
+          </div>
         </div>
       )}
 
@@ -596,6 +604,54 @@ function CasinoToggles({ onToast }: { onToast: (text: string, tone?: ToastTone) 
         ))}
         {machines && machines.length === 0 && <p className="py-2 font-sans text-sm text-muted-2">Sem máquinas.</p>}
       </div>
+    </div>
+  );
+}
+
+/** "Onde ver" editor: official broadcaster + link per competition. */
+function BroadcastRow({ league, channel, url, onSave }: { league: string; channel: string; url: string; onSave: (channel: string, url: string) => Promise<void> }) {
+  const [ch, setCh] = useState(channel);
+  const [u, setU] = useState(url);
+  const [saving, setSaving] = useState(false);
+  return (
+    <div className="card grid gap-2 p-3 sm:grid-cols-[150px_1fr_1fr_auto] sm:items-center">
+      <span className="font-sans text-sm text-text">{league}</span>
+      <Input id={`bc-ch-${league}`} value={ch} onChange={(e) => setCh(e.target.value)} placeholder="Canal (ex: Sport TV)" />
+      <Input id={`bc-url-${league}`} value={u} onChange={(e) => setU(e.target.value)} placeholder="https://…" />
+      <Button variant="secondary" disabled={saving} onClick={async () => { setSaving(true); try { await onSave(ch, u); } finally { setSaving(false); } }}>
+        {saving ? 'A guardar…' : 'Guardar'}
+      </Button>
+    </div>
+  );
+}
+
+function BroadcastsEditor({ onToast }: { onToast: (text: string, tone?: ToastTone) => void }) {
+  const { data } = useBroadcasts();
+  const setBroadcast = useSetBroadcast();
+  const byLeague = new Map((data ?? []).map((b) => [b.league, b]));
+  return (
+    <div className="space-y-2">
+      <div>
+        <p className="font-display text-base font-medium text-text">Onde ver — emissoras oficiais</p>
+        <p className="font-sans text-[11px] text-muted-2">Mostrado no detalhe do jogo. Deixa o canal vazio para esconder.</p>
+      </div>
+      {LEAGUES.map((league) => {
+        const b = byLeague.get(league);
+        return (
+          <BroadcastRow
+            key={league}
+            league={league}
+            channel={b?.channel ?? ''}
+            url={b?.url ?? ''}
+            onSave={async (channel, url) => {
+              try {
+                await setBroadcast.mutateAsync({ league, channel, url });
+                onToast('Emissora guardada.');
+              } catch { onToast('Não foi possível guardar.', 'error'); }
+            }}
+          />
+        );
+      })}
     </div>
   );
 }

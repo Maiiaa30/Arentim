@@ -3,7 +3,46 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/features/auth/AuthProvider';
 import { profileKey } from '@/features/profile/useProfile';
-import type { Bet, BetSelectionInput, BetSelectionRow, Fixture, PlaceBetResult } from '@/types/db';
+import type {
+  Bet,
+  BetSelectionInput,
+  BetSelectionRow,
+  Broadcast,
+  Fixture,
+  MatchStatsResponse,
+  PlaceBetResult,
+} from '@/types/db';
+
+/** Official "Onde ver" broadcaster per competition (admin-curated). */
+export function useBroadcasts() {
+  return useQuery({
+    queryKey: ['broadcasts'] as const,
+    staleTime: 300_000,
+    queryFn: async (): Promise<Broadcast[]> => {
+      const { data, error } = await supabase.rpc('list_broadcasts');
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+}
+
+/**
+ * Live match statistics for a fixture, fetched on demand from the match-stats
+ * Edge Function (only while a popup is open for a live game). Refreshes every
+ * 30s; the function caches server-side so this doesn't hammer the stats API.
+ */
+export function useMatchStats(fixtureId: number, enabled: boolean) {
+  return useQuery({
+    queryKey: ['match-stats', fixtureId] as const,
+    enabled,
+    refetchInterval: enabled ? 30_000 : false,
+    queryFn: async (): Promise<MatchStatsResponse> => {
+      const { data, error } = await supabase.functions.invoke('match-stats', { body: { fixtureId } });
+      if (error) throw error;
+      return data as MatchStatsResponse;
+    },
+  });
+}
 
 /** Currently-live fixtures (score, minute, events stream in over Realtime). */
 export function useLiveFixtures() {
