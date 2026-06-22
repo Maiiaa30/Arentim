@@ -174,9 +174,15 @@ export function SportsbookPage() {
               </>
             )}
           </div>
-          <aside className="min-w-0 flex-[1_1_300px] space-y-6">
-            <BetSlip />
-            <FootballLeaderboard />
+          <aside className="min-w-0 flex-[1_1_300px]">
+            {/* Sticky right rail: the Boletim stays in view while you scroll the
+                fixtures. The leaderboard sits inside the SAME sticky block (and it
+                scrolls internally if the rail is taller than the viewport) so it
+                can't bleed over the slip the way a lone sticky element did. */}
+            <div className="space-y-6 lg:sticky lg:top-[88px] lg:max-h-[calc(100vh-104px)] lg:overflow-y-auto lg:pr-1">
+              <BetSlip />
+              <FootballLeaderboard />
+            </div>
           </aside>
         </div>
       )}

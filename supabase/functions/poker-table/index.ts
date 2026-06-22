@@ -56,7 +56,7 @@ Deno.serve(async (req) => {
   if (!user) return json({ error: 'unauthorized' }, 401);
 
   const db = createClient(SUPABASE_URL, SERVICE_KEY);
-  let body: { op?: string; code?: string; buyIn?: number; botCount?: number; difficulty?: string; action?: string; raiseTo?: number; tableId?: number; amount?: number };
+  let body: { op?: string; code?: string; buyIn?: number; botCount?: number; difficulty?: string; action?: string; raiseTo?: number; tableId?: number; amount?: number; isPublic?: boolean; targetId?: string };
   try { body = await req.json(); } catch { return json({ error: 'bad request' }, 400); }
 
   const name = async () =>
@@ -100,6 +100,28 @@ Deno.serve(async (req) => {
       if (!actor.isBot) s = applyActionFor(s, actor.id, 'fold', 0, rand);
     }
     return s;
+  };
+
+  // Remove a seat safely whether or not a hand is in progress: mid-hand, fold the
+  // player (their committed chips stay in the pot, conserved) and flag the seat to
+  // be purged at the next hand; between hands they can be removed outright. If it
+  // was their turn, fold through the engine so the hand keeps progressing.
+  const foldSeat = (state: TableState, id: string): TableState => {
+    if (state.handOver) return state;
+    if (state.toAct >= 0 && state.players[state.toAct]!.id === id) {
+      return applyActionFor(state, id, 'fold', 0, rand);
+    }
+    const p = state.players.find((pp) => pp.id === id);
+    if (p && (p.status === 'active' || p.status === 'allin')) p.status = 'folded';
+    return state;
+  };
+
+  // When the host leaves/is removed and other humans remain, pass the host badge
+  // to one of them so add-bot / start keep working.
+  const transferHostIfNeeded = async (row: Row, state: TableState, leaverId: string) => {
+    if (row.host_id !== leaverId) return;
+    const nextHost = state.players.find((p) => !p.isBot && !p.leaving && p.id !== leaverId);
+    if (nextHost) await db.from('poker_tables').update({ host_id: nextHost.id }).eq('id', row.id);
   };
 
   // Between hands, broke bots leave and a fresh bot takes the seat (same
@@ -146,16 +168,27 @@ Deno.serve(async (req) => {
       }
       const code = genCode();
       const { data: row, error } = await db.from('poker_tables')
-        .insert({ code, host_id: user.id, buy_in: buyIn, state }).select('id').single();
+        .insert({ code, host_id: user.id, buy_in: buyIn, state, is_public: body.isPublic === true })
+        .select('id').single();
       if (error) return json({ error: 'could not create table' }, 500);
       await db.from('poker_table_members').insert({ table_id: row.id, user_id: user.id });
       return json({ table_id: row.id, code, view: viewFor(state, user.id) });
     }
 
     case 'join': {
-      const code = String(body.code ?? '').toUpperCase().trim();
-      const { data: row } = await db.from('poker_tables')
-        .select('id, host_id, status, buy_in, state').eq('code', code).neq('status', 'closed').maybeSingle();
+      // Join by code (private + public) OR by id for a public table (from the
+      // lobby "Sentar"). A private table can't be joined by guessing its id.
+      let row: { id: number; host_id: string; status: string; buy_in: number; state: TableState; is_public: boolean } | null = null;
+      if (body.tableId != null) {
+        const r = await db.from('poker_tables')
+          .select('id, host_id, status, buy_in, state, is_public').eq('id', body.tableId).neq('status', 'closed').maybeSingle();
+        if (r.data && r.data.is_public) row = r.data as typeof row;
+      } else {
+        const code = String(body.code ?? '').toUpperCase().trim();
+        const r = await db.from('poker_tables')
+          .select('id, host_id, status, buy_in, state, is_public').eq('code', code).neq('status', 'closed').maybeSingle();
+        row = (r.data as typeof row) ?? null;
+      }
       if (!row) return json({ error: 'table not found' }, 404);
       const state = row.state as TableState;
       if (state.players.some((p) => p.id === user.id)) return json({ table_id: row.id, view: viewFor(state, user.id) });
@@ -217,9 +250,20 @@ Deno.serve(async (req) => {
       if (!row) return json({ error: 'no table' }, 404);
       if (!row.state.handOver) return json({ error: 'hand in progress' }, 409);
       rotateBrokeBots(row.state, row.buy_in);
+      // A hand needs at least two seats with chips. Without this guard startHand
+      // silently no-ops (handOver stays true) and the table looks frozen.
+      if (row.state.players.filter((p) => p.stack > 0 && !p.leaving).length < 2) {
+        return json({ error: 'need at least 2 players' }, 409);
+      }
       const trail: unknown[] = [];
       const rec: StepRecorder = (st) => trail.push(viewFor(st, user.id));
-      const state = startHand(row.state, rand, rec);
+      let state: TableState;
+      try {
+        state = startHand(row.state, rand, rec);
+      } catch (e) {
+        console.error('startHand failed', e);
+        return json({ error: 'could not start hand' }, 500);
+      }
       await persist(row.id, state, 'active');
       return json({ view: viewFor(state, user.id), trail, turnDeadline: deadlineFor(state) });
     }
@@ -259,13 +303,7 @@ Deno.serve(async (req) => {
         // their remaining stack is cashed out now, and the seat is purged at the
         // next hand start (removePlayer is a no-op mid-hand). If it's their turn,
         // fold through the engine so the hand keeps progressing for everyone.
-        if (!state.handOver) {
-          if (state.toAct >= 0 && state.players[state.toAct]!.id === user.id) {
-            state = applyActionFor(state, user.id, 'fold', 0, rand);
-          } else if (me.status === 'active' || me.status === 'allin') {
-            me.status = 'folded';
-          }
-        }
+        state = foldSeat(state, user.id);
         const meNow = state.players.find((p) => p.id === user.id)!;
         cashOut = meNow.stack;
         if (cashOut > 0) {
@@ -283,9 +321,57 @@ Deno.serve(async (req) => {
         else meNow.leaving = true; // purged at the next startHand
       }
       await db.from('poker_table_members').delete().eq('table_id', row.id).eq('user_id', user.id);
+      await transferHostIfNeeded(row, state, user.id);
       const remaining = state.players.filter((p) => !p.isBot && !p.leaving).length;
       await persist(row.id, state, remaining === 0 ? 'closed' : undefined);
       return json({ left: true, cashOut });
+    }
+
+    case 'kick': {
+      // Host removes a player or bot. A kicked human is folded (if mid-hand) and
+      // their remaining stack is returned to their balance; a bot is just folded
+      // + removed. Same chip-conservation rules as a normal leave.
+      const row = await loadByMembership(body.tableId);
+      if (!row) return json({ error: 'no table' }, 404);
+      if (row.host_id !== user.id) return json({ error: 'host only' }, 403);
+      const targetId = String(body.targetId ?? '');
+      if (!targetId || targetId === user.id) return json({ error: 'bad request' }, 400);
+      let state = row.state;
+      const target = state.players.find((p) => p.id === targetId);
+      if (!target) return json({ error: 'player not found' }, 404);
+
+      state = foldSeat(state, targetId);
+      const t = state.players.find((p) => p.id === targetId)!;
+      if (!t.isBot && t.stack > 0) {
+        const tm = (await db.from('poker_table_members').select('joined_at').eq('table_id', row.id).eq('user_id', targetId).maybeSingle()).data;
+        await db.rpc('apply_ledger_entry', {
+          p_user_id: targetId, p_type: 'win', p_amount: t.stack, p_game: 'poker', p_note: 'poker table expulso',
+          p_idempotency_key: `poker-cashout-${row.id}-${targetId}-${tm?.joined_at ?? '0'}`, p_wager: 0,
+        });
+      }
+      t.stack = 0;
+      if (state.handOver) removePlayer(state, targetId);
+      else t.leaving = true;
+      if (!t.isBot) await db.from('poker_table_members').delete().eq('table_id', row.id).eq('user_id', targetId);
+      await persist(row.id, state);
+      return json({ view: viewFor(state, user.id), kicked: targetId });
+    }
+
+    case 'watch': {
+      // Spectate a PUBLIC table by id — no membership, no buy-in. viewFor hides
+      // every hole card because the watcher isn't a seated player.
+      const { data: row } = await db.from('poker_tables')
+        .select('id, host_id, buy_in, state, is_public, status')
+        .eq('id', body.tableId ?? -1).neq('status', 'closed').maybeSingle();
+      if (!row || !row.is_public) return json({ view: null });
+      const state = row.state as TableState;
+      const seated = state.players.filter((p) => !p.leaving).length;
+      return json({
+        view: viewFor(state, user.id),
+        buyIn: row.buy_in,
+        seatsOpen: state.handOver && seated < MAX_SEATS,
+        seated,
+      });
     }
 
     case 'state': {

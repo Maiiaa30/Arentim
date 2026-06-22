@@ -104,12 +104,17 @@ export function MinesPage() {
 
   const cashValue = Math.floor(stake * mult);
 
-  function tileFace(i: number) {
+  function tileContent(i: number) {
     const isSafe = safe.has(i);
     const isBomb = phase === 'done' && bombs.includes(i);
-    if (isBomb) return i === hit ? '💥' : '💣';
-    if (isSafe) return '💎';
-    return '';
+    // Wrapping each revealed face in a freshly-mounted span lets the CSS
+    // animation fire the moment a tile flips (pop a diamond, blow up the mine).
+    if (isBomb) {
+      const isHit = i === hit;
+      return <span className={isHit ? 'inline-block animate-pop' : 'inline-block animate-fade-in opacity-80'}>{isHit ? '💥' : '💣'}</span>;
+    }
+    if (isSafe) return <span className="inline-block animate-pop">💎</span>;
+    return null;
   }
   function tileCls(i: number) {
     const isSafe = safe.has(i);
@@ -183,8 +188,15 @@ export function MinesPage() {
         </div>
 
         {/* Board */}
-        <div className="felt felt-rail rounded-lg p-4 sm:p-6">
-          <div className="mx-auto grid max-w-[560px] grid-cols-5 gap-2.5 sm:gap-3">
+        <div className={`felt felt-rail relative overflow-hidden rounded-lg p-4 sm:p-6 ${phase === 'done' && !result?.won ? 'animate-shake' : ''}`}>
+          {/* Outcome flash wash */}
+          {phase === 'done' && (
+            <div
+              className={`pointer-events-none absolute inset-0 z-0 animate-fade-in ${result?.won ? 'bg-positive/10' : 'bg-negative/15'}`}
+              aria-hidden
+            />
+          )}
+          <div className="relative z-10 mx-auto grid max-w-[560px] grid-cols-5 gap-2.5 sm:gap-3">
             {Array.from({ length: 25 }, (_, i) => (
               <button
                 key={i}
@@ -192,10 +204,27 @@ export function MinesPage() {
                 disabled={phase !== 'playing' || busy || safe.has(i)}
                 className={`focus-ring flex aspect-square items-center justify-center rounded-lg text-3xl shadow-[inset_0_-3px_6px_rgba(0,0,0,0.35)] transition-all hover:scale-[1.03] disabled:hover:scale-100 sm:text-4xl ${tileCls(i)}`}
               >
-                {tileFace(i)}
+                {tileContent(i)}
               </button>
             ))}
           </div>
+
+          {/* Outcome banner — pops over the board when the round ends */}
+          {phase === 'done' && (
+            <div className="pointer-events-none absolute inset-x-0 top-1/2 z-20 flex -translate-y-1/2 justify-center px-4">
+              {result?.won ? (
+                <div className="animate-win-burst rounded-2xl border border-positive/60 bg-bg/85 px-6 py-4 text-center shadow-[0_0_30px_rgba(31,138,91,0.5)] backdrop-blur-sm">
+                  <p className="font-display text-2xl font-bold text-positive">💎 +{formatAmount(result.payout)} tós</p>
+                  <p className="mt-0.5 font-mono text-sm text-positive/90">{mult.toFixed(2)}×</p>
+                </div>
+              ) : (
+                <div className="animate-pop rounded-2xl border border-negative/60 bg-bg/85 px-6 py-4 text-center shadow-[0_0_30px_rgba(176,48,58,0.55)] backdrop-blur-sm">
+                  <p className="font-display text-3xl font-bold text-negative">💥 Bum!</p>
+                  <p className="mt-0.5 font-sans text-sm text-muted">Rebentaste numa mina.</p>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>

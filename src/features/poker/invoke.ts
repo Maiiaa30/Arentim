@@ -20,6 +20,8 @@ const MESSAGES: Record<string, string> = {
   'host only': 'Só o anfitrião pode fazer isso.',
   'need at least 2 players': 'São precisos pelo menos 2 jogadores.',
   'cannot add bot now': 'Não é possível adicionar bots agora.',
+  'could not start hand': 'Não foi possível iniciar a mão. Tente novamente.',
+  'player not found': 'Jogador não encontrado.',
   'finish the hand before leaving': 'Termine a mão antes de sair.',
   'bad action': 'Ação inválida.',
   'bad request': 'Pedido inválido.',
