@@ -12,7 +12,10 @@ import { Eyebrow, SectionHeader } from '@/components/ui/primitives';
 import { SpinWheel } from '@/features/bonus/SpinWheel';
 import type { ChallengeRow, DailyChallengeRow } from '@/types/db';
 
-const RESCUE_THRESHOLD = 100;
+// Must match claim_rescue's server threshold (rescaled to 10 in
+// 20260619010000_rescale_economy.sql). If this is higher, the rescue card shows
+// for balances that the server then rejects as "not eligible".
+const RESCUE_THRESHOLD = 10;
 
 /** Live "resets in HH:MM:SS" countdown to the next local midnight (server day). */
 function ResetCountdown({ resetsAt }: { resetsAt: string }) {
@@ -145,24 +148,12 @@ export function ChallengesPage() {
         </p>
       </div>
 
-      {/* Ajuda quando o saldo está em baixo */}
-      {lowBalance && (
-        <section className="card border-gold/40 p-5 sm:p-6">
-          <h2 className="font-display text-lg font-medium text-text sm:text-xl">No fundo do poço?</h2>
-          <p className="mt-1 font-sans text-sm text-muted-2">
-            Ficou sem Tostões — aqui tem uma ajuda diária gratuita para voltar ao jogo.
-          </p>
-          <Button variant="primary" onClick={onRescue} disabled={rescue.isPending} className="mt-4">
-            {rescue.isPending ? 'A resgatar…' : 'Resgatar ajuda gratuita'}
-          </Button>
-        </section>
-      )}
-
       {msg && (
         <p className="animate-fade-in font-sans text-sm font-medium text-positive">{msg}</p>
       )}
 
-      {/* Roleta diária — um giro grátis por dia */}
+      {/* Roleta diária — um giro grátis por dia. Lead with the rewards so they're
+          never buried below the rescue card. */}
       <SpinWheel />
 
       {/* Desafios diários — renovam todos os dias, iguais para todos */}
@@ -185,6 +176,19 @@ export function ChallengesPage() {
               />
             ))}
           </div>
+        </section>
+      )}
+
+      {/* Ajuda quando o saldo está MESMO em baixo (< 10 tós, igual ao servidor) */}
+      {lowBalance && (
+        <section className="card border-gold/40 p-5 sm:p-6">
+          <h2 className="font-display text-lg font-medium text-text sm:text-xl">No fundo do poço?</h2>
+          <p className="mt-1 font-sans text-sm text-muted-2">
+            Ficou sem Tostões — aqui tem uma ajuda diária gratuita para voltar ao jogo.
+          </p>
+          <Button variant="primary" onClick={onRescue} disabled={rescue.isPending} className="mt-4">
+            {rescue.isPending ? 'A resgatar…' : 'Resgatar ajuda gratuita'}
+          </Button>
         </section>
       )}
 
