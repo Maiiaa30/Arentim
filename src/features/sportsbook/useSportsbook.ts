@@ -44,6 +44,12 @@ export function useMatchStats(fixtureId: number, enabled: boolean) {
   });
 }
 
+/** A match can't realistically run longer than this; past it, a still-'live'
+ *  fixture is stale (the poll/cron missed finishing it) — don't show it as live. */
+export const LIVE_MAX_AGE_MS = 3.5 * 60 * 60 * 1000;
+export const isActuallyLive = (f: Pick<Fixture, 'status' | 'kickoff'>) =>
+  f.status === 'live' && Date.now() - new Date(f.kickoff).getTime() < LIVE_MAX_AGE_MS;
+
 /** Currently-live fixtures (score, minute, events stream in over Realtime). */
 export function useLiveFixtures() {
   return useQuery({
@@ -55,7 +61,8 @@ export function useLiveFixtures() {
         .eq('status', 'live')
         .order('kickoff', { ascending: true });
       if (error) throw error;
-      return data;
+      // Drop games stuck 'live' (ended long ago but never finished server-side).
+      return data.filter(isActuallyLive);
     },
     refetchInterval: 30_000, // safety net in case a Realtime event is missed
   });
