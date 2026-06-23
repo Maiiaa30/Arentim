@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import type { EmailOtpType } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -39,9 +40,8 @@ export function AuthCallbackPage() {
     const e = readError();
     if (e) { setErrMsg(e); setStatus('error'); return; }
 
-    // Wait for detectSessionInUrl to establish the session from the link.
     let done = false;
-    const finish = (ok: boolean) => {
+    const finish = (ok: boolean, msg?: string) => {
       if (done) return;
       done = true;
       if (ok) {
@@ -49,9 +49,24 @@ export function AuthCallbackPage() {
         setTimeout(() => navigate('/', { replace: true }), 1000);
       } else {
         setStatus('error');
-        setErrMsg('Não conseguimos confirmar automaticamente. Tenta entrar — se a conta já estiver confirmada, funciona.');
+        setErrMsg(msg ?? 'Não conseguimos confirmar automaticamente. Tenta entrar — se a conta já estiver confirmada, funciona.');
       }
     };
+
+    // Branded-link flow: the email template links to OUR domain with a
+    // token_hash (so the user never sees the supabase.co URL); verify it here.
+    const params = new URLSearchParams(window.location.search);
+    const tokenHash = params.get('token_hash');
+    const type = params.get('type');
+    if (tokenHash && type) {
+      supabase.auth
+        .verifyOtp({ type: type as EmailOtpType, token_hash: tokenHash })
+        .then(({ error }) => finish(!error, error ? 'Esta ligação expirou ou já foi usada. Pede uma nova abaixo.' : undefined))
+        .catch(() => finish(false));
+      return;
+    }
+
+    // Default flow: detectSessionInUrl establishes the session from the URL hash.
     supabase.auth.getSession().then(({ data }) => { if (data.session) finish(true); });
     const { data: sub } = supabase.auth.onAuthStateChange((_evt, session) => { if (session) finish(true); });
     const timer = setTimeout(() => finish(false), 5000);
