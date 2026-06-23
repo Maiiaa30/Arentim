@@ -7,30 +7,22 @@ import { TopAccentRule } from '@/components/ui/primitives';
 import { useRealtimeSync } from '@/features/realtime/useRealtimeSync';
 import { useReferralClaim } from '@/features/referrals/useReferral';
 
-/** A subtle casino atmosphere behind everything — warm depth glows + a faint
- *  tiled card-suit pattern, so the app isn't flat black. Fixed + non-interactive. */
+/** A subtle casino atmosphere behind everything — like the home hero: soft depth
+ *  glows, a couple of big faint suit watermarks and a few drifting "chip" rings.
+ *  Fixed, non-interactive, and hidden on phones so it never clutters the content. */
 function CasinoBackdrop() {
   return (
     <div aria-hidden className="pointer-events-none fixed inset-0 -z-10 overflow-hidden bg-bg">
-      <div
-        className="absolute -left-44 -top-44 h-[560px] w-[560px] rounded-full"
-        style={{ background: 'radial-gradient(circle, rgba(201,162,75,0.08), transparent 70%)' }}
-      />
-      <div
-        className="absolute -bottom-56 -right-44 h-[600px] w-[600px] rounded-full"
-        style={{ background: 'radial-gradient(circle, rgba(31,138,91,0.06), transparent 70%)' }}
-      />
-      <svg className="absolute inset-0 h-full w-full opacity-[0.045]">
-        <defs>
-          <pattern id="arentim-suits" width="128" height="128" patternUnits="userSpaceOnUse" patternTransform="rotate(8)">
-            <text x="22" y="44" fontSize="30" fill="#C9A24B">♠</text>
-            <text x="86" y="98" fontSize="30" fill="#b0303a">♥</text>
-            <text x="20" y="104" fontSize="26" fill="#C9A24B">♣</text>
-            <text x="84" y="34" fontSize="26" fill="#b0303a">♦</text>
-          </pattern>
-        </defs>
-        <rect width="100%" height="100%" fill="url(#arentim-suits)" />
-      </svg>
+      <div className="absolute -left-44 -top-44 h-[540px] w-[540px] rounded-full" style={{ background: 'radial-gradient(circle, rgba(201,162,75,0.06), transparent 70%)' }} />
+      <div className="absolute -bottom-56 -right-44 h-[580px] w-[580px] rounded-full" style={{ background: 'radial-gradient(circle, rgba(31,138,91,0.045), transparent 70%)' }} />
+      {/* Big faint suit watermarks */}
+      <span className="absolute left-[-3%] top-24 hidden select-none font-display text-[240px] leading-none text-gold/[0.035] sm:block">♠</span>
+      <span className="absolute bottom-6 right-[-2%] hidden select-none font-display text-[280px] leading-none text-gold/[0.03] sm:block">♣</span>
+      <span className="absolute right-[34%] top-[-5%] hidden select-none font-display text-[170px] leading-none sm:block" style={{ color: 'rgba(176,48,58,0.03)' }}>♥</span>
+      {/* Drifting chip rings */}
+      <span className="animate-floaty absolute left-[13%] top-[42%] hidden h-20 w-20 rounded-full border-[3px] border-dashed border-gold/[0.08] sm:block" />
+      <span className="animate-floaty absolute right-[17%] top-[16%] hidden h-14 w-14 rounded-full border-[3px] border-dashed border-gold/[0.06] sm:block" style={{ animationDelay: '-1.6s' }} />
+      <span className="animate-floaty absolute bottom-[16%] left-[42%] hidden h-12 w-12 rounded-full border-[3px] border-dashed sm:block" style={{ borderColor: 'rgba(31,138,91,0.07)', animationDelay: '-0.8s' }} />
     </div>
   );
 }
