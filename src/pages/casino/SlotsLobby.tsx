@@ -51,13 +51,16 @@ function MachineCard({ m }: { m: SlotMachineMeta }) {
       </div>
 
       <div className="flex flex-1 flex-col p-5">
-        <h3 className="font-display text-[26px] font-semibold text-text group-hover:text-gold">{m.name}</h3>
+        <h3 className="font-display text-[26px] font-semibold" style={{ color: hex }}>{m.name}</h3>
         <p className="mt-1.5 flex-1 font-sans text-[13.5px] leading-relaxed text-muted">{m.blurb}</p>
         <div className="mt-4 flex items-center justify-between">
           <span className="font-mono text-[13px] text-muted-2">
             {formatAmount(m.min_bet)} – {formatAmount(m.max_bet)} tós
           </span>
-          <span className="rounded border border-gold/40 px-3.5 py-1.5 font-sans text-[10px] uppercase tracking-[0.18em] text-gold transition-colors group-hover:bg-gold group-hover:text-bg">
+          <span
+            className="rounded border px-3.5 py-1.5 font-sans text-[10px] font-semibold uppercase tracking-[0.18em]"
+            style={{ borderColor: `${hex}66`, color: hex, background: `${hex}14` }}
+          >
             Jogar
           </span>
         </div>

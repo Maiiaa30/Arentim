@@ -184,7 +184,7 @@ export function HorsePage() {
                 <span className="absolute left-2.5 z-[6] flex h-9 w-9 items-center justify-center rounded-full text-[14px] font-bold text-white shadow ring-2 ring-black/40" style={{ background: COLORS[i] }}>
                   {i + 1}
                 </span>
-                <span className="absolute right-2.5 z-[6] font-mono text-[11px] text-white/75">{odd}×</span>
+                <span className="absolute right-1.5 z-[22] whitespace-nowrap rounded bg-black/70 px-1.5 py-0.5 font-mono text-[11px] font-semibold tabular-nums text-gold-light shadow">{odd}×</span>
                 {mineHere && <span className="absolute left-12 top-1.5 z-[6] rounded bg-gold/30 px-1 text-[10px] font-semibold text-gold">tu</span>}
                 <div className="absolute z-[5]" style={{ left: `calc(${pos[i]}% + 46px)`, transform: 'translateX(-50%)' }}>
                   <RaceHorse galloping={racing} />
