@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Eyebrow, SectionHeader } from '@/components/ui/primitives';
-import { useAllFixtures, useSportsbookRealtime } from '@/features/sportsbook/useSportsbook';
+import { isActuallyLive, useAllFixtures, useSportsbookRealtime } from '@/features/sportsbook/useSportsbook';
 import { ScoreRow } from '@/features/sportsbook/ScoreRow';
 import { MatchDetail } from '@/features/sportsbook/MatchDetail';
 import type { Fixture } from '@/types/db';
@@ -107,7 +107,7 @@ export function ScoresPage() {
   const { liveList, upcomingList, finishedList } = useMemo(() => {
     const all = fixtures ?? [];
     const liveList = all
-      .filter((f) => f.status === 'live')
+      .filter(isActuallyLive)
       .sort((a, b) => (a.minute ?? 0) - (b.minute ?? 0));
     const upcomingList = all
       .filter((f) => f.status === 'scheduled' || f.status === 'postponed')

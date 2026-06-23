@@ -612,7 +612,7 @@ export function VideoSlotPage() {
 
       {/* Header */}
       <div className="flex items-center justify-between">
-        <Link to="/casino" className="font-sans text-sm text-muted-2 hover:text-text">← Casino</Link>
+        <Link to="/casino/slots" className="font-sans text-sm text-muted-2 hover:text-text">← Slots</Link>
         <span className="font-sans text-[11px] uppercase tracking-[0.24em] text-muted-2">Fortuna de Ouro</span>
       </div>
 
@@ -838,8 +838,8 @@ export function VideoSlotPage() {
                 <InfoIcon className="h-5 w-5" />
               </button>
               <Link
-                to="/casino"
-                aria-label="Menu do casino"
+                to="/casino/slots"
+                aria-label="Voltar às slots"
                 className="focus-ring flex h-9 w-9 items-center justify-center rounded-full border border-border text-muted-2 hover:text-text"
               >
                 <MenuIcon className="h-5 w-5" />

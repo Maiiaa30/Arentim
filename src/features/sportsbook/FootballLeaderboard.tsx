@@ -16,7 +16,9 @@ const TABS: { key: Board; label: string; tone: string }[] = [
 function useFootballLeaderboard() {
   return useQuery({
     queryKey: ['football-leaderboard'] as const,
-    staleTime: 1000 * 60 * 2,
+    staleTime: 20_000,
+    refetchInterval: 30_000, // keep the bettors table fresh as bets are placed/settled
+    refetchOnWindowFocus: true,
     queryFn: async (): Promise<FootballLeaderRow[]> => {
       const { data, error } = await supabase.rpc('football_leaderboard');
       if (error) throw error;

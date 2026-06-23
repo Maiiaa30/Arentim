@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import type { Fixture, MatchStats, TeamStat } from '@/types/db';
-import { useBroadcasts, useMatchStats } from './useSportsbook';
+import { useMatchStats } from './useSportsbook';
 
 /**
  * Match-detail popup for the Resultados page: teams + score/kickoff, the 1x2 /
@@ -95,25 +95,6 @@ function StatTable({ home, away, hName, aName }: { home?: TeamStat | null | unde
           <span className="text-right font-mono text-sm tabular-nums text-text">{cell(away, fn)}</span>
         </div>
       ))}
-    </div>
-  );
-}
-
-/** "Onde ver" — the official broadcaster for this competition (if curated). */
-function OndeVer({ league }: { league: string }) {
-  const { data } = useBroadcasts();
-  const b = (data ?? []).find((x) => x.league === league);
-  if (!b) return null;
-  return (
-    <div className="flex items-center justify-between gap-2 rounded border border-border bg-surface px-3 py-2">
-      <span className="font-sans text-[10px] uppercase tracking-[0.18em] text-muted-2">Onde ver</span>
-      {b.url ? (
-        <a href={b.url} target="_blank" rel="noopener noreferrer" className="font-sans text-sm font-medium text-gold hover:underline">
-          {b.channel} ↗
-        </a>
-      ) : (
-        <span className="font-sans text-sm font-medium text-text">{b.channel}</span>
-      )}
     </div>
   );
 }
@@ -243,7 +224,6 @@ export function MatchDetail({ fixture, onClose }: { fixture: Fixture; onClose: (
         <p className="mt-3 text-center font-sans text-xs text-muted-2">{dateLabel(fixture.kickoff)}</p>
 
         <div className="mt-5 space-y-4">
-          <OndeVer league={fixture.league} />
           <LiveStatsSection fixtureId={fixture.id} live={fixture.status === 'live'} />
           <StatTable home={fixture.stats?.home} away={fixture.stats?.away} hName={fixture.home} aName={fixture.away} />
 
