@@ -21,10 +21,6 @@ export function cardSuit(card: number): number {
   return Math.floor(card / 13);
 }
 
-export function cardLabel(card: number): string {
-  return `${RANK_LABELS[cardRank(card)]}${SUIT_LABELS[cardSuit(card)]}`;
-}
-
 /** Base value: Ace counts as 11 here (soft handling done in handValue). */
 export function cardValue(card: number): number {
   const r = cardRank(card);

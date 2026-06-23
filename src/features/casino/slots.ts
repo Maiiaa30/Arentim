@@ -25,14 +25,6 @@ export const REEL_STRIP: readonly SlotSymbol[] = [
   'sardine',
 ];
 
-export const SYMBOL_LABEL: Record<SlotSymbol, string> = {
-  coin: '🪙',
-  seven: '7️⃣',
-  galo: '🐓',
-  wine: '🍷',
-  sardine: '🐟',
-};
-
 const PAY3: Record<SlotSymbol, number> = { coin: 100, seven: 40, galo: 18, wine: 13, sardine: 7 };
 const PAY2: Record<SlotSymbol, number> = { coin: 3, seven: 1, galo: 0, wine: 0, sardine: 0 };
 
@@ -44,8 +36,4 @@ export function slotsMultiplier(s1: SlotSymbol, s2: SlotSymbol, s3: SlotSymbol):
   else if (s2 === s3) pair = s2;
   if (pair === null) return 0;
   return PAY2[pair];
-}
-
-export function symbolAt(index: number): SlotSymbol {
-  return REEL_STRIP[index % REEL_STRIP.length]!;
 }

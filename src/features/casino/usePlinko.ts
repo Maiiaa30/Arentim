@@ -1,17 +1,7 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
-import { useAuth } from '@/features/auth/AuthProvider';
-import { profileKey } from '@/features/profile/useProfile';
+import { useInvalidateWallet } from '@/features/wallet/useInvalidateWallet';
 import type { PlinkoResult, PlinkoRisk, PlinkoRows } from './plinko';
-
-function useInvalidateWallet() {
-  const { user } = useAuth();
-  const qc = useQueryClient();
-  return () => {
-    void qc.invalidateQueries({ queryKey: profileKey(user?.id) });
-    void qc.invalidateQueries({ queryKey: ['transactions', user?.id] });
-  };
-}
 
 /** Plinko: drop a ball through `rows` peg rows at a chosen risk; server settles. */
 export function usePlinko() {
