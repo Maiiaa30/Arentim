@@ -44,7 +44,7 @@ function genCode(): string {
   return Array.from(bytes, (b) => alphabet[b % alphabet.length]).join('');
 }
 
-type Row = { id: number; host_id: string; status: string; buy_in: number; state: TableState; turn_deadline: string | null; joinedAt?: string | null };
+type Row = { id: number; host_id: string; status: string; buy_in: number; state: TableState; turn_deadline: string | null; version: number; joinedAt?: string | null };
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
@@ -72,6 +72,17 @@ Deno.serve(async (req) => {
       .update({ state: s, turn_deadline: deadlineFor(s), updated_at: new Date().toISOString(), ...(status ? { status } : {}) })
       .eq('id', id);
 
+  // Compare-and-set persist: only writes if the row is still at `expected`
+  // version, bumping it on success. Returns true iff this writer won. Lets the
+  // pure-state ops (act/deal/start/add_bot) retry from a fresh reload on a
+  // concurrent write instead of silently clobbering it (last-writer-wins).
+  const persistCAS = async (id: number, s: TableState, expected: number, status?: string): Promise<boolean> => {
+    const { data } = await db.from('poker_tables')
+      .update({ state: s, turn_deadline: deadlineFor(s), updated_at: new Date().toISOString(), version: expected + 1, ...(status ? { status } : {}) })
+      .eq('id', id).eq('version', expected).select('id');
+    return (data?.length ?? 0) > 0;
+  };
+
   const loadByMembership = async (tableId?: number): Promise<Row | null> => {
     // Always restrict to tables the caller is actually a member of — even when a
     // tableId is supplied — so a non-member can't load (and act on / time out)
@@ -79,7 +90,7 @@ Deno.serve(async (req) => {
     const members = (await db.from('poker_table_members').select('table_id, joined_at').eq('user_id', user.id)).data ?? [];
     if (members.length === 0) return null;
     let q = db.from('poker_tables')
-      .select('id, host_id, status, buy_in, state, turn_deadline')
+      .select('id, host_id, status, buy_in, state, turn_deadline, version')
       .neq('status', 'closed')
       .in('id', members.map((m) => m.table_id));
     if (tableId != null) q = q.eq('id', tableId);
@@ -139,6 +150,27 @@ Deno.serve(async (req) => {
         stack: buyIn,
       });
     }
+  };
+
+  // Run a pure-state mutation under optimistic concurrency: load → mutate → CAS,
+  // retrying from a fresh reload if a concurrent write bumped the version. SAFE
+  // ONLY for ops with no pre-persist side effects (act/deal/start/add_bot), so
+  // re-running the mutation on a retry is harmless. `mutate` may early-return a
+  // Response (validation error) instead of a new state.
+  const withCAS = async (
+    tableId: number | undefined,
+    mutate: (row: Row) => { state: TableState; status?: string; result: unknown } | Response,
+  ): Promise<Response> => {
+    for (let attempt = 0; attempt < 4; attempt++) {
+      const row = await loadByMembership(tableId);
+      if (!row) return json({ error: 'no table' }, 404);
+      const out = mutate(row);
+      if (out instanceof Response) return out;
+      if (await persistCAS(row.id, out.state, row.version, out.status)) {
+        return json(out.result);
+      }
+    }
+    return json({ error: 'conflito — tenta novamente' }, 409);
   };
 
   switch (body.op) {
@@ -225,68 +257,60 @@ Deno.serve(async (req) => {
       return json({ table_id: row.id, view: viewFor(state, user.id) });
     }
 
-    case 'add_bot': {
-      const row = await loadByMembership(body.tableId);
-      if (!row) return json({ error: 'no table' }, 404);
-      if (row.host_id !== user.id) return json({ error: 'host only' }, 403);
-      const difficulty = (['easy', 'medium', 'hard'].includes(String(body.difficulty)) ? body.difficulty : 'medium') as BotDifficulty;
-      const botId = `bot_${crypto.randomUUID().slice(0, 6)}`;
-      const botName = randomBotName(row.state.players.map((p) => p.name));
-      const ok = addPlayer(row.state, { id: botId, name: botName, isBot: true, difficulty, stack: row.buy_in });
-      if (!ok) return json({ error: 'cannot add bot now' }, 409);
-      await persist(row.id, row.state);
-      return json({ view: viewFor(row.state, user.id) });
-    }
+    case 'add_bot':
+      return withCAS(body.tableId, (row) => {
+        if (row.host_id !== user.id) return json({ error: 'host only' }, 403);
+        const difficulty = (['easy', 'medium', 'hard'].includes(String(body.difficulty)) ? body.difficulty : 'medium') as BotDifficulty;
+        const botId = `bot_${crypto.randomUUID().slice(0, 6)}`;
+        const botName = randomBotName(row.state.players.map((p) => p.name));
+        const ok = addPlayer(row.state, { id: botId, name: botName, isBot: true, difficulty, stack: row.buy_in });
+        if (!ok) return json({ error: 'cannot add bot now' }, 409);
+        return { state: row.state, result: { view: viewFor(row.state, user.id) } };
+      });
 
-    case 'start': {
-      const row = await loadByMembership(body.tableId);
-      if (!row) return json({ error: 'no table' }, 404);
-      if (row.host_id !== user.id) return json({ error: 'host only' }, 403);
-      rotateBrokeBots(row.state, row.buy_in);
-      if (row.state.players.length < 2) return json({ error: 'need at least 2 players' }, 409);
-      const trail: unknown[] = [];
-      const rec: StepRecorder = (st) => trail.push(viewFor(st, user.id));
-      const state = startHand(row.state, rand, rec);
-      await persist(row.id, state, 'active');
-      return json({ view: viewFor(state, user.id), trail, turnDeadline: deadlineFor(state) });
-    }
+    case 'start':
+      return withCAS(body.tableId, (row) => {
+        if (row.host_id !== user.id) return json({ error: 'host only' }, 403);
+        rotateBrokeBots(row.state, row.buy_in);
+        if (row.state.players.length < 2) return json({ error: 'need at least 2 players' }, 409);
+        const trail: unknown[] = [];
+        const rec: StepRecorder = (st) => trail.push(viewFor(st, user.id));
+        const state = startHand(row.state, rand, rec);
+        return { state, status: 'active', result: { view: viewFor(state, user.id), trail, turnDeadline: deadlineFor(state) } };
+      });
 
-    case 'act': {
-      const row = await loadByMembership(body.tableId);
-      if (!row) return json({ error: 'no table' }, 404);
-      let state = enforceTimeout(row);
-      const action = String(body.action) as PokerAction;
-      const trail: unknown[] = [];
-      const rec: StepRecorder = (st) => trail.push(viewFor(st, user.id));
-      if (['fold', 'check', 'call', 'raise'].includes(action)) {
-        state = applyActionFor(state, user.id, action, Math.floor(Number(body.raiseTo) || 0), rand, rec);
-      }
-      await persist(row.id, state);
-      return json({ view: viewFor(state, user.id), trail, turnDeadline: deadlineFor(state) });
-    }
+    case 'act':
+      return withCAS(body.tableId, (row) => {
+        let state = enforceTimeout(row);
+        const action = String(body.action) as PokerAction;
+        const trail: unknown[] = [];
+        const rec: StepRecorder = (st) => trail.push(viewFor(st, user.id));
+        if (['fold', 'check', 'call', 'raise'].includes(action)) {
+          state = applyActionFor(state, user.id, action, Math.floor(Number(body.raiseTo) || 0), rand, rec);
+        }
+        return { state, result: { view: viewFor(state, user.id), trail, turnDeadline: deadlineFor(state) } };
+      });
 
-    case 'deal': {
-      const row = await loadByMembership(body.tableId);
-      if (!row) return json({ error: 'no table' }, 404);
-      if (!row.state.handOver) return json({ error: 'hand in progress' }, 409);
-      rotateBrokeBots(row.state, row.buy_in);
-      // A hand needs at least two seats with chips. Without this guard startHand
-      // silently no-ops (handOver stays true) and the table looks frozen.
-      if (row.state.players.filter((p) => p.stack > 0 && !p.leaving).length < 2) {
-        return json({ error: 'need at least 2 players' }, 409);
-      }
-      const trail: unknown[] = [];
-      const rec: StepRecorder = (st) => trail.push(viewFor(st, user.id));
-      let state: TableState;
-      try {
-        state = startHand(row.state, rand, rec);
-      } catch (e) {
-        console.error('startHand failed', e);
-        return json({ error: 'could not start hand' }, 500);
-      }
-      await persist(row.id, state, 'active');
-      return json({ view: viewFor(state, user.id), trail, turnDeadline: deadlineFor(state) });
-    }
+    case 'deal':
+      return withCAS(body.tableId, (row) => {
+        if (!row.state.handOver) return json({ error: 'hand in progress' }, 409);
+        rotateBrokeBots(row.state, row.buy_in);
+        // A hand needs at least two seats with chips. Without this guard startHand
+        // silently no-ops (handOver stays true) and the table looks frozen.
+        if (row.state.players.filter((p) => p.stack > 0 && !p.leaving).length < 2) {
+          return json({ error: 'need at least 2 players' }, 409);
+        }
+        const trail: unknown[] = [];
+        const rec: StepRecorder = (st) => trail.push(viewFor(st, user.id));
+        let state: TableState;
+        try {
+          state = startHand(row.state, rand, rec);
+        } catch (e) {
+          console.error('startHand failed', e);
+          return json({ error: 'could not start hand' }, 500);
+        }
+        return { state, status: 'active', result: { view: viewFor(state, user.id), trail, turnDeadline: deadlineFor(state) } };
+      });
 
     case 'rebuy': {
       // A seated human tops their stack back up from their Tostões balance —
@@ -402,7 +426,9 @@ Deno.serve(async (req) => {
       // polls; only recompute when the timeout sweep actually changed the turn.
       let deadline = row.turn_deadline;
       if (state !== row.state) {
-        await persist(row.id, state);
+        // Best-effort CAS: if a concurrent act already advanced the hand, our
+        // sweep simply loses and the next poll reflects the newer state.
+        await persistCAS(row.id, state, row.version);
         deadline = deadlineFor(state);
       }
       return json({ view: viewFor(state, user.id), host: row.host_id === user.id, turnDeadline: deadline });
