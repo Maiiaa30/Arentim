@@ -194,6 +194,18 @@ export type DailyChallengeClaimResult = {
   target?: number;
 };
 
+export type SpinSegment = { idx: number; amount: number };
+
+export type DailySpinStatus = { available: boolean; resets_at: string };
+
+export type DailySpinResult = {
+  status: 'spun' | 'already_spun';
+  index?: number;
+  amount?: number;
+  balance?: number;
+  resets_at: string;
+};
+
 export type MyPokerTable = {
   table_id: number;
   code: string;
@@ -1280,6 +1292,18 @@ export type Database = {
       claim_daily_challenge: {
         Args: { p_key: string };
         Returns: DailyChallengeClaimResult;
+      };
+      spin_wheel_segments: {
+        Args: Record<string, never>;
+        Returns: SpinSegment[];
+      };
+      daily_spin_status: {
+        Args: Record<string, never>;
+        Returns: DailySpinStatus;
+      };
+      daily_spin: {
+        Args: Record<string, never>;
+        Returns: DailySpinResult;
       };
       admin_adjust_balance: {
         Args: { p_user: string; p_amount: number; p_reason: string };
