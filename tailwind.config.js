@@ -149,6 +149,15 @@ export default {
           '30%': { transform: 'translateY(6px)' },
           '60%': { transform: 'translateY(-2px)' },
         },
+        // A per-ball win/loss label that pops over its landing bin and floats up
+        // and out — so several balls landing at once each get their own marker.
+        'plinko-rise': {
+          '0%': { opacity: '0', transform: 'translate(-50%, 8px) scale(0.8)' },
+          '16%': { opacity: '1', transform: 'translate(-50%, -6px) scale(1.06)' },
+          '34%': { transform: 'translate(-50%, -12px) scale(1)' },
+          '74%': { opacity: '1' },
+          '100%': { opacity: '0', transform: 'translate(-50%, -52px) scale(0.94)' },
+        },
       },
       animation: {
         'fade-in': 'fade-in 0.25s cubic-bezier(0.22,0.61,0.36,1)',
@@ -175,6 +184,7 @@ export default {
         'coin-fall': 'coin-fall 1.5s linear infinite',
         'symbol-throb': 'symbol-throb 0.65s ease-in-out infinite',
         'plinko-bin': 'plinko-bin 0.4s ease-out',
+        'plinko-rise': 'plinko-rise 1.5s cubic-bezier(0.22,0.61,0.36,1) forwards',
       },
     },
   },
