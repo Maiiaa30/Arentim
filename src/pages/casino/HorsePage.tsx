@@ -9,16 +9,10 @@ import { Button } from '@/components/ui/Button';
 import { Eyebrow } from '@/components/ui/primitives';
 import { formatAmount } from '@/lib/format';
 
-const ODDS = [2.4, 4, 6, 9, 14, 28];
-// Winner is drawn weighted by 1/odds (= round(10000/odds)); favourites win more.
-const WEIGHTS = [4167, 2500, 1667, 1111, 714, 357];
-const WEIGHT_TOTAL = WEIGHTS.reduce((a, b) => a + b, 0); // 10516
+// Fallback odds (until the room state arrives). The server now randomizes the
+// odds — and therefore each horse's win chance — every round.
+const DEFAULT_ODDS = [2.4, 4, 6, 9, 14, 28];
 const COLORS = ['#C9A24B', '#b0303a', '#2b6f4e', '#2b4a8b', '#9a5cc2', '#c97f2a'];
-
-/** Real win chance of a horse, in % — its draw weight over the total. */
-function winChance(i: number): number {
-  return (WEIGHTS[i]! / WEIGHT_TOTAL) * 100;
-}
 
 /** Deterministic per-horse pace from the room id, so every client sees the same
  * race; the winner runs at full pace and leads to the line. */
@@ -68,6 +62,13 @@ export function HorsePage() {
   useEffect(() => {
     if (state?.server_now) offsetRef.current = new Date(state.server_now).getTime() - Date.now();
   }, [state?.server_now]);
+
+  // Per-round odds from the room; win chance is the implied probability
+  // (1/odds normalised), which equals the true draw chance since the RTP margin
+  // is uniform across horses.
+  const odds = state?.odds && state.odds.length === 6 ? state.odds : DEFAULT_ODDS;
+  const invSum = odds.reduce((s, o) => s + 1 / o, 0);
+  const winChance = (i: number) => ((1 / odds[i]!) / invSum) * 100;
 
   const status = state?.status ?? null;
   const betting = status === 'betting';
@@ -121,7 +122,7 @@ export function HorsePage() {
 
   return (
     <div className="animate-fade-in space-y-6">
-      {done && mine?.settled && mine.payout > 0 && <WinCelebration key={winId} jackpot={ODDS[mine.horse]! >= 10} />}
+      {done && mine?.settled && mine.payout > 0 && <WinCelebration key={winId} jackpot={odds[mine.horse]! >= 10} />}
 
       <div>
         <Link to="/casino" className="font-sans text-sm text-muted-2 hover:text-text">← Casino</Link>
@@ -175,7 +176,7 @@ export function HorsePage() {
           <div className="pointer-events-none absolute inset-y-0 right-10 z-20 w-2.5 opacity-95" style={{ backgroundImage: 'repeating-conic-gradient(#fff 0% 25%, #111 0% 50%)', backgroundSize: '5px 5px' }} aria-hidden />
           <span className="pointer-events-none absolute right-1.5 top-1 z-20 rounded bg-[#b0303a] px-1.5 py-0.5 font-display text-[9px] font-bold uppercase tracking-wider text-white shadow">Meta</span>
 
-          {ODDS.map((odd, i) => {
+          {odds.map((odd, i) => {
             const isWin = done && state?.winner === i;
             const mineHere = mine?.horse === i;
             return (
@@ -217,7 +218,7 @@ export function HorsePage() {
           <div>
             <span className="mb-2 block font-sans text-sm font-medium text-muted">O teu cavalo</span>
             <div className="flex flex-wrap gap-2">
-              {ODDS.map((odd, i) => (
+              {odds.map((odd, i) => (
                 <button key={i} onClick={() => setHorse(i)} disabled={!betting || !!mine}
                   className={`focus-ring flex flex-col items-center gap-0.5 rounded px-3 py-1.5 font-mono text-sm disabled:opacity-50 ${horse === i ? 'bg-gold text-bg' : 'border border-border text-muted hover:text-text'}`}>
                   <span className="flex items-center gap-1.5">
@@ -279,7 +280,7 @@ export function HorsePage() {
             ganham mais vezes. A hipótese real de cada cavalo é o seu peso a dividir pela soma de todos:
           </p>
           <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">
-            {ODDS.map((odd, i) => (
+            {odds.map((odd, i) => (
               <div key={i} className="flex items-center justify-between rounded border border-border px-2.5 py-1.5 font-mono text-xs">
                 <span className="flex items-center gap-1.5">
                   <span className="flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-bold text-white" style={{ background: COLORS[i] }}>{i + 1}</span>
