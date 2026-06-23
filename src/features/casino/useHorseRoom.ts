@@ -5,7 +5,7 @@ import { useAuth } from '@/features/auth/AuthProvider';
 import { profileKey } from '@/features/profile/useProfile';
 import type { HorseRoomState, HorseBetRow } from '@/types/db';
 
-const POLL_MS = 350;
+const POLL_MS = 700;
 
 /** Drives the shared horse-race room (poll horse_room_now + live bets via Realtime). */
 export function useHorseRoom() {
@@ -19,7 +19,7 @@ export function useHorseRoom() {
   useEffect(() => {
     let cancelled = false;
     const tick = async () => {
-      if (inFlight.current) return;
+      if (document.hidden || inFlight.current) return;
       inFlight.current = true;
       try {
         const { data } = await supabase.rpc('horse_room_now');
