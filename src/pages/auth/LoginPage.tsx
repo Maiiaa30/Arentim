@@ -21,6 +21,22 @@ export function LoginPage() {
   const [busy, setBusy] = useState(false);
   const [mode, setMode] = useState<'login' | 'reset'>('login');
   const [resetMsg, setResetMsg] = useState<string | null>(null);
+  const [confirmMsg, setConfirmMsg] = useState<string | null>(null);
+
+  async function resendConfirm() {
+    setError(null);
+    setConfirmMsg(null);
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      setError('Escreve o teu email primeiro e tenta de novo.');
+      return;
+    }
+    await supabase.auth.resend({
+      type: 'signup',
+      email: email.trim().toLowerCase(),
+      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+    });
+    setConfirmMsg('Se a conta existir e ainda não estiver confirmada, enviámos um novo email.');
+  }
 
   async function onReset(e: FormEvent) {
     e.preventDefault();
@@ -111,13 +127,17 @@ export function LoginPage() {
           required
         />
         {error && <p className="text-sm text-negative">{error}</p>}
+        {confirmMsg && <p className="text-sm text-positive">{confirmMsg}</p>}
         <Button type="submit" variant="primary" className="w-full" disabled={busy}>
           {busy ? 'A entrar…' : 'Entrar'}
         </Button>
       </form>
-      <div className="mt-4 text-center">
+      <div className="mt-4 flex flex-col items-center gap-2 text-center">
         <button onClick={() => { setMode('reset'); setError(null); }} className="font-sans text-sm text-muted-2 hover:text-text">
           Esqueceste-te da palavra-passe?
+        </button>
+        <button onClick={resendConfirm} className="font-sans text-sm text-muted-2 hover:text-text">
+          Não recebeste o email de confirmação? Reenviar
         </button>
       </div>
       <p className="mt-4 text-center text-sm text-muted">
