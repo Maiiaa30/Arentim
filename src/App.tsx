@@ -51,7 +51,17 @@ const AdminPage = lazy(() => named(import('@/pages/AdminPage'), 'AdminPage'));
 const NotFoundPage = lazy(() => named(import('@/pages/stubs'), 'NotFoundPage'));
 
 function PageFallback() {
-  return <div className="py-24 text-center text-muted">A carregar…</div>;
+  return (
+    <div className="animate-fade-in space-y-5" aria-busy>
+      <div className="h-7 w-48 animate-pulse rounded-md bg-surface-raised/60" />
+      <div className="h-44 w-full animate-pulse rounded-lg bg-surface-raised/60" />
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,250px),1fr))] gap-4">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className="h-40 animate-pulse rounded-md bg-surface-raised/60" />
+        ))}
+      </div>
+    </div>
+  );
 }
 
 export default function App() {

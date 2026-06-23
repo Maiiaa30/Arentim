@@ -8,6 +8,7 @@ import { LiveFixtures } from '@/features/sportsbook/LiveFixtures';
 import { BetSlip } from '@/features/sportsbook/BetSlip';
 import { MyBets } from '@/features/sportsbook/MyBets';
 import { FootballLeaderboard } from '@/features/sportsbook/FootballLeaderboard';
+import { Skeleton } from '@/components/ui/Skeleton';
 import type { Fixture } from '@/types/db';
 
 type Tab = 'fixtures' | 'bets';
@@ -117,7 +118,11 @@ export function SportsbookPage() {
             <FeaturedMatch />
             <LiveFixtures />
             {isLoading ? (
-              <p className="py-8 text-center text-muted-2">A carregar jogos…</p>
+              <div className="space-y-3">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <Skeleton key={i} className="h-[72px]" />
+                ))}
+              </div>
             ) : dayGroups.length === 0 ? (
               <div className="card p-8 text-center text-sm text-muted-2">
                 Ainda sem jogos. A sincronização diária vai preenchê-los.
