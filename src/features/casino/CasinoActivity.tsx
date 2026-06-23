@@ -3,18 +3,30 @@ import { useCasinoActivity } from './useCasinoActivity';
 import { formatAmount } from '@/lib/format';
 
 const GAME_LABEL: Record<string, string> = {
-  crash: 'Crash',
-  roulette: 'Roleta',
-  slots: 'Slots',
-  blackjack: 'Blackjack',
-  coinflip: 'Moeda',
-  dice: 'Dados',
-  wheel: 'Fita da Sorte',
+  crash: 'no Crash',
+  roulette: 'na Roleta',
+  horse: 'na Corrida',
+  slots: 'nas Slots',
+  blackjack: 'no Blackjack',
+  poker: 'no Poker',
+  coinflip: 'na Moeda',
+  dice: 'nos Dados',
+  wheel: 'na Fita da Sorte',
+  plinko: 'no Plinko',
+  balatro: 'no Balatró',
+  mines: 'nas Mines',
+  chicken: 'no Atravessa!',
+  tigrinho: 'no Tigrinho',
+  chest: 'no Jogo dos Copos',
+  cups: 'no Jogo dos Copos',
+  highlow: 'no Maior ou Menor',
+  sobedesce: 'no Sobe e Desce',
+  hilo: 'no Sobe e Desce',
 };
 
 function gameName(g: string | null): string {
   if (!g) return 'no casino';
-  return GAME_LABEL[g] ?? g.charAt(0).toUpperCase() + g.slice(1);
+  return GAME_LABEL[g] ?? `em ${g.charAt(0).toUpperCase() + g.slice(1)}`;
 }
 
 function LiveRow({ to, name, players, friends }: { to: string; name: string; players: number; friends: number }) {

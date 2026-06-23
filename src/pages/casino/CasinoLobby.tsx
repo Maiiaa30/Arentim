@@ -1,4 +1,6 @@
-import { Eyebrow, FramedPanel, SectionHeader } from '@/components/ui/primitives';
+import { useState } from 'react';
+import { Eyebrow, SectionHeader } from '@/components/ui/primitives';
+import { HeroFrame } from '@/components/ui/HeroFrame';
 import { CasinoActivity } from '@/features/casino/CasinoActivity';
 import { GameCard, type GameTile } from '@/features/casino/GameCard';
 import { useGameSwitches } from '@/features/admin/useAdmin';
@@ -47,14 +49,30 @@ function Section({ title, right, games, featured }: { title: string; right?: str
   );
 }
 
+type Cat = 'todos' | 'live' | 'tables' | 'arcade';
+const CATS: { key: Cat; label: string }[] = [
+  { key: 'todos', label: 'Todos' },
+  { key: 'live', label: 'Ao vivo' },
+  { key: 'tables', label: 'Mesas & Máquinas' },
+  { key: 'arcade', label: 'Arcada' },
+];
+
 export function CasinoLobby() {
   const { data: switches } = useGameSwitches();
   const off = new Set((switches ?? []).filter((s) => !s.enabled).map((s) => s.key));
   const show = (games: GameTile[]) => games.filter((g) => !off.has(switchKey(g)));
+  const [cat, setCat] = useState<Cat>('todos');
+
+  const live = show(LIVE);
+  const tables = show(TABLES);
+  const arcade = show(ARCADE);
+  const showLive = cat === 'todos' || cat === 'live';
+  const showTables = cat === 'todos' || cat === 'tables';
+  const showArcade = cat === 'todos' || cat === 'arcade';
 
   return (
-    <div className="animate-fade-in space-y-12">
-      <FramedPanel>
+    <div className="animate-fade-in space-y-10">
+      <HeroFrame>
         <div className="max-w-xl">
           <Eyebrow>O Salão</Eyebrow>
           <h1 className="mt-3 font-display text-[40px] font-medium leading-[1.05] text-text sm:text-[44px]">
@@ -65,13 +83,28 @@ export function CasinoLobby() {
             brincar, só dinheiro de mentira.
           </p>
         </div>
-      </FramedPanel>
+      </HeroFrame>
 
       <CasinoActivity />
 
-      {show(LIVE).length > 0 && <Section title="Ao vivo" right="Multijogador" games={show(LIVE)} featured />}
-      {show(TABLES).length > 0 && <Section title="Mesas & Máquinas" right="Clássicos" games={show(TABLES)} />}
-      {show(ARCADE).length > 0 && <Section title="Arcada" right="Uma jogada" games={show(ARCADE)} />}
+      {/* Category filter — choose how the floor is shown. */}
+      <div className="-mx-1 flex flex-wrap gap-2 px-1">
+        {CATS.map((c) => (
+          <button
+            key={c.key}
+            onClick={() => setCat(c.key)}
+            className={`focus-ring min-h-[38px] rounded-full px-4 py-1.5 font-sans text-sm font-medium transition-colors ${
+              cat === c.key ? 'bg-gold text-bg' : 'border border-border text-muted-2 hover:text-text'
+            }`}
+          >
+            {c.label}
+          </button>
+        ))}
+      </div>
+
+      {showLive && live.length > 0 && <Section title="Ao vivo" right="Multijogador" games={live} featured />}
+      {showTables && tables.length > 0 && <Section title="Mesas & Máquinas" right="Clássicos" games={tables} />}
+      {showArcade && arcade.length > 0 && <Section title="Arcada" right="Uma jogada" games={arcade} />}
     </div>
   );
 }
