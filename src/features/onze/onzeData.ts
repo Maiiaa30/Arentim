@@ -1,9 +1,14 @@
 /**
  * Typed access to the real Onze de Ouro dataset (Liga Portugal squads, 2005–2020).
  * Built by scripts/build-onze-data.mjs from open FIFA ratings data (fifaindex via
- * lbenz730/fifa_model). Bundled as JSON and lazy-loaded with the Onze route.
+ * lbenz730/fifa_model).
+ *
+ * The dataset is ~674 KB. We load it with a dynamic `import()` + top-level await
+ * so it lands in its OWN chunk (separate from the Onze page/logic code), kept out
+ * of the main app bundle and only fetched when the Onze route is opened. The
+ * synchronous API below is preserved — module evaluation simply awaits the data.
  */
-import raw from './data/onzeData.json';
+const raw = (await import('./data/onzeData.json')).default;
 
 export type Line = 'GK' | 'DF' | 'MF' | 'FW';
 
