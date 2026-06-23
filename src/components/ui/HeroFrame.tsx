@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { CornerBrackets } from './primitives';
+import { ChipMark } from './ChipMark';
 
 /**
  * A richer hero panel than FramedPanel: layered gold/felt glows, a faint suit
@@ -28,16 +29,10 @@ export function HeroFrame({ children, className = '' }: { children: ReactNode; c
       >
         ♠
       </div>
-      {/* Drifting chip rings */}
-      <span
-        className="animate-floaty pointer-events-none absolute right-12 top-9 hidden h-16 w-16 rounded-full border-[3px] border-dashed border-gold/25 sm:block"
-        aria-hidden
-      />
-      <span
-        className="animate-floaty pointer-events-none absolute bottom-9 right-32 hidden h-10 w-10 rounded-full border-[3px] border-dashed border-gold/15 sm:block"
-        style={{ animationDelay: '-1.6s' }}
-        aria-hidden
-      />
+      {/* Drifting poker chips */}
+      <ChipMark className="animate-floaty pointer-events-none absolute right-10 top-7 hidden h-20 w-20 sm:block" color="#C9A24B" opacity={0.16} />
+      <ChipMark className="animate-floaty pointer-events-none absolute bottom-7 right-28 hidden h-12 w-12 sm:block" color="#C9A24B" opacity={0.1} style={{ animationDelay: '-1.6s' }} />
+      <ChipMark className="animate-floaty pointer-events-none absolute right-44 top-20 hidden h-9 w-9 sm:block" color="#1f8a5b" opacity={0.12} style={{ animationDelay: '-0.8s' }} />
       <CornerBrackets />
       <div className="relative">{children}</div>
     </section>
