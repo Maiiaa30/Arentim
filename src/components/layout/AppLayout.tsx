@@ -6,6 +6,7 @@ import { LowBalanceBanner } from '@/components/LowBalanceBanner';
 import { TopAccentRule } from '@/components/ui/primitives';
 import { useRealtimeSync } from '@/features/realtime/useRealtimeSync';
 import { useReferralClaim } from '@/features/referrals/useReferral';
+import { ChipMark } from '@/components/ui/ChipMark';
 
 /** A subtle casino atmosphere behind everything — like the home hero: soft depth
  *  glows, a couple of big faint suit watermarks and a few drifting "chip" rings.
@@ -13,16 +14,17 @@ import { useReferralClaim } from '@/features/referrals/useReferral';
 function CasinoBackdrop() {
   return (
     <div aria-hidden className="pointer-events-none fixed inset-0 -z-10 overflow-hidden bg-bg">
+      {/* base depth: a soft vignette so the edges sink and the centre lifts */}
+      <div className="absolute inset-0" style={{ background: 'radial-gradient(120% 90% at 50% 0%, rgba(28,24,15,0.5), transparent 55%), radial-gradient(100% 100% at 50% 120%, rgba(0,0,0,0.55), transparent 60%)' }} />
       <div className="absolute -left-44 -top-44 h-[540px] w-[540px] rounded-full" style={{ background: 'radial-gradient(circle, rgba(201,162,75,0.06), transparent 70%)' }} />
       <div className="absolute -bottom-56 -right-44 h-[580px] w-[580px] rounded-full" style={{ background: 'radial-gradient(circle, rgba(31,138,91,0.045), transparent 70%)' }} />
       {/* Big faint suit watermarks */}
-      <span className="absolute left-[-3%] top-24 hidden select-none font-display text-[240px] leading-none text-gold/[0.035] sm:block">♠</span>
-      <span className="absolute bottom-6 right-[-2%] hidden select-none font-display text-[280px] leading-none text-gold/[0.03] sm:block">♣</span>
-      <span className="absolute right-[34%] top-[-5%] hidden select-none font-display text-[170px] leading-none sm:block" style={{ color: 'rgba(176,48,58,0.03)' }}>♥</span>
-      {/* Drifting chip rings */}
-      <span className="animate-floaty absolute left-[13%] top-[42%] hidden h-20 w-20 rounded-full border-[3px] border-dashed border-gold/[0.08] sm:block" />
-      <span className="animate-floaty absolute right-[17%] top-[16%] hidden h-14 w-14 rounded-full border-[3px] border-dashed border-gold/[0.06] sm:block" style={{ animationDelay: '-1.6s' }} />
-      <span className="animate-floaty absolute bottom-[16%] left-[42%] hidden h-12 w-12 rounded-full border-[3px] border-dashed sm:block" style={{ borderColor: 'rgba(31,138,91,0.07)', animationDelay: '-0.8s' }} />
+      <span className="absolute left-[-3%] top-24 hidden select-none font-display text-[240px] leading-none text-gold/[0.03] sm:block">♠</span>
+      <span className="absolute bottom-6 right-[-2%] hidden select-none font-display text-[280px] leading-none text-gold/[0.025] sm:block">♣</span>
+      {/* Drifting poker chips */}
+      <ChipMark className="animate-floaty absolute left-[12%] top-[40%] hidden h-24 w-24 sm:block" color="#C9A24B" opacity={0.06} />
+      <ChipMark className="animate-floaty absolute right-[15%] top-[15%] hidden h-16 w-16 sm:block" color="#C9A24B" opacity={0.05} style={{ animationDelay: '-1.6s' }} />
+      <ChipMark className="animate-floaty absolute bottom-[15%] left-[44%] hidden h-14 w-14 sm:block" color="#1f8a5b" opacity={0.05} style={{ animationDelay: '-0.8s' }} />
     </div>
   );
 }
