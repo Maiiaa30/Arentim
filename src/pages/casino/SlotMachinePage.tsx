@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useProfile } from '@/features/profile/useProfile';
 import { useSlotMachines, usePlaySlot } from '@/features/casino/useSlotMachines';
-import { accentHex } from '@/features/casino/slotTheme';
+import { machineHex } from '@/features/casino/slotTheme';
 import { SymbolArt } from '@/features/casino/slotSymbols';
 import { SlotBackdrop } from '@/features/casino/SlotBackdrop';
 import { WinCelebration } from '@/features/casino/WinCelebration';
@@ -257,7 +257,7 @@ function Lever({ pulled }: { pulled: boolean }) {
 function MachineScreen({ m }: { m: SlotMachineMeta }) {
   const { data: profile } = useProfile();
   const play = usePlaySlot();
-  const hex = accentHex(m.accent);
+  const hex = machineHex(m.key, m.accent);
 
   const glyphById = useMemo(
     () => Object.fromEntries(m.symbols.map((s) => [s.id, s.glyph])),
@@ -318,7 +318,9 @@ function MachineScreen({ m }: { m: SlotMachineMeta }) {
     : `linear-gradient(155deg, #f7e4ad, ${hex}, #5b4824)`;
   const innerBg = classic
     ? 'radial-gradient(135% 90% at 50% -10%, rgba(120,130,140,0.28), transparent 55%), linear-gradient(180deg, #16191e, #0a0b0d 75%)'
-    : `radial-gradient(135% 90% at 50% -10%, ${hex}38, transparent 55%), linear-gradient(180deg, #171309, #0a0907 75%)`;
+    : // Richer, more immersive per-machine atmosphere: a strong accent glow from
+      // the top + a soft accent wash from below over a deep vignette.
+      `radial-gradient(120% 85% at 50% -8%, ${hex}55, transparent 60%), radial-gradient(95% 60% at 50% 118%, ${hex}28, transparent 72%), linear-gradient(180deg, #181206, #0a0907 80%)`;
 
   async function onSpin() {
     if (busy || stake > balance || stake < m.min_bet) return;
@@ -377,7 +379,7 @@ function MachineScreen({ m }: { m: SlotMachineMeta }) {
 
       {/* Cabinet — chrome drum (classic) or ornate gilded frame (video) */}
       <div
-        className="relative mx-auto max-w-3xl rounded-[20px] p-1 shadow-[0_30px_90px_rgba(0,0,0,0.6)]"
+        className="relative mx-auto max-w-4xl rounded-[24px] p-1.5 shadow-[0_36px_110px_rgba(0,0,0,0.66)]"
         style={{ background: frameBg }}
       >
         {classic && <Lever pulled={busy} />}

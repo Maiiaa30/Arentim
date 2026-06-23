@@ -42,16 +42,35 @@ function Backdrop({ k }: { k: string }) {
           <path d="M250 200 q40 -60 90 0 Z" fill="#0f1f3a" opacity="0.5" />
         </g>
       );
-    case 'aurelia': // royal columns + laurel
+    case 'aurelia': // royal columns + laurel (purple/gold)
       return (
-        <g opacity="0.5">
-          <rect x="40" y="20" width="34" height="280" rx="4" fill="#C9A24B" opacity="0.18" />
-          <rect x="606" y="20" width="34" height="280" rx="4" fill="#C9A24B" opacity="0.18" />
-          <g stroke="#C9A24B" strokeWidth="1" opacity="0.3" fill="none">
+        <g opacity="0.62">
+          <rect x="40" y="20" width="34" height="280" rx="4" fill="#9d6be0" opacity="0.22" />
+          <rect x="606" y="20" width="34" height="280" rx="4" fill="#9d6be0" opacity="0.22" />
+          <g stroke="#C9A24B" strokeWidth="1.2" opacity="0.34" fill="none">
             <path d="M250 50 q90 40 180 0" />
             <path d="M270 40 q70 36 140 0" />
           </g>
-          <circle cx="340" cy="40" r="6" fill="#C9A24B" opacity="0.4" />
+          <circle cx="340" cy="40" r="7" fill="#C9A24B" opacity="0.45" />
+        </g>
+      );
+    case 'pote': // molten gold pot of riches
+      return (
+        <g opacity="0.6">
+          <ellipse cx="340" cy="60" rx="320" ry="120" fill="#e3b53b" opacity="0.16" />
+          {[[150, 250], [340, 270], [530, 250], [240, 120], [440, 120]].map(([x, y], i) => (
+            <circle key={i} cx={x} cy={y} r={14 - i} fill="#f2cf6a" opacity="0.3" />
+          ))}
+        </g>
+      );
+    case 'vegas': // neon vegas glow
+      return (
+        <g opacity="0.55">
+          <ellipse cx="340" cy="40" rx="300" ry="90" fill="#e24355" opacity="0.18" />
+          <g stroke="#ffd54a" strokeWidth="1" opacity="0.3">
+            {[90, 200, 480, 590].map((x) => <line key={x} x1={x} y1="20" x2={x} y2="300" />)}
+          </g>
+          <circle cx="340" cy="60" r="40" fill="none" stroke="#e24355" strokeWidth="2" opacity="0.3" />
         </g>
       );
     default:
