@@ -11,12 +11,9 @@ import { displayNameSchema } from '@/features/auth/schema';
 import { AnimatedNumber } from '@/components/AnimatedNumber';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import {
-  Eyebrow,
-  FramedPanel,
-  RingAvatar,
-  SectionHeader,
-} from '@/components/ui/primitives';
+import { Eyebrow, RingAvatar, SectionHeader } from '@/components/ui/primitives';
+import { HeroFrame } from '@/components/ui/HeroFrame';
+import { Skeleton } from '@/components/ui/Skeleton';
 import type { TransactionType } from '@/types/db';
 
 const monthYear = (iso: string) =>
@@ -59,7 +56,19 @@ export function ProfilePage() {
   const [name, setName] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
 
-  if (isLoading) return <p className="py-12 text-center text-muted-2">A carregar o seu perfil…</p>;
+  if (isLoading) {
+    return (
+      <div className="animate-fade-in space-y-8">
+        <Skeleton className="h-44 w-full rounded-lg" />
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Skeleton key={i} className="h-28" />
+          ))}
+        </div>
+        <Skeleton className="h-40 w-full" />
+      </div>
+    );
+  }
   if (error || !profile) return <p className="py-12 text-center text-negative">Não foi possível carregar o perfil.</p>;
 
   const net = netResult(profile);
@@ -86,7 +95,7 @@ export function ProfilePage() {
         ← Voltar às Mesas
       </Link>
 
-      <FramedPanel>
+      <HeroFrame>
         <div className="flex flex-wrap items-center gap-5 sm:gap-6">
           <RingAvatar initials={initials} size={96} />
           <div className="min-w-[180px] flex-1">
@@ -127,12 +136,14 @@ export function ProfilePage() {
             </Link>
           </div>
         </div>
-      </FramedPanel>
+      </HeroFrame>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
         <StatCard label="Jogos" value={formatAmount(profile.games_played)} sub="no total" />
+        <StatCard label="Apostado" value={formatTos(profile.total_wagered)} sub="ao longo do tempo" />
+        <StatCard label="Ganho total" value={formatTos(profile.total_won)} sub="em prémios" tone="text-positive" />
         <StatCard label="Maior ganho" value={formatTos(profile.biggest_win)} sub="num só lance" tone="text-positive" />
-        <StatCard label="Taxa de vitória" value={`${winRate(profile)}%`} sub="ao longo do tempo" />
+        <StatCard label="Taxa de vitória" value={`${winRate(profile)}%`} sub="ao longo do tempo" tone="text-gold" />
         <StatCard
           label="Resultado"
           value={`${net >= 0 ? '+' : '−'}${formatAmount(Math.abs(net))} tós`}

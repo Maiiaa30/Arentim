@@ -8,6 +8,7 @@ import { WinCelebration } from '@/features/casino/WinCelebration';
 import { Button } from '@/components/ui/Button';
 import { Eyebrow } from '@/components/ui/primitives';
 import { formatAmount } from '@/lib/format';
+import { Skeleton } from '@/components/ui/Skeleton';
 import type { BlackjackView } from '@/types/db';
 
 export function BlackjackPage() {
@@ -52,7 +53,7 @@ export function BlackjackPage() {
     }
   }
 
-  if (isLoading) return <p className="py-12 text-center text-muted">A carregar…</p>;
+  if (isLoading) return <Skeleton className="h-[420px] w-full rounded-lg" />;
 
   return (
     <div className="animate-fade-in space-y-6">
