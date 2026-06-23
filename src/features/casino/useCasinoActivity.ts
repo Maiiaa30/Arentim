@@ -9,7 +9,7 @@ export function useCasinoActivity() {
   return useQuery({
     queryKey: ['casino-activity', user?.id] as const,
     enabled: !!user,
-    refetchInterval: 4000,
+    refetchInterval: 9000,
     queryFn: async (): Promise<CasinoActivity> => {
       const { data, error } = await supabase.rpc('casino_activity');
       if (error) throw error;

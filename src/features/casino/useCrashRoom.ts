@@ -5,7 +5,7 @@ import { useAuth } from '@/features/auth/AuthProvider';
 import { profileKey } from '@/features/profile/useProfile';
 import type { CrashRoomState, CrashBetRow, CrashRoomCashoutResult } from '@/types/db';
 
-const POLL_MS = 250;
+const POLL_MS = 600;
 
 /**
  * Drives the shared Crash room: polls crash_room_now() (the authoritative,
@@ -25,7 +25,8 @@ export function useCrashRoom() {
   useEffect(() => {
     let cancelled = false;
     const tick = async () => {
-      if (inFlight.current) return;
+      // Skip while the tab is hidden (nobody's watching) or a poll is in flight.
+      if (document.hidden || inFlight.current) return;
       inFlight.current = true;
       try {
         const { data } = await supabase.rpc('crash_room_now');

@@ -5,7 +5,7 @@ import { useAuth } from '@/features/auth/AuthProvider';
 import { profileKey } from '@/features/profile/useProfile';
 import type { RouletteRoomState, RouletteRoomBetRow, RouletteBetPayload } from '@/types/db';
 
-const POLL_MS = 400;
+const POLL_MS = 700;
 
 /**
  * Drives the shared Roulette table: polls roulette_room_now() (number masked
@@ -23,7 +23,7 @@ export function useRouletteRoom() {
   useEffect(() => {
     let cancelled = false;
     const tick = async () => {
-      if (inFlight.current) return;
+      if (document.hidden || inFlight.current) return;
       inFlight.current = true;
       try {
         const { data } = await supabase.rpc('roulette_room_now');
