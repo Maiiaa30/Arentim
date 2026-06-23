@@ -1,15 +1,44 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useProfile } from '@/features/profile/useProfile';
-import { useChallenges, useChallengeActions } from '@/features/challenges/useChallenges';
+import {
+  useChallenges,
+  useChallengeActions,
+  useDailyChallenges,
+} from '@/features/challenges/useChallenges';
 import { Button } from '@/components/ui/Button';
 import { CoinIcon } from '@/components/CoinIcon';
 import { formatAmount, formatTostoes } from '@/lib/format';
 import { Eyebrow, SectionHeader } from '@/components/ui/primitives';
-import type { ChallengeRow } from '@/types/db';
+import type { ChallengeRow, DailyChallengeRow } from '@/types/db';
 
 const RESCUE_THRESHOLD = 100;
 
-function ChallengeCard({ c, onClaim, busy }: { c: ChallengeRow; onClaim: () => void; busy: boolean }) {
+/** Live "resets in HH:MM:SS" countdown to the next local midnight (server day). */
+function ResetCountdown({ resetsAt }: { resetsAt: string }) {
+  const target = new Date(resetsAt).getTime();
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+  const ms = Math.max(0, target - now);
+  const h = Math.floor(ms / 3_600_000);
+  const m = Math.floor((ms % 3_600_000) / 60_000);
+  const s = Math.floor((ms % 60_000) / 1000);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return (
+    <span className="font-mono text-xs tabular-nums text-muted-2">
+      Renova em {pad(h)}:{pad(m)}:{pad(s)}
+    </span>
+  );
+}
+
+type CardChallenge = Pick<
+  ChallengeRow,
+  'title' | 'description' | 'reward' | 'progress' | 'target' | 'claimed'
+>;
+
+function ChallengeCard({ c, onClaim, busy }: { c: CardChallenge; onClaim: () => void; busy: boolean }) {
   const pct = Math.min(100, Math.round((c.progress / c.target) * 100));
   const complete = c.progress >= c.target;
   return (
@@ -62,7 +91,8 @@ function ChallengeCard({ c, onClaim, busy }: { c: ChallengeRow; onClaim: () => v
 export function ChallengesPage() {
   const { data: profile } = useProfile();
   const { data: challenges } = useChallenges();
-  const { claim, rescue } = useChallengeActions();
+  const { data: daily } = useDailyChallenges();
+  const { claim, claimDaily, rescue } = useChallengeActions();
   const [msg, setMsg] = useState<string | null>(null);
 
   const balance = profile?.balance ?? 0;
@@ -70,11 +100,18 @@ export function ChallengesPage() {
   const recovery = (challenges ?? []).filter((c) => c.track === 'recovery');
   const highroller = (challenges ?? []).filter((c) => c.track === 'highroller');
   const badges = (challenges ?? []).filter((c) => c.claimed);
+  const dailyList = daily ?? [];
 
   async function onClaim(key: string) {
     setMsg(null);
     const res = await claim.mutateAsync(key);
     if (res.status === 'claimed') setMsg(`Resgatou +${formatTostoes(res.reward ?? 0)}!`);
+    else if (res.status === 'incomplete') setMsg('Ainda não está lá. Continue a jogar.');
+  }
+  async function onClaimDaily(key: string) {
+    setMsg(null);
+    const res = await claimDaily.mutateAsync(key);
+    if (res.status === 'claimed') setMsg(`Desafio diário resgatado: +${formatTostoes(res.reward ?? 0)}!`);
     else if (res.status === 'incomplete') setMsg('Ainda não está lá. Continue a jogar.');
   }
   async function onRescue() {
@@ -122,6 +159,29 @@ export function ChallengesPage() {
 
       {msg && (
         <p className="animate-fade-in font-sans text-sm font-medium text-positive">{msg}</p>
+      )}
+
+      {/* Desafios diários — renovam todos os dias, iguais para todos */}
+      {dailyList.length > 0 && (
+        <section className="space-y-4">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <SectionHeader title="Desafios diários" />
+            <ResetCountdown resetsAt={dailyList[0]!.resets_at} />
+          </div>
+          <p className="-mt-2 font-sans text-sm text-muted-2">
+            Um novo conjunto para toda a gente, todos os dias. Conta só o que jogar hoje.
+          </p>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {dailyList.map((c: DailyChallengeRow) => (
+              <ChallengeCard
+                key={c.key}
+                c={c}
+                busy={claimDaily.isPending}
+                onClaim={() => onClaimDaily(c.key)}
+              />
+            ))}
+          </div>
+        </section>
       )}
 
       {tracksInOrder.map((track) => (

@@ -2,7 +2,13 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/features/auth/AuthProvider';
 import { profileKey } from '@/features/profile/useProfile';
-import type { ChallengeClaimResult, ChallengeRow, RescueResult } from '@/types/db';
+import type {
+  ChallengeClaimResult,
+  ChallengeRow,
+  DailyChallengeClaimResult,
+  DailyChallengeRow,
+  RescueResult,
+} from '@/types/db';
 
 export function useChallenges() {
   const { user } = useAuth();
@@ -17,11 +23,25 @@ export function useChallenges() {
   });
 }
 
+export function useDailyChallenges() {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ['daily-challenges', user?.id] as const,
+    enabled: !!user,
+    queryFn: async (): Promise<DailyChallengeRow[]> => {
+      const { data, error } = await supabase.rpc('list_daily_challenges');
+      if (error) throw error;
+      return data;
+    },
+  });
+}
+
 export function useChallengeActions() {
   const { user } = useAuth();
   const qc = useQueryClient();
   const refresh = () => {
     void qc.invalidateQueries({ queryKey: ['challenges', user?.id] });
+    void qc.invalidateQueries({ queryKey: ['daily-challenges', user?.id] });
     void qc.invalidateQueries({ queryKey: profileKey(user?.id) });
     void qc.invalidateQueries({ queryKey: ['transactions', user?.id] });
   };
@@ -29,6 +49,15 @@ export function useChallengeActions() {
   const claim = useMutation({
     mutationFn: async (key: string): Promise<ChallengeClaimResult> => {
       const { data, error } = await supabase.rpc('claim_challenge', { p_key: key });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: refresh,
+  });
+
+  const claimDaily = useMutation({
+    mutationFn: async (key: string): Promise<DailyChallengeClaimResult> => {
+      const { data, error } = await supabase.rpc('claim_daily_challenge', { p_key: key });
       if (error) throw error;
       return data;
     },
@@ -44,5 +73,5 @@ export function useChallengeActions() {
     onSuccess: refresh,
   });
 
-  return { claim, rescue };
+  return { claim, claimDaily, rescue };
 }

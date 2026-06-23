@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useNotifications, useUnreadCount, useMarkNotificationsRead } from '@/features/notifications/useNotifications';
 import { useFriendRequests, useFriendActions } from '@/features/friends/useFriends';
-import { useChallenges } from '@/features/challenges/useChallenges';
+import { useChallenges, useDailyChallenges } from '@/features/challenges/useChallenges';
 import { UiIcon, type UiIconName } from '@/components/icons/UiIcon';
 import type { NotificationRow } from '@/types/db';
 
@@ -35,11 +35,15 @@ export function NotificationBell() {
   const { data: unread = 0 } = useUnreadCount();
   const { data: requests = [] } = useFriendRequests();
   const { data: challenges = [] } = useChallenges();
+  const { data: daily = [] } = useDailyChallenges();
   const markRead = useMarkNotificationsRead();
   const { respond } = useFriendActions();
 
   const incoming = requests.filter((r) => r.direction === 'incoming');
-  const claimable = challenges.filter((c) => !c.claimed && c.progress >= c.target);
+  const claimable = [
+    ...challenges.filter((c) => !c.claimed && c.progress >= c.target),
+    ...daily.filter((c) => !c.claimed && c.progress >= c.target),
+  ];
   const badge = unread + claimable.length;
 
   // Close on outside click.
