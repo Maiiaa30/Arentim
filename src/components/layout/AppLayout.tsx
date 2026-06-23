@@ -7,6 +7,7 @@ import { TopAccentRule } from '@/components/ui/primitives';
 import { useRealtimeSync } from '@/features/realtime/useRealtimeSync';
 import { useReferralClaim } from '@/features/referrals/useReferral';
 import { ChipMark } from '@/components/ui/ChipMark';
+import { GameSessionTracker } from '@/features/casino/GameSessionTracker';
 
 /** A subtle casino atmosphere behind everything — like the home hero: soft depth
  *  glows, a couple of big faint suit watermarks and a few drifting "chip" rings.
@@ -52,6 +53,7 @@ export function AppLayout() {
         <Outlet />
       </main>
       <Footer />
+      <GameSessionTracker />
     </div>
   );
 }

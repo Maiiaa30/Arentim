@@ -231,6 +231,13 @@ export type BuyTicketsResult = {
   balance?: number;
 };
 
+export type GameSessionStats = {
+  wagered: number;
+  won: number;
+  plays: number;
+  biggest: number;
+};
+
 export type MyPokerTable = {
   table_id: number;
   code: string;
@@ -1351,6 +1358,10 @@ export type Database = {
       claim_level_rewards: {
         Args: Record<string, never>;
         Returns: LevelRewardResult;
+      };
+      game_session_stats: {
+        Args: { p_games: string[]; p_since: string };
+        Returns: GameSessionStats;
       };
       admin_adjust_balance: {
         Args: { p_user: string; p_amount: number; p_reason: string };
