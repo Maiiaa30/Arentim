@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useSlotMachines } from '@/features/casino/useSlotMachines';
 import { machineHex } from '@/features/casino/slotTheme';
+import { SkeletonCard } from '@/components/ui/Skeleton';
 import { SymbolArt } from '@/features/casino/slotSymbols';
 import { Eyebrow } from '@/components/ui/primitives';
 import { formatAmount } from '@/lib/format';
@@ -148,7 +149,13 @@ export function SlotsLobby() {
 
       <FortunaFeature />
 
-      {isLoading && <p className="py-12 text-center text-muted">A acender as máquinas…</p>}
+      {isLoading && (
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,300px),1fr))] gap-5">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <SkeletonCard key={i} className="h-[320px]" />
+          ))}
+        </div>
+      )}
       {error && (
         <p className="py-12 text-center text-negative">
           Não foi possível carregar as slots. Atualize a página.
