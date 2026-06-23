@@ -206,6 +206,31 @@ export type DailySpinResult = {
   resets_at: string;
 };
 
+export type RaffleRecentWinner = {
+  id: number;
+  pot: number;
+  winner_name: string | null;
+  total_tickets: number;
+  drawn_at: string;
+};
+
+export type RaffleState = {
+  id: number;
+  ticket_price: number;
+  pot: number;
+  total_tickets: number;
+  draws_at: string;
+  my_tickets: number;
+  recent: RaffleRecentWinner[];
+};
+
+export type BuyTicketsResult = {
+  status: 'bought' | 'closed' | 'insufficient';
+  qty?: number;
+  cost?: number;
+  balance?: number;
+};
+
 export type MyPokerTable = {
   table_id: number;
   code: string;
@@ -1304,6 +1329,14 @@ export type Database = {
       daily_spin: {
         Args: Record<string, never>;
         Returns: DailySpinResult;
+      };
+      raffle_current: {
+        Args: Record<string, never>;
+        Returns: RaffleState;
+      };
+      buy_raffle_tickets: {
+        Args: { p_qty: number };
+        Returns: BuyTicketsResult;
       };
       admin_adjust_balance: {
         Args: { p_user: string; p_amount: number; p_reason: string };

@@ -47,6 +47,7 @@ const SuecaTablePage = lazy(() => named(import('@/pages/sueca/SuecaTablePage'), 
 const PrivatePokerPage = lazy(() => named(import('@/pages/poker/PrivatePokerPage'), 'PrivatePokerPage'));
 const FriendsPage = lazy(() => named(import('@/pages/FriendsPage'), 'FriendsPage'));
 const ChallengesPage = lazy(() => named(import('@/pages/ChallengesPage'), 'ChallengesPage'));
+const RafflePage = lazy(() => named(import('@/pages/RafflePage'), 'RafflePage'));
 const AdminPage = lazy(() => named(import('@/pages/AdminPage'), 'AdminPage'));
 const NotFoundPage = lazy(() => named(import('@/pages/stubs'), 'NotFoundPage'));
 
@@ -108,6 +109,7 @@ export default function App() {
             <Route path="poker/private" element={<PrivatePokerPage />} />
             <Route path="friends" element={<FriendsPage />} />
             <Route path="challenges" element={<ChallengesPage />} />
+            <Route path="rifa" element={<RafflePage />} />
             <Route path="wallet" element={<WalletPage />} />
             <Route path="profile" element={<ProfilePage />} />
             <Route element={<RequireAdmin />}>
