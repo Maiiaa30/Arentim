@@ -1,13 +1,13 @@
 import { Link } from 'react-router-dom';
 import { useSlotMachines } from '@/features/casino/useSlotMachines';
-import { accentHex } from '@/features/casino/slotTheme';
+import { machineHex } from '@/features/casino/slotTheme';
 import { SymbolArt } from '@/features/casino/slotSymbols';
 import { Eyebrow } from '@/components/ui/primitives';
 import { formatAmount } from '@/lib/format';
 import type { SlotMachineMeta } from '@/types/db';
 
 function MachineCard({ m }: { m: SlotMachineMeta }) {
-  const hex = accentHex(m.accent);
+  const hex = machineHex(m.key, m.accent);
   const showcase = m.symbols.slice(0, 3);
 
   return (
@@ -18,7 +18,7 @@ function MachineCard({ m }: { m: SlotMachineMeta }) {
       {/* Themed marquee */}
       <div
         className="relative flex h-[180px] items-center justify-center gap-3 overflow-hidden"
-        style={{ background: `radial-gradient(120% 130% at 50% -20%, ${hex}40, transparent 60%), linear-gradient(180deg, #100e09, #0a0907)` }}
+        style={{ background: `radial-gradient(130% 130% at 50% -10%, ${hex}70, transparent 62%), linear-gradient(180deg, ${hex}18, #0a0907 78%)` }}
       >
         <span
           className="pointer-events-none absolute inset-x-0 top-0 h-px"
