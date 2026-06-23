@@ -9,7 +9,10 @@ import { PlayingCardFace, type CardSize } from '@/components/PlayingCardFace';
 export function PokerCard({ card, small, size }: { card: number; small?: boolean; size?: CardSize }) {
   const s: CardSize = size ?? (small ? 'sm' : 'md');
   if (card < 0) return <PlayingCardFace faceDown size={s} />;
-  return <PlayingCardFace rank={RANK_CHARS[card % 13]} suit={suitOf(card)} size={s} />;
+  // RANK_CHARS uses 'T' for Ten (engine shorthand); show '10' on the face so it
+  // doesn't read as a mystery "T" card.
+  const r = RANK_CHARS[card % 13];
+  return <PlayingCardFace rank={r === 'T' ? '10' : r} suit={suitOf(card)} size={s} />;
 }
 
 export { RANK_CHARS, SUIT_CHARS };
