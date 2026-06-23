@@ -174,6 +174,26 @@ export type RescueResult = {
   balance?: number;
 };
 
+export type DailyChallengeRow = {
+  key: string;
+  title: string;
+  description: string;
+  target: number;
+  reward: number;
+  progress: number;
+  claimed: boolean;
+  slot: number;
+  resets_at: string;
+};
+
+export type DailyChallengeClaimResult = {
+  status: 'claimed' | 'already_claimed' | 'incomplete';
+  reward?: number;
+  balance?: number;
+  progress?: number;
+  target?: number;
+};
+
 export type MyPokerTable = {
   table_id: number;
   code: string;
@@ -852,6 +872,18 @@ export type Database = {
         Update: Partial<{ title: string; description: string; metric: string; target: number; reward: number; track: string; active: boolean }>;
         Relationships: [];
       };
+      daily_challenge_catalog: {
+        Row: { key: string; title: string; description: string; metric: string; target: number; reward: number; sort: number; active: boolean };
+        Insert: { key: string; title: string; description: string; metric: string; target: number; reward: number };
+        Update: Partial<{ title: string; description: string; metric: string; target: number; reward: number; active: boolean }>;
+        Relationships: [];
+      };
+      daily_challenge_claims: {
+        Row: { user_id: string; challenge_key: string; claim_date: string; claimed_at: string; reward: number };
+        Insert: { user_id: string; challenge_key: string; reward: number };
+        Update: Partial<{ reward: number }>;
+        Relationships: [];
+      };
       notifications: {
         Row: NotificationRow;
         Insert: Partial<NotificationRow> & { user_id: string; type: string; title: string };
@@ -1240,6 +1272,14 @@ export type Database = {
       claim_rescue: {
         Args: Record<string, never>;
         Returns: RescueResult;
+      };
+      list_daily_challenges: {
+        Args: Record<string, never>;
+        Returns: DailyChallengeRow[];
+      };
+      claim_daily_challenge: {
+        Args: { p_key: string };
+        Returns: DailyChallengeClaimResult;
       };
       admin_adjust_balance: {
         Args: { p_user: string; p_amount: number; p_reason: string };
