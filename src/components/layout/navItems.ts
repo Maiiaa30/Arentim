@@ -47,4 +47,5 @@ export const NAV: NavEntry[] = [
   { to: '/sueca', label: 'Sueca' },
   { to: '/friends', label: 'Amigos' },
   { to: '/challenges', label: 'Desafios' },
+  { to: '/rifa', label: 'Rifa' },
 ];
