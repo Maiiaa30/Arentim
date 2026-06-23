@@ -54,10 +54,12 @@ export function SignupPage() {
       password: parsed.data.password,
       options: {
         data: { display_name: parsed.data.displayName },
-        // Send the confirmation link back to whatever origin the user signed up
-        // from (prod or a preview deploy), not the project's default Site URL.
-        // The origin must also be in Supabase → Auth → URL Configuration → Redirect URLs.
-        emailRedirectTo: window.location.origin,
+        // Send the confirmation link to a dedicated callback page that confirms
+        // success / handles an expired-or-used link / offers a resend, instead of
+        // landing silently on the home page. The URL must be allow-listed in
+        // Supabase → Auth → URL Configuration → Redirect URLs (a `…/**` wildcard
+        // covers it).
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
       },
     });
     setBusy(false);

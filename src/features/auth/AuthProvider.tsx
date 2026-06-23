@@ -43,11 +43,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const apply = (session: Session | null) => {
       if (!active) return;
       const uid = session?.user?.id ?? null;
-      if (prevUid.current !== undefined && prevUid.current !== uid) {
-        // The account actually changed (different user / sign-out) — e.g. another
-        // tab signed in, since the session is shared per-browser. Hard reload so
-        // ZERO stale cross-account state (cached balances, in-flight bets, the
-        // supabase client's queued requests) can survive into the new account.
+      // Hard-reload ONLY when an already-established account changes to a
+      // DIFFERENT one (or signs out) — e.g. another tab switched accounts, since
+      // the session is shared per-browser — so no stale cross-account state
+      // survives. A FRESH login (null → user, e.g. landing from the email
+      // confirmation link) and the initial load must NOT reload, or the
+      // confirmation/login flow flashes and looks broken.
+      if (prevUid.current != null && prevUid.current !== uid) {
         qc.clear();
         prevUid.current = uid;
         window.location.reload();

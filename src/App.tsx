@@ -14,6 +14,7 @@ const named = <T extends Record<string, unknown>, K extends keyof T>(p: Promise<
 const LoginPage = lazy(() => named(import('@/pages/auth/LoginPage'), 'LoginPage'));
 const SignupPage = lazy(() => named(import('@/pages/auth/SignupPage'), 'SignupPage'));
 const ResetPasswordPage = lazy(() => named(import('@/pages/auth/ResetPasswordPage'), 'ResetPasswordPage'));
+const AuthCallbackPage = lazy(() => named(import('@/pages/auth/AuthCallbackPage'), 'AuthCallbackPage'));
 const ProfilePage = lazy(() => named(import('@/pages/ProfilePage'), 'ProfilePage'));
 const WalletPage = lazy(() => named(import('@/pages/WalletPage'), 'WalletPage'));
 const CasinoLobby = lazy(() => named(import('@/pages/casino/CasinoLobby'), 'CasinoLobby'));
@@ -63,6 +64,7 @@ export default function App() {
           <Route path="login" element={<LoginPage />} />
           <Route path="signup" element={<SignupPage />} />
           <Route path="redefinir-palavra-passe" element={<ResetPasswordPage />} />
+          <Route path="auth/callback" element={<AuthCallbackPage />} />
 
           {/* Authenticated only */}
           <Route element={<RequireAuth />}>
