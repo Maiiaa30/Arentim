@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Eyebrow, SectionHeader } from '@/components/ui/primitives';
 import { isActuallyLive, useAllFixtures, useSportsbookRealtime } from '@/features/sportsbook/useSportsbook';
+import { Skeleton } from '@/components/ui/Skeleton';
 import { ScoreRow } from '@/features/sportsbook/ScoreRow';
 import { MatchDetail } from '@/features/sportsbook/MatchDetail';
 import type { Fixture } from '@/types/db';
@@ -162,7 +163,11 @@ export function ScoresPage() {
       <div className="h-px bg-gradient-to-r from-border to-transparent" />
 
       {isLoading ? (
-        <p className="py-10 text-center text-sm text-muted-2">A carregar resultados…</p>
+        <div className="space-y-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Skeleton key={i} className="h-[68px]" />
+          ))}
+        </div>
       ) : total === 0 ? (
         <div className="card p-8 text-center text-sm text-muted-2">
           Ainda sem jogos. A sincronização diária vai preenchê-los assim que houver dados disponíveis.

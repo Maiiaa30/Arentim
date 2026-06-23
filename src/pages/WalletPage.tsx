@@ -5,6 +5,7 @@ import { formatAmount } from '@/lib/format';
 import { BalanceChart } from '@/components/BalanceChart';
 import { CoinIcon } from '@/components/CoinIcon';
 import { Eyebrow, SectionHeader } from '@/components/ui/primitives';
+import { SkeletonRow } from '@/components/ui/Skeleton';
 
 const FILTERS: { value: TransactionType | 'all'; label: string }[] = [
   { value: 'all', label: 'Todas' },
@@ -85,7 +86,11 @@ export function WalletPage() {
           </div>
 
           {isLoading ? (
-            <p className="p-8 text-center text-muted-2">A carregar…</p>
+            <div className="space-y-2 p-3">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <SkeletonRow key={i} />
+              ))}
+            </div>
           ) : !transactions || transactions.length === 0 ? (
             <p className="p-8 text-center text-muted-2">Ainda sem transações.</p>
           ) : (

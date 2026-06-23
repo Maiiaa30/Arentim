@@ -3,6 +3,7 @@ import { useMyBets, useCashoutBet, type BetWithLegs } from './useSportsbook';
 import { selectionLabel, type Market, type Selection } from './odds';
 import { summariseBets, filterBets, type BetFilter } from './betStats';
 import { formatAmount } from '@/lib/format';
+import { Skeleton } from '@/components/ui/Skeleton';
 
 const statusLabel: Record<string, string> = {
   pending: 'Pendente',
@@ -203,7 +204,20 @@ export function BetHistory() {
   const summary = useMemo(() => summariseBets(bets ?? []), [bets]);
   const shown = useMemo(() => filterBets(bets ?? [], filter), [bets, filter]);
 
-  if (isLoading) return <p className="py-6 text-center text-muted-2">A carregar…</p>;
+  if (isLoading) {
+    return (
+      <div className="space-y-3">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-14" />
+          ))}
+        </div>
+        {Array.from({ length: 3 }).map((_, i) => (
+          <Skeleton key={i} className="h-28" />
+        ))}
+      </div>
+    );
+  }
   if (!bets || bets.length === 0) {
     return <p className="py-6 text-center text-sm text-muted-2">Ainda sem apostas.</p>;
   }

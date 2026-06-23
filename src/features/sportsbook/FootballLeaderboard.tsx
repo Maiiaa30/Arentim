@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { RingAvatar, SectionHeader } from '@/components/ui/primitives';
 import { formatAmount } from '@/lib/format';
+import { Skeleton } from '@/components/ui/Skeleton';
 import type { FootballLeaderRow } from '@/types/db';
 
 type Board = 'wagered' | 'won' | 'lost';
@@ -57,7 +58,14 @@ export function FootballLeaderboard() {
       </div>
 
       <div className="space-y-1">
-        {isLoading && <p className="px-2 py-3 text-sm text-muted-2">A carregar…</p>}
+        {isLoading &&
+          Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="flex items-center gap-2 px-2 py-1.5">
+              <Skeleton className="h-6 w-6 shrink-0 rounded-full" />
+              <Skeleton className="h-3.5 flex-1" />
+              <Skeleton className="h-3.5 w-12 shrink-0" />
+            </div>
+          ))}
         {!isLoading && rows.length === 0 && <p className="px-2 py-3 text-sm text-muted-2">Ainda sem dados.</p>}
         {rows.map((r, i) => {
           const tone = TABS.find((t) => t.key === tab)!.tone;
