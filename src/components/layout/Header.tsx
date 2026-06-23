@@ -5,6 +5,8 @@ import { useProfile } from '@/features/profile/useProfile';
 import { AnimatedNumber } from '@/components/AnimatedNumber';
 import { Button } from '@/components/ui/Button';
 import { RingAvatar } from '@/components/ui/primitives';
+import { LevelBadge } from '@/features/profile/LevelBadge';
+import { levelFromWagered } from '@/features/profile/level';
 import { Brandmark } from '@/components/ui/Brandmark';
 import { CoinIcon } from '@/components/CoinIcon';
 import { NotificationBell } from '@/components/NotificationBell';
@@ -197,6 +199,12 @@ export function Header() {
               </NavLink>
 
               <NotificationBell />
+
+              {profile && (
+                <NavLink to="/profile" className="focus-ring hidden lg:inline-flex" title="O seu nível">
+                  <LevelBadge level={levelFromWagered(profile.total_wagered)} />
+                </NavLink>
+              )}
 
               <NavLink to="/profile" className="focus-ring hidden rounded-full sm:inline-flex" title="O seu perfil">
                 <RingAvatar initials={initialsOf(profile?.display_name)} size={40} />
