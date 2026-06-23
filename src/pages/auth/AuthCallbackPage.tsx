@@ -53,24 +53,31 @@ export function AuthCallbackPage() {
       }
     };
 
-    // Branded-link flow: the email template links to OUR domain with a
-    // token_hash (so the user never sees the supabase.co URL); verify it here.
-    const params = new URLSearchParams(window.location.search);
-    const tokenHash = params.get('token_hash');
-    const type = params.get('type');
-    if (tokenHash && type) {
-      supabase.auth
-        .verifyOtp({ type: type as EmailOtpType, token_hash: tokenHash })
-        .then(({ error }) => finish(!error, error ? 'Esta ligação expirou ou já foi usada. Pede uma nova abaixo.' : undefined))
-        .catch(() => finish(false));
-      return;
-    }
+    const sub = supabase.auth.onAuthStateChange((_evt, session) => { if (session) finish(true); });
 
-    // Default flow: detectSessionInUrl establishes the session from the URL hash.
-    supabase.auth.getSession().then(({ data }) => { if (data.session) finish(true); });
-    const { data: sub } = supabase.auth.onAuthStateChange((_evt, session) => { if (session) finish(true); });
-    const timer = setTimeout(() => finish(false), 5000);
-    return () => { clearTimeout(timer); sub.subscription.unsubscribe(); };
+    void (async () => {
+      // If we're ALREADY signed in, we're done — this happens when the token was
+      // verified a moment ago and the page reloaded. We must NOT re-verify the
+      // one-time token (that returns "expired/used" and would show an error to a
+      // user who is, in fact, logged in).
+      const { data: existing } = await supabase.auth.getSession();
+      if (existing.session) { finish(true); return; }
+
+      // Branded-link flow: the email links to OUR domain with a token_hash
+      // (so the user never sees the supabase.co URL); verify it here.
+      const params = new URLSearchParams(window.location.search);
+      const tokenHash = params.get('token_hash');
+      const type = params.get('type');
+      if (tokenHash && type) {
+        const { error } = await supabase.auth.verifyOtp({ type: type as EmailOtpType, token_hash: tokenHash });
+        finish(!error, error ? 'Esta ligação expirou ou já foi usada. Pede uma nova abaixo.' : undefined);
+      }
+      // Else: an implicit-hash link — detectSessionInUrl establishes the session
+      // and the onAuthStateChange listener above resolves it (or the timeout).
+    })();
+
+    const timer = setTimeout(() => finish(false), 6000);
+    return () => { clearTimeout(timer); sub.data.subscription.unsubscribe(); };
   }, [navigate]);
 
   async function resend(ev: FormEvent) {
