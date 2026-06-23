@@ -1,7 +1,7 @@
 <!--
   Arentim — "Confirmar inscrição" (Supabase Auth → Email Templates → Confirm signup).
   Paste this whole file into the template body. Supabase fills the Go variables
-  ({{ .ConfirmationURL }} etc.) at send time. Email-safe: table layout + inline
+  ({{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=signup etc.) at send time. Email-safe: table layout + inline
   styles only (no external CSS/JS/fonts), so it renders the same in Gmail/Outlook.
 -->
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#0a0907;margin:0;padding:32px 0;font-family:Arial,Helvetica,sans-serif;">
@@ -34,7 +34,7 @@
                   <table role="presentation" cellpadding="0" cellspacing="0" style="margin:8px 0 22px;">
                     <tr>
                       <td align="center" style="border-radius:6px;background:#C9A24B;">
-                        <a href="{{ .ConfirmationURL }}" target="_blank"
+                        <a href="{{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=signup" target="_blank"
                            style="display:inline-block;padding:13px 30px;font-size:15px;font-weight:bold;color:#0a0907;text-decoration:none;letter-spacing:0.5px;">
                           Confirmar email
                         </a>
@@ -43,7 +43,7 @@
                   </table>
 
                   <p style="margin:0 0 6px;font-size:12px;color:#9d927a;">Se o botão não funcionar, copia este link para o navegador:</p>
-                  <p style="margin:0;font-size:12px;line-height:1.5;word-break:break-all;"><a href="{{ .ConfirmationURL }}" style="color:#C9A24B;">{{ .ConfirmationURL }}</a></p>
+                  <p style="margin:0;font-size:12px;line-height:1.5;word-break:break-all;"><a href="{{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=signup" style="color:#C9A24B;">{{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=signup</a></p>
                 </td>
               </tr>
             </table>
