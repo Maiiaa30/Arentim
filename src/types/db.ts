@@ -650,8 +650,18 @@ export type Profile = {
   created_at: string;
   last_online: string | null;
   last_rescue_date: string | null;
+  levels_claimed: number;
   suspended: boolean;
   suspended_until: string | null;
+};
+
+export type LevelRewardResult = {
+  status: 'claimed' | 'none';
+  reward?: number;
+  level: number;
+  from?: number;
+  to?: number;
+  balance?: number;
 };
 
 export type Announcement = {
@@ -1337,6 +1347,10 @@ export type Database = {
       buy_raffle_tickets: {
         Args: { p_qty: number };
         Returns: BuyTicketsResult;
+      };
+      claim_level_rewards: {
+        Args: Record<string, never>;
+        Returns: LevelRewardResult;
       };
       admin_adjust_balance: {
         Args: { p_user: string; p_amount: number; p_reason: string };

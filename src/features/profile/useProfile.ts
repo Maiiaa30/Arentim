@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/features/auth/AuthProvider';
-import type { Profile } from '@/types/db';
+import type { LevelRewardResult, Profile } from '@/types/db';
 
 export const profileKey = (userId: string | undefined) => ['profile', userId] as const;
 
@@ -38,6 +38,23 @@ export function useUpdateProfile() {
     },
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: profileKey(user?.id) });
+    },
+  });
+}
+
+/** Claims the one-time reward for every level reached since the last claim. */
+export function useClaimLevelRewards() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (): Promise<LevelRewardResult> => {
+      const { data, error } = await supabase.rpc('claim_level_rewards');
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: profileKey(user?.id) });
+      void qc.invalidateQueries({ queryKey: ['transactions', user?.id] });
     },
   });
 }

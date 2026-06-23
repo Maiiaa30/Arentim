@@ -20,6 +20,7 @@ const base: Profile = {
   created_at: '2026-01-01T00:00:00Z',
   last_online: null,
   last_rescue_date: null,
+  levels_claimed: 0,
   suspended: false,
   suspended_until: null,
 };

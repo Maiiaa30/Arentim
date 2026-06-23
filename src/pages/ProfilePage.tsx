@@ -5,6 +5,7 @@ import { useChallenges } from '@/features/challenges/useChallenges';
 import { useTransactions } from '@/features/wallet/useTransactions';
 import { netResult, winRate } from '@/features/profile/stats';
 import { AchievementsGrid } from '@/features/profile/AchievementsGrid';
+import { LevelCard } from '@/features/profile/LevelCard';
 import { AccountSecurity } from '@/features/auth/AccountSecurity';
 import { formatAmount, formatTos } from '@/lib/format';
 import { displayNameSchema } from '@/features/auth/schema';
@@ -137,6 +138,8 @@ export function ProfilePage() {
           </div>
         </div>
       </HeroFrame>
+
+      <LevelCard profile={profile} />
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
         <StatCard label="Jogos" value={formatAmount(profile.games_played)} sub="no total" />
