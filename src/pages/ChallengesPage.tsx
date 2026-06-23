@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/Button';
 import { CoinIcon } from '@/components/CoinIcon';
 import { formatAmount, formatTostoes } from '@/lib/format';
 import { Eyebrow, SectionHeader } from '@/components/ui/primitives';
+import { SpinWheel } from '@/features/bonus/SpinWheel';
 import type { ChallengeRow, DailyChallengeRow } from '@/types/db';
 
 const RESCUE_THRESHOLD = 100;
@@ -160,6 +161,9 @@ export function ChallengesPage() {
       {msg && (
         <p className="animate-fade-in font-sans text-sm font-medium text-positive">{msg}</p>
       )}
+
+      {/* Roleta diária — um giro grátis por dia */}
+      <SpinWheel />
 
       {/* Desafios diários — renovam todos os dias, iguais para todos */}
       {dailyList.length > 0 && (
