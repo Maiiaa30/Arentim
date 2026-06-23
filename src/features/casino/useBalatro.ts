@@ -1,17 +1,8 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/features/auth/AuthProvider';
-import { profileKey } from '@/features/profile/useProfile';
+import { useInvalidateWallet } from '@/features/wallet/useInvalidateWallet';
 import type { BalatroState, BalatroPlayResult, BalatroDiscardResult } from './balatro';
-
-function useInvalidateWallet() {
-  const { user } = useAuth();
-  const qc = useQueryClient();
-  return () => {
-    void qc.invalidateQueries({ queryKey: profileKey(user?.id) });
-    void qc.invalidateQueries({ queryKey: ['transactions', user?.id] });
-  };
-}
 
 /** Balatró: stake a blind — debit + deal a fresh hidden deck and 8-card hand. */
 export function useBalatroStart() {

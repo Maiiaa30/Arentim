@@ -1,7 +1,6 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
-import { useAuth } from '@/features/auth/AuthProvider';
-import { profileKey } from '@/features/profile/useProfile';
+import { useInvalidateWallet } from '@/features/wallet/useInvalidateWallet';
 import type { CoinSide } from './coinflip';
 import type { DicePick, HiLoPick, HighLowPick } from './miniGames';
 import type {
@@ -27,15 +26,6 @@ import type {
   ChickenCashoutResult,
   ChickenCurrent,
 } from '@/types/db';
-
-function useInvalidateWallet() {
-  const { user } = useAuth();
-  const qc = useQueryClient();
-  return () => {
-    void qc.invalidateQueries({ queryKey: profileKey(user?.id) });
-    void qc.invalidateQueries({ queryKey: ['transactions', user?.id] });
-  };
-}
 
 /** Coin-flip: pick a side, stake, server flips with a CSPRNG. */
 export function useCoinflip() {

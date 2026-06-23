@@ -1,18 +1,7 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
-import { useAuth } from '@/features/auth/AuthProvider';
-import { profileKey } from '@/features/profile/useProfile';
+import { useInvalidateWallet } from '@/features/wallet/useInvalidateWallet';
 import type { VideoSlotResult } from './videoSlot';
-
-/** Invalidate the wallet + transaction caches after a settled round. */
-function useInvalidateWallet() {
-  const { user } = useAuth();
-  const qc = useQueryClient();
-  return () => {
-    void qc.invalidateQueries({ queryKey: profileKey(user?.id) });
-    void qc.invalidateQueries({ queryKey: ['transactions', user?.id] });
-  };
-}
 
 /**
  * Fortuna de Ouro — spin the 5×3, 9-payline video slot. Stake only; the server
