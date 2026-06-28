@@ -19,7 +19,7 @@ function initialsOf(name: string | undefined): string {
 }
 
 const leafClass =
-  'focus-ring whitespace-nowrap border-b px-1 pb-1 font-sans text-[12px] font-medium uppercase tracking-[0.16em] transition-colors';
+  'focus-ring whitespace-nowrap border-b px-1 pb-1 font-sans text-[12.5px] font-medium uppercase tracking-[0.08em] transition-colors';
 
 /** A top-level link in the desktop bar. */
 function NavTopLink({ to, label }: NavLeaf) {
@@ -75,7 +75,7 @@ function NavDropdown({
               key={i.to}
               to={i.to}
               className={({ isActive }) =>
-                `block rounded px-3 py-2 font-sans text-[12px] font-medium uppercase tracking-[0.14em] transition-colors ${
+                `block rounded px-3 py-2 font-sans text-[12px] font-medium uppercase tracking-[0.08em] transition-colors ${
                   isActive ? 'bg-gold/10 text-gold' : 'text-muted-2 hover:bg-surface-raised hover:text-text'
                 }`
               }
@@ -140,10 +140,10 @@ export function Header() {
               <Brandmark size={40} />
             </span>
             <span className="leading-tight">
-              <span className="block font-sans text-sm font-semibold tracking-[0.35em] text-gold sm:text-base sm:tracking-[0.42em]">
+              <span className="block font-sans text-sm font-semibold tracking-[0.28em] text-gold sm:text-base sm:tracking-[0.32em]">
                 ARENTIM
               </span>
-              <span className="hidden font-sans text-[9px] uppercase tracking-[0.3em] text-muted-2 sm:block">
+              <span className="hidden font-sans text-[9px] uppercase tracking-[0.24em] text-muted-2 sm:block">
                 Casa de Jogos
               </span>
             </span>

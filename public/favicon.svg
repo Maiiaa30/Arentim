@@ -1,15 +1,16 @@
 <svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <linearGradient id="fav-gold" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#f3dca0"/>
-      <stop offset="50%" stop-color="#C9A24B"/>
-      <stop offset="100%" stop-color="#6b542a"/>
+      <stop offset="0%" stop-color="#f6e4ad"/>
+      <stop offset="46%" stop-color="#C9A24B"/>
+      <stop offset="100%" stop-color="#7a5f2e"/>
     </linearGradient>
   </defs>
-  <rect width="48" height="48" rx="11" fill="#0a0907"/>
-  <rect x="10" y="10" width="28" height="28" rx="7" transform="rotate(45 24 24)" fill="none" stroke="url(#fav-gold)" stroke-width="2"/>
-  <g fill="none" stroke="url(#fav-gold)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M17 33 L24 16 L31 33"/>
-    <path d="M20 26.5 L28 26.5"/>
+  <rect width="48" height="48" rx="12" fill="#0a0907"/>
+  <circle cx="24" cy="24" r="17.5" fill="#0c0b08" stroke="url(#fav-gold)" stroke-width="2"/>
+  <circle cx="24" cy="24" r="13.2" fill="none" stroke="rgba(201,162,75,0.32)" stroke-width="1"/>
+  <g fill="none" stroke="url(#fav-gold)" stroke-width="3.1" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M16.8 32 L24 14.5 L31.2 32"/>
+    <path d="M19.7 25.3 L28.3 25.3"/>
   </g>
 </svg>
