@@ -1232,6 +1232,14 @@ export type Database = {
         Args: Record<string, never>;
         Returns: string;
       };
+      admin_reset_player: {
+        Args: { p_user: string; p_reason: string };
+        Returns: { balance: number };
+      };
+      admin_delete_player: {
+        Args: { p_user: string; p_reason: string };
+        Returns: undefined;
+      };
       bj_deal: {
         Args: { p_stake: number };
         Returns: BlackjackView;
