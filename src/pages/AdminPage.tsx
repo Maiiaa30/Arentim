@@ -181,7 +181,7 @@ const DETAIL_LABEL: Record<DetailSection, string> = {
 };
 
 /** Master/detail right panel for a selected player. */
-function PlayerDetail({ player, onToast }: { player: Profile; onToast: (text: string, tone?: ToastTone) => void }) {
+function PlayerDetail({ player, onToast, onDeleted }: { player: Profile; onToast: (text: string, tone?: ToastTone) => void; onDeleted: () => void }) {
   const [section, setSection] = useState<DetailSection>('profile');
   const sections: DetailSection[] = ['profile', 'transactions', 'bets', 'moderation'];
 
@@ -207,7 +207,7 @@ function PlayerDetail({ player, onToast }: { player: Profile; onToast: (text: st
       {section === 'profile' && <PlayerProfile player={player} />}
       {section === 'transactions' && <PlayerTransactions player={player} />}
       {section === 'bets' && <PlayerBets player={player} />}
-      {section === 'moderation' && <PlayerActions player={player} onToast={onToast} />}
+      {section === 'moderation' && <PlayerActions player={player} onToast={onToast} onDeleted={onDeleted} />}
     </div>
   );
 }
@@ -297,8 +297,8 @@ function PlayerBets({ player }: { player: Profile }) {
   );
 }
 
-function PlayerActions({ player, onToast }: { player: Profile; onToast: (text: string, tone?: ToastTone) => void }) {
-  const { adjustBalance, setStreak, setSuspended, suspendUntil } = useAdminActionsMutations();
+function PlayerActions({ player, onToast, onDeleted }: { player: Profile; onToast: (text: string, tone?: ToastTone) => void; onDeleted: () => void }) {
+  const { adjustBalance, setStreak, setSuspended, suspendUntil, resetPlayer, deletePlayer } = useAdminActionsMutations();
   const [amount, setAmount] = useState(0);
   const [reason, setReason] = useState('');
   const [streak, setStreakVal] = useState(player.streak_count);
@@ -368,6 +368,45 @@ function PlayerActions({ player, onToast }: { player: Profile; onToast: (text: s
         }}>
         {player.suspended ? 'Reativar (permanente)' : 'Suspender (permanente)'}
       </Button>
+
+      {/* Zona de perigo — repor ou eliminar a conta */}
+      <div className="mt-1 space-y-2 rounded-lg border border-negative/30 bg-negative/[0.04] p-3">
+        <p className="font-sans text-[10.5px] font-medium uppercase tracking-[0.16em] text-negative/80">
+          Zona de perigo
+        </p>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <span className="font-sans text-xs text-muted-2">Repor saldo (500) e estatísticas a zero. Mantém o histórico.</span>
+          <Button variant="secondary" className="shrink-0 !px-3 !py-1.5"
+            disabled={resetPlayer.isPending}
+            onClick={() => {
+              if (!guardReason()) return;
+              if (!window.confirm(`Repor a conta de ${player.display_name} para o estado inicial?`)) return;
+              void run(() => resetPlayer.mutateAsync({ user: player.id, reason }), 'Conta reposta.');
+            }}>
+            {resetPlayer.isPending ? 'A repor…' : 'Repor conta'}
+          </Button>
+        </div>
+        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-negative/20 pt-2">
+          <span className="font-sans text-xs text-muted-2">Eliminar a conta e todos os dados. Irreversível.</span>
+          <Button variant="danger" className="shrink-0 !px-3 !py-1.5"
+            disabled={deletePlayer.isPending}
+            onClick={() => {
+              if (!guardReason()) return;
+              if (!window.confirm(`ELIMINAR ${player.display_name} e todos os seus dados? Esta ação é irreversível.`)) return;
+              void (async () => {
+                try {
+                  await deletePlayer.mutateAsync({ user: player.id, reason });
+                  onToast(`${player.display_name} eliminado.`);
+                  onDeleted();
+                } catch {
+                  onToast('Não foi possível eliminar a conta.', 'error');
+                }
+              })();
+            }}>
+            {deletePlayer.isPending ? 'A eliminar…' : 'Eliminar conta'}
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -492,7 +531,7 @@ export function AdminPage() {
               )}
             </div>
           </div>
-          {selected && <PlayerDetail key={selected.id} player={selected} onToast={show} />}
+          {selected && <PlayerDetail key={selected.id} player={selected} onToast={show} onDeleted={() => setSelectedId(null)} />}
         </div>
       )}
 

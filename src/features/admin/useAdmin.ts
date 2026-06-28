@@ -320,5 +320,27 @@ export function useAdminActionsMutations() {
     },
   });
 
-  return { adjustBalance, setStreak, setSuspended, suspendUntil, settleFixture, setOdds, broadcast, upsertChallenge, resetSeason };
+  const resetPlayer = useMutation({
+    mutationFn: async (v: { user: string; reason: string }) => {
+      const { error } = await supabase.rpc('admin_reset_player', { p_user: v.user, p_reason: v.reason });
+      if (error) throw error;
+    },
+    onSuccess: (_d, v) => {
+      refresh();
+      void qc.invalidateQueries({ queryKey: ['admin-player-transactions', v.user] });
+      void qc.invalidateQueries({ queryKey: ['admin-stats'] });
+    },
+  });
+  const deletePlayer = useMutation({
+    mutationFn: async (v: { user: string; reason: string }) => {
+      const { error } = await supabase.rpc('admin_delete_player', { p_user: v.user, p_reason: v.reason });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      refresh();
+      void qc.invalidateQueries({ queryKey: ['admin-stats'] });
+    },
+  });
+
+  return { adjustBalance, setStreak, setSuspended, suspendUntil, settleFixture, setOdds, broadcast, upsertChallenge, resetSeason, resetPlayer, deletePlayer };
 }
