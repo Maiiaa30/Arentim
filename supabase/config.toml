@@ -1,0 +1,64 @@
+# Supabase project config — checked into version control so the security posture
+# is reviewable and reproducible instead of living only in Dashboard state.
+#
+# This repo manages a REMOTE project (migrations applied via `npm run db:migrate`).
+# The [functions.*] verify_jwt = true blocks below codify the posture documented
+# in docs/EDGE_FUNCTIONS.md ("deployed with JWT verification on") — committing
+# them changes nothing live, it just versions what is already true and makes
+# future `supabase functions deploy` reproducible.
+#
+# The [auth] / [api] hardening below is COMMENTED OUT on purpose: pushing values
+# that don't match the live Dashboard could silently change signup / email
+# confirmation / token lifetimes. Review each against the Dashboard, then
+# uncomment and `supabase config push` deliberately.
+
+project_id = "kactlxdjoxjrqhmkjtfj"
+
+# --- Edge Functions: require a valid JWT at the gateway for every function. ----
+# User-facing functions then also call auth.getUser(); the cron functions pass
+# the anon key (a valid JWT) + their own x-sync-secret as the real guard.
+[functions.poker-table]
+verify_jwt = true
+
+[functions.poker-bots]
+verify_jwt = true
+
+[functions.sueca-table]
+verify_jwt = true
+
+[functions.send-invite]
+verify_jwt = true
+
+[functions.match-stats]
+verify_jwt = true
+
+[functions.generate-content]
+verify_jwt = true
+
+[functions.sync-fixtures]
+verify_jwt = true
+
+[functions.poll-live-scores]
+verify_jwt = true
+
+# --- Recommended hardening — verify against the Dashboard before enabling. -----
+# [api]
+# # Bound PostgREST result sets so a forgotten .limit() can't pull huge pages.
+# max_rows = 1000
+#
+# [auth]
+# # Keep signups on only if you intend open registration.
+# enable_signup = true
+# # Require email confirmation before a session is issued.
+# enable_confirmations = true
+# # Short-lived access tokens (1h); refresh handles longevity.
+# jwt_expiry = 3600
+#
+# [auth.email]
+# # OTP / magic-link links should expire in <= 1h, not the 24h default.
+# otp_expiry = 3600
+#
+# [auth.rate_limit]
+# email_sent = 10
+# sign_in_sign_ups = 30
+# token_refresh = 150
