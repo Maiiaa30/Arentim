@@ -14,7 +14,8 @@ export type UiIconName =
   | 'sparkle'
   | 'userPlus'
   | 'check'
-  | 'bell';
+  | 'bell'
+  | 'arrowRight';
 
 const PATHS: Record<UiIconName, JSX.Element> = {
   gift: (
@@ -71,6 +72,12 @@ const PATHS: Record<UiIconName, JSX.Element> = {
     <>
       <path d="M12 3a6 6 0 0 0-6 6c0 3.5-1 5-2 6h16c-1-1-2-2.5-2-6a6 6 0 0 0-6-6Z" />
       <path d="M10 20a2 2 0 0 0 4 0" />
+    </>
+  ),
+  arrowRight: (
+    <>
+      <path d="M5 12h14" />
+      <path d="M13 6l6 6-6 6" />
     </>
   ),
 };

@@ -4,35 +4,103 @@ import { useAuth } from '@/features/auth/AuthProvider';
 import { useFriends } from '@/features/friends/useFriends';
 import { usePresence } from '@/features/friends/usePresence';
 import { useLeaderboard } from '@/features/friends/useLeaderboard';
+import { useProfile } from '@/features/profile/useProfile';
+import { levelInfo } from '@/features/profile/level';
+import { LevelBadge } from '@/features/profile/LevelBadge';
+import { useGameSwitches } from '@/features/admin/useAdmin';
 import { PlayerCard } from '@/features/friends/PlayerCard';
 import { DailyBonusCard } from '@/features/bonus/DailyBonusCard';
-import { LandingPage } from '@/pages/LandingPage';
-import { Button } from '@/components/ui/Button';
-import { Eyebrow, RingAvatar, SectionHeader } from '@/components/ui/primitives';
-import { HeroFrame } from '@/components/ui/HeroFrame';
+import { CasinoActivity } from '@/features/casino/CasinoActivity';
 import { GameCard, type GameTile } from '@/features/casino/GameCard';
 import { WinPopup } from '@/features/sportsbook/WinPopup';
+import { LandingPage } from '@/pages/LandingPage';
+import { Button } from '@/components/ui/Button';
+import { CoinIcon } from '@/components/CoinIcon';
+import { RingAvatar, SectionHeader } from '@/components/ui/primitives';
 import { formatTos } from '@/lib/format';
 
-const GAMES: GameTile[] = [
-  { to: '/casino/mines', name: 'Mines', desc: 'Diamantes ou minas?', art: 'mines', badge: 'Novo', tone: 'from-positive-felt/40 to-bg' },
-  { to: '/casino/frango', name: 'Atravessa!', desc: 'A galinha atravessa — não morras.', art: 'chicken', badge: 'Novo', tone: 'from-gold/30 to-bg' },
-  { to: '/casino/crash', name: 'Crash', desc: 'Saia antes de rebentar.', art: 'crash', badge: 'Novo', tone: 'from-chip-ruby/40 to-bg' },
-  { to: '/casino/wheel', name: 'Fita da Sorte', desc: 'Pare no multiplicador certo.', art: 'wheel', badge: 'Novo', tone: 'from-gold/30 to-bg' },
-  { to: '/casino/roulette', name: 'Roleta', desc: 'Roleta europeia, zero único.', art: 'roulette', badge: 'Em alta', tone: 'from-chip-ruby/40 to-bg' },
-  { to: '/casino/blackjack', name: 'Blackjack', desc: 'O croupier pára nos 17.', art: 'blackjack', tone: 'from-positive-felt/40 to-bg' },
-  { to: '/casino/slots', name: 'Slots', desc: 'Cinco máquinas, pote progressivo.', art: 'slots', badge: '5 máquinas', tone: 'from-gold/30 to-bg' },
-  { to: '/poker', name: 'Poker', desc: 'Contra bots ou amigos.', art: 'poker', tone: 'from-chip-navy/40 to-bg' },
-  { to: '/casino/sobe-e-desce', name: 'Sobe e Desce', desc: 'Sobe, desce, ou sete.', art: 'sobedesce', badge: 'Novo', tone: 'from-positive-felt/40 to-bg' },
-  { to: '/sportsbook', name: 'Futebol', desc: 'Primeira Liga e mais.', art: 'football', badge: 'Ao vivo', tone: 'from-positive-felt/30 to-bg', cta: 'Abrir' },
+/** A game tile's switch key is the last path segment ('/casino/crash' → 'crash'). */
+const switchKey = (g: GameTile) => g.to.split('/').filter(Boolean).pop() ?? '';
+
+const LIVE: GameTile[] = [
+  { to: '/casino/crash', name: 'Crash', desc: 'Sala ao vivo. Sai antes do foguetão rebentar.', art: 'crash', badge: 'Ao vivo', tone: 'from-chip-ruby/40 to-bg', range: '5 – 100 tós' },
+  { to: '/casino/roulette', name: 'Roleta', desc: 'Mesa ao vivo. Todos veem a mesma bola cair.', art: 'roulette', badge: 'Ao vivo', tone: 'from-chip-ruby/40 to-bg', range: '5 – 500 tós' },
+  { to: '/casino/corrida', name: 'Corrida de Cavalos', desc: 'Corrida ao vivo. Escolhe o teu cavalo.', art: 'horse', badge: 'Ao vivo', tone: 'from-chip-navy/40 to-bg', range: '5 – 100 tós' },
 ];
+
+const POPULAR: GameTile[] = [
+  { to: '/casino/slots', name: 'Slots', desc: 'Máquinas temáticas, pote progressivo e o Tigrinho.', art: 'slots', badge: 'Máquinas', tone: 'from-gold/30 to-bg', range: '5 – 1000 tós' },
+  { to: '/casino/blackjack', name: 'Blackjack', desc: 'O croupier pára nos 17.', art: 'blackjack', tone: 'from-positive-felt/40 to-bg', range: '10 – 500 tós' },
+  { to: '/poker', name: 'Poker', desc: 'Texas Hold’em contra bots ou amigos.', art: 'poker', tone: 'from-chip-navy/40 to-bg', range: '100+ tós' },
+  { to: '/casino/plinko', name: 'Plinko', desc: 'Larga a bola pelos pinos.', art: 'plinko', badge: 'Novo', tone: 'from-chip-ruby/40 to-bg', range: '5 – 100 tós' },
+  { to: '/casino/mines', name: 'Mines', desc: 'Revela diamantes e foge das minas.', art: 'mines', badge: 'Novo', tone: 'from-positive-felt/40 to-bg', range: '5 – 100 tós' },
+];
+
+const ARCADE: GameTile[] = [
+  { to: '/casino/frango', name: 'Atravessa!', desc: 'A galinha atravessa as faixas.', art: 'chicken', badge: 'Novo', tone: 'from-gold/30 to-bg', range: '5 – 100 tós' },
+  { to: '/casino/balatro', name: 'Balatró', desc: 'Joga mãos de póquer para bater a meta.', art: 'balatro', badge: 'Novo', tone: 'from-chip-navy/40 to-bg', range: '5 – 100 tós' },
+  { to: '/casino/wheel', name: 'Fita da Sorte', desc: 'A fita pára no multiplicador — até 5×.', art: 'wheel', tone: 'from-gold/30 to-bg', range: '5 – 100 tós' },
+  { to: '/casino/chest', name: 'Jogo dos Copos', desc: 'Segue a joia debaixo do copo.', art: 'chest', tone: 'from-gold/30 to-bg', range: '5 – 100 tós' },
+  { to: '/casino/maior-menor', name: 'Maior ou Menor', desc: 'Um dado. Maior, menor, ou certo a 5.7×.', art: 'highlow', tone: 'from-chip-navy/40 to-bg', range: '5 – 100 tós' },
+  { to: '/casino/dice', name: 'Dados', desc: 'Dois dados. Mais de 7, menos de 7, ou sete.', art: 'dice', tone: 'from-chip-navy/40 to-bg', range: '5 – 100 tós' },
+  { to: '/casino/coinflip', name: 'Moeda', desc: 'Cara ou coroa — dobro ou nada.', art: 'coinflip', tone: 'from-gold-light/30 to-bg', range: '5 – 500 tós' },
+];
+
+/** Personal welcome strip — greeting, level progress, balance, daily reward. */
+function PersonalBar() {
+  const { data: profile } = useProfile();
+  if (!profile) return <div className="card h-[92px] animate-pulse" />;
+  const info = levelInfo(profile.total_wagered);
+  return (
+    <section className="card flex flex-wrap items-center justify-between gap-x-6 gap-y-4 p-4 sm:p-5">
+      <div className="min-w-0">
+        <p className="font-display text-xl font-medium text-text sm:text-2xl">
+          Olá, <span className="text-gold">{profile.display_name}</span>
+        </p>
+        <div className="mt-2 flex items-center gap-2.5">
+          <LevelBadge level={info.level} />
+          <div className="h-1.5 w-28 overflow-hidden rounded-full bg-border sm:w-40" title={`${info.progressPct}% para o nível ${info.level + 1}`}>
+            <div className="h-full rounded-full bg-gold transition-[width] duration-500" style={{ width: `${info.progressPct}%` }} />
+          </div>
+        </div>
+      </div>
+      <div className="flex items-center gap-4">
+        <div className="text-right">
+          <p className="font-sans text-[10px] uppercase tracking-[0.18em] text-muted-2">Saldo</p>
+          <p className="font-display text-2xl font-semibold leading-none text-gold">{formatTos(profile.balance)}</p>
+        </div>
+        <Link to="/challenges">
+          <Button variant="primary" className="shrink-0">
+            <CoinIcon className="h-4 w-4" /> Roleta diária
+          </Button>
+        </Link>
+      </div>
+    </section>
+  );
+}
+
+/** A curated section of wide, cinematic game cards (≤3 per row so they read as
+ *  banners, not squares). */
+function GameSection({ title, right, games }: { title: string; right?: string; games: GameTile[] }) {
+  if (games.length === 0) return null;
+  return (
+    <section className="space-y-4">
+      <SectionHeader title={title} right={right} />
+      <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+        {games.map((g) => (
+          <GameCard key={g.to} g={g} />
+        ))}
+      </div>
+    </section>
+  );
+}
 
 function HighRollers({ onSelect }: { onSelect: (id: string) => void }) {
   const { data } = useLeaderboard('global', 'net');
   return (
-    <div className="space-y-3">
+    <div className="card space-y-1 p-4 sm:p-5">
       <SectionHeader title="Grandes Apostadores" right="Esta semana" />
-      <div className="space-y-1">
+      <div className="mt-2 space-y-1">
         {(data ?? []).slice(0, 5).map((row, i) => (
           <button
             key={row.id}
@@ -55,9 +123,9 @@ function Circle({ onSelect }: { onSelect: (id: string) => void }) {
   const { data: friends } = useFriends();
   const online = usePresence();
   return (
-    <div className="space-y-3">
+    <div className="card space-y-1 p-4 sm:p-5">
       <SectionHeader title="O Seu Círculo" right={<Link to="/friends" className="hover:text-text">+ Convidar</Link>} />
-      <div className="space-y-1">
+      <div className="mt-2 space-y-1">
         {(friends ?? []).slice(0, 5).map((f) => (
           <button
             key={f.id}
@@ -81,55 +149,32 @@ function Circle({ onSelect }: { onSelect: (id: string) => void }) {
 
 export function HomePage() {
   const { user } = useAuth();
+  const { data: switches } = useGameSwitches();
   const [selected, setSelected] = useState<string | null>(null);
 
-  // Logged-out visitors get the marketing landing page.
-  if (!user) {
-    return <LandingPage />;
-  }
+  if (!user) return <LandingPage />;
+
+  const off = new Set((switches ?? []).filter((s) => !s.enabled).map((s) => s.key));
+  const show = (games: GameTile[]) => games.filter((g) => !off.has(switchKey(g)));
 
   return (
-    <div className="animate-fade-in space-y-10">
+    <div className="animate-fade-in space-y-8">
       {selected && <PlayerCard userId={selected} onClose={() => setSelected(null)} />}
       <WinPopup />
-      {user && <DailyBonusCard />}
 
-      <HeroFrame>
-        <div className="max-w-xl">
-          <Eyebrow>Bem-vindo ao Arentim</Eyebrow>
-          <h1 className="mt-3 font-display text-[44px] font-medium leading-[1.02] text-text sm:text-[52px]">
-            A sorte está <span className="italic text-gold">lançada.</span>
-          </h1>
-          <p className="mt-4 font-sans text-[15px] leading-relaxed text-muted">
-            Uma casa de jogos só para amigos. Cada conta começa com 500 Tostões. É tudo a brincar.
-          </p>
-          <div className="mt-7 flex flex-wrap gap-3">
-            <Link to="/casino">
-              <Button variant="primary">Entrar no Casino</Button>
-            </Link>
-            <Link to="/sportsbook">
-              <Button variant="ghost">Ver Futebol</Button>
-            </Link>
-          </div>
-        </div>
-      </HeroFrame>
+      <PersonalBar />
+      <DailyBonusCard />
+      <CasinoActivity />
 
-      <div className="flex flex-wrap gap-8">
-        <div className="min-w-0 flex-[3_1_600px] space-y-5">
-          <SectionHeader title="As Mesas" right="Salão" />
-          <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,238px),1fr))] gap-[18px]">
-            {GAMES.map((g) => (
-              <GameCard key={g.to} g={g} />
-            ))}
-          </div>
-        </div>
-        {user && (
-          <aside className="min-w-0 flex-[1_1_300px] space-y-8">
-            <HighRollers onSelect={setSelected} />
-            <Circle onSelect={setSelected} />
-          </aside>
-        )}
+      {/* Social — leaderboard + your circle, up near the top (not buried at the end) */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        <HighRollers onSelect={setSelected} />
+        <Circle onSelect={setSelected} />
       </div>
+
+      <GameSection title="Ao vivo" right="Multijogador" games={show(LIVE)} />
+      <GameSection title="Populares" right="Os preferidos" games={show(POPULAR)} />
+      <GameSection title="Arcada" right="Uma jogada" games={show(ARCADE)} />
     </div>
   );
 }
