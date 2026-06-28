@@ -517,21 +517,34 @@ export function AdminPage() {
   const selected = visiblePlayers.find((p) => p.id === selectedId) ?? (players ?? []).find((p) => p.id === selectedId) ?? null;
 
   return (
-    <div className="animate-fade-in space-y-5">
-      <div>
-        <Eyebrow>Administração</Eyebrow>
-        <h1 className="mt-2 font-display text-[28px] font-medium leading-tight text-text sm:text-[38px]">Admin</h1>
-      </div>
-      <div className="flex flex-wrap gap-2">
-        {tabs.map((t) => (
-          <button key={t} onClick={() => setTab(t)}
-            className={`focus-ring inline-flex min-h-[40px] items-center rounded-full px-4 py-1.5 font-sans text-sm font-medium ${tab === t ? 'bg-gold text-bg' : 'border border-border text-muted-2 hover:text-text'}`}>
-            {TAB_LABEL[t]}
-          </button>
-        ))}
+    <div className="animate-fade-in">
+      <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <Eyebrow>Administração</Eyebrow>
+          <h1 className="mt-2 font-display text-[28px] font-medium leading-tight text-text sm:text-[38px]">Admin</h1>
+        </div>
+        {stats && (
+          <div className="flex items-center gap-4 font-sans text-xs text-muted-2">
+            <span><span className="font-mono text-gold">{stats.online_now}</span> online</span>
+            <span><span className="font-mono text-text">{stats.users_total}</span> contas</span>
+          </div>
+        )}
       </div>
 
-      <Toast toast={toast} />
+      <div className="grid gap-5 lg:grid-cols-[200px_minmax(0,1fr)]">
+        {/* Sidebar nav — vertical on desktop, horizontal scroll on phones */}
+        <nav className="-mx-1 flex gap-1 overflow-x-auto px-1 pb-1 lg:mx-0 lg:flex-col lg:gap-0.5 lg:overflow-visible lg:border-r lg:border-border lg:px-0 lg:pb-0 lg:pr-3">
+          {tabs.map((t) => (
+            <button key={t} onClick={() => setTab(t)}
+              className={`focus-ring shrink-0 rounded-lg px-3.5 py-2 text-left font-sans text-sm font-medium transition-colors lg:w-full ${tab === t ? 'bg-gold text-bg' : 'text-muted-2 hover:bg-surface-raised hover:text-text'}`}>
+              {TAB_LABEL[t]}
+            </button>
+          ))}
+        </nav>
+
+        {/* Content */}
+        <div className="min-w-0 space-y-5">
+          <Toast toast={toast} />
 
       {tab === 'overview' && (
         <div className="space-y-5">
@@ -644,6 +657,8 @@ export function AdminPage() {
       )}
 
       {tab === 'logs' && <LogsView actions={actions ?? []} players={players ?? []} />}
+        </div>
+      </div>
     </div>
   );
 }
