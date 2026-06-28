@@ -1,7 +1,8 @@
 /**
- * Arentim brand mark — a gilded coin/medallion with a refined "A" monogram
- * (paths, not text, so it renders identically everywhere). Cleaner and more
- * premium than the old diamond crest; reads as a casino token at any size.
+ * Arentim brand mark — a gilded Ace-of-Spades card (paths, not text, so it
+ * renders identically everywhere). The corner "A" reads as both the Ace and
+ * Arentim; the spade makes it unmistakably casino. Sits next to the ARENTIM
+ * wordmark in the header.
  */
 export function Brandmark({ size = 38, className = '' }: { size?: number; className?: string }) {
   const gold = 'bm-gold';
@@ -22,22 +23,27 @@ export function Brandmark({ size = 38, className = '' }: { size?: number; classN
           <stop offset="100%" stopColor="#7a5f2e" />
         </linearGradient>
         <linearGradient id={sheen} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#ffffff" stopOpacity="0.10" />
+          <stop offset="0%" stopColor="#ffffff" stopOpacity="0.12" />
           <stop offset="55%" stopColor="#ffffff" stopOpacity="0" />
         </linearGradient>
       </defs>
 
-      {/* Coin body */}
-      <circle cx="20" cy="20" r="18.2" fill="#0c0b08" stroke={`url(#${gold})`} strokeWidth="1.7" />
-      {/* Top sheen for a minted-metal feel */}
-      <circle cx="20" cy="20" r="18.2" fill={`url(#${sheen})`} />
-      {/* Inner hairline ring */}
-      <circle cx="20" cy="20" r="13.8" fill="none" stroke="rgba(201,162,75,0.32)" strokeWidth="0.8" />
+      {/* Card */}
+      <rect x="7" y="2.5" width="26" height="35" rx="4.2" fill="#0c0b08" stroke={`url(#${gold})`} strokeWidth="1.6" />
+      <rect x="7" y="2.5" width="26" height="35" rx="4.2" fill={`url(#${sheen})`} />
 
-      {/* Refined "A" monogram */}
-      <g fill="none" stroke={`url(#${gold})`} strokeWidth="2.7" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M14 27.5 L20 12 L26 27.5" />
-        <path d="M16.4 22.2 L23.6 22.2" />
+      {/* Corner "A" (Ace / Arentim) */}
+      <g fill="none" stroke={`url(#${gold})`} strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M10 13.2 L11.7 7.8 L13.4 13.2" />
+        <path d="M10.7 11.3 L12.7 11.3" />
+      </g>
+
+      {/* Centre spade pip */}
+      <g transform="translate(20.5,23) scale(0.2)">
+        <path
+          d="M0,-38 C-15,-12 -40,-6 -40,12 C-40,26 -22,28 -10,18 C-13,30 -16,34 -22,38 L22,38 C16,34 13,30 10,18 C22,28 40,26 40,12 C40,-6 15,-12 0,-38 Z"
+          fill={`url(#${gold})`}
+        />
       </g>
     </svg>
   );
