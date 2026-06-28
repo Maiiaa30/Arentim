@@ -54,3 +54,6 @@ design_handoff_aretim/
 
 # Internal process notes — do not commit
 process/
+
+# Source art sheet kept on disk for re-slicing, but never deployed
+public/games/_source-sheet.png

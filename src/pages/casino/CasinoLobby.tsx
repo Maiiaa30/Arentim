@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Eyebrow, SectionHeader } from '@/components/ui/primitives';
-import { HeroFrame } from '@/components/ui/HeroFrame';
+import { SectionHeader } from '@/components/ui/primitives';
+import { CasinoHero } from '@/features/casino/CasinoHero';
 import { CasinoActivity } from '@/features/casino/CasinoActivity';
 import { GameCard, type GameTile } from '@/features/casino/GameCard';
 import { useGameSwitches } from '@/features/admin/useAdmin';
@@ -72,18 +72,7 @@ export function CasinoLobby() {
 
   return (
     <div className="animate-fade-in space-y-10">
-      <HeroFrame>
-        <div className="max-w-xl">
-          <Eyebrow>O Salão</Eyebrow>
-          <h1 className="mt-3 font-display text-[40px] font-medium leading-[1.05] text-text sm:text-[44px]">
-            Entre no <span className="italic text-gold">Casino.</span>
-          </h1>
-          <p className="mt-4 font-sans text-[15px] leading-relaxed text-muted">
-            Jogos transparentes, semeados no servidor — cada giro e cada carta é verificável. É tudo a
-            brincar, só dinheiro de mentira.
-          </p>
-        </div>
-      </HeroFrame>
+      <CasinoHero />
 
       <CasinoActivity />
 

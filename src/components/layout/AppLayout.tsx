@@ -3,7 +3,6 @@ import { Header } from './Header';
 import { Footer } from './Footer';
 import { AnnouncementBanner } from '@/components/AnnouncementBanner';
 import { LowBalanceBanner } from '@/components/LowBalanceBanner';
-import { TopAccentRule } from '@/components/ui/primitives';
 import { useRealtimeSync } from '@/features/realtime/useRealtimeSync';
 import { useReferralClaim } from '@/features/referrals/useReferral';
 import { ChipMark } from '@/components/ui/ChipMark';
@@ -45,7 +44,6 @@ export function AppLayout() {
       >
         Saltar para o conteúdo
       </a>
-      <TopAccentRule />
       <Header />
       <AnnouncementBanner />
       <LowBalanceBanner />
