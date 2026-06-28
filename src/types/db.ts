@@ -1240,6 +1240,14 @@ export type Database = {
         Args: { p_user: string; p_reason: string };
         Returns: undefined;
       };
+      admin_set_admin: {
+        Args: { p_user: string; p_is_admin: boolean; p_reason: string };
+        Returns: undefined;
+      };
+      admin_bulk_grant: {
+        Args: { p_amount: number; p_reason: string; p_scope: string };
+        Returns: { count: number };
+      };
       bj_deal: {
         Args: { p_stake: number };
         Returns: BlackjackView;
