@@ -11,30 +11,14 @@ export type NavEntry = NavLeaf | NavGroup;
 export const isGroup = (e: NavEntry): e is NavGroup => 'items' in e;
 
 /**
- * Primary navigation (PT-PT), grouped to keep the bar uncluttered. Casino and
- * Futebol collapse into dropdowns; Carteira/Perfil live in the right-hand
- * cluster (Caixa button + avatar), so they're intentionally not repeated here.
+ * Primary navigation (PT-PT). Kept deliberately FLAT — "Casino" links straight
+ * to the lobby (which already showcases every game by category), so the bar
+ * isn't a wall of dropdowns. Only Futebol keeps a small dropdown, since its
+ * three sections (apostas / resultados / Onze) are genuinely distinct.
  */
 export const NAV: NavEntry[] = [
   { to: '/', label: 'Salão' },
-  {
-    label: 'Casino',
-    items: [
-      { to: '/casino', label: 'Todos os jogos' },
-      { to: '/casino/slots', label: 'Slots' },
-      { to: '/casino/crash', label: 'Crash' },
-      { to: '/casino/plinko', label: 'Plinko' },
-      { to: '/casino/balatro', label: 'Balatró' },
-      { to: '/casino/mines', label: 'Mines' },
-      { to: '/casino/frango', label: 'Atravessa!' },
-      { to: '/casino/corrida', label: 'Corrida de Cavalos' },
-      { to: '/casino/wheel', label: 'Fita da Sorte' },
-      { to: '/casino/chest', label: 'Jogo dos Copos' },
-      { to: '/casino/dice', label: 'Dados' },
-      { to: '/casino/maior-menor', label: 'Maior ou Menor' },
-      { to: '/casino/sobe-e-desce', label: 'Sobe e Desce' },
-    ],
-  },
+  { to: '/casino', label: 'Casino' },
   {
     label: 'Futebol',
     items: [
