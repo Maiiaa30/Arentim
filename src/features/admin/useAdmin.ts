@@ -341,6 +341,24 @@ export function useAdminActionsMutations() {
       void qc.invalidateQueries({ queryKey: ['admin-stats'] });
     },
   });
+  const setAdmin = useMutation({
+    mutationFn: async (v: { user: string; isAdmin: boolean; reason: string }) => {
+      const { error } = await supabase.rpc('admin_set_admin', { p_user: v.user, p_is_admin: v.isAdmin, p_reason: v.reason });
+      if (error) throw error;
+    },
+    onSuccess: refresh,
+  });
+  const bulkGrant = useMutation({
+    mutationFn: async (v: { amount: number; scope: 'all' | 'active'; reason: string }): Promise<{ count: number }> => {
+      const { data, error } = await supabase.rpc('admin_bulk_grant', { p_amount: v.amount, p_scope: v.scope, p_reason: v.reason });
+      if (error) throw error;
+      return data as { count: number };
+    },
+    onSuccess: () => {
+      refresh();
+      void qc.invalidateQueries({ queryKey: ['admin-stats'] });
+    },
+  });
 
-  return { adjustBalance, setStreak, setSuspended, suspendUntil, settleFixture, setOdds, broadcast, upsertChallenge, resetSeason, resetPlayer, deletePlayer };
+  return { adjustBalance, setStreak, setSuspended, suspendUntil, settleFixture, setOdds, broadcast, upsertChallenge, resetSeason, resetPlayer, deletePlayer, setAdmin, bulkGrant };
 }

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useAuth } from '@/features/auth/AuthProvider';
 import { useProfile } from '@/features/profile/useProfile';
 import {
   useAdminActions,
@@ -138,6 +139,54 @@ export function Overview({ stats }: { stats: AdminStats | undefined }) {
           valueOf={(r) => (r.created_at ? new Date(r.created_at).toLocaleDateString('pt-PT', { day: 'numeric', month: 'short' }) : '')}
         />
       </div>
+    </div>
+  );
+}
+
+/** Give (or take, with a minus) Tostões to many players at once. */
+function BulkGrant({ onToast }: { onToast: (text: string, tone?: ToastTone) => void }) {
+  const { bulkGrant } = useAdminActionsMutations();
+  const [amount, setAmount] = useState(0);
+  const [scope, setScope] = useState<'all' | 'active'>('all');
+  const [reason, setReason] = useState('');
+
+  const submit = async () => {
+    if (reason.trim().length < 3) { onToast('É necessário um motivo (3+ caracteres).', 'error'); return; }
+    if (amount === 0) { onToast('Indica um valor diferente de zero.', 'error'); return; }
+    const who = scope === 'all' ? 'todos os jogadores' : 'jogadores ativos (7 dias)';
+    const verb = amount > 0 ? `dar ${formatAmount(amount)}` : `retirar ${formatAmount(-amount)}`;
+    if (!window.confirm(`Confirmar: ${verb} tós a ${who}?`)) return;
+    try {
+      const res = await bulkGrant.mutateAsync({ amount, scope, reason });
+      onToast(`${res.count} carteira(s) atualizada(s).`);
+      setAmount(0); setReason('');
+    } catch { onToast('Não foi possível concluir.', 'error'); }
+  };
+
+  return (
+    <div className="card space-y-3 p-5">
+      <div>
+        <p className="font-display text-base font-medium text-text">Distribuir Tostões</p>
+        <p className="font-sans text-[12px] text-muted-2">Dá (ou retira, com −) tós a vários jogadores de uma vez.</p>
+      </div>
+      <div className="flex flex-wrap items-end gap-2">
+        <div className="w-32">
+          <Input id="bulk-amount" type="number" label="Valor (±)" value={amount}
+            onChange={(e) => setAmount(Math.floor(Number(e.target.value) || 0))} />
+        </div>
+        <div className="flex gap-1.5 pb-0.5">
+          {(['all', 'active'] as const).map((s) => (
+            <button key={s} onClick={() => setScope(s)}
+              className={`focus-ring rounded-full px-3 py-2 font-sans text-xs font-medium ${scope === s ? 'bg-gold text-bg' : 'border border-border text-muted-2 hover:text-text'}`}>
+              {s === 'all' ? 'Todos' : 'Ativos (7d)'}
+            </button>
+          ))}
+        </div>
+      </div>
+      <Input id="bulk-reason" label="Motivo (obrigatório)" value={reason} onChange={(e) => setReason(e.target.value)} />
+      <Button variant="primary" className="self-start" disabled={bulkGrant.isPending} onClick={submit}>
+        {bulkGrant.isPending ? 'A aplicar…' : 'Aplicar'}
+      </Button>
     </div>
   );
 }
@@ -298,10 +347,12 @@ function PlayerBets({ player }: { player: Profile }) {
 }
 
 function PlayerActions({ player, onToast, onDeleted }: { player: Profile; onToast: (text: string, tone?: ToastTone) => void; onDeleted: () => void }) {
-  const { adjustBalance, setStreak, setSuspended, suspendUntil, resetPlayer, deletePlayer } = useAdminActionsMutations();
+  const { user } = useAuth();
+  const { adjustBalance, setStreak, setSuspended, suspendUntil, resetPlayer, deletePlayer, setAdmin } = useAdminActionsMutations();
   const [amount, setAmount] = useState(0);
   const [reason, setReason] = useState('');
   const [streak, setStreakVal] = useState(player.streak_count);
+  const isSelf = player.id === user?.id;
 
   const guardReason = () => {
     if (reason.trim().length < 3) { onToast('É necessário um motivo (3+ caracteres).', 'error'); return false; }
@@ -369,6 +420,20 @@ function PlayerActions({ player, onToast, onDeleted }: { player: Profile; onToas
         {player.suspended ? 'Reativar (permanente)' : 'Suspender (permanente)'}
       </Button>
 
+      {/* Função de administrador */}
+      {!isSelf && (
+        <Button variant={player.is_admin ? 'secondary' : 'ghost'}
+          disabled={setAdmin.isPending}
+          onClick={() => {
+            if (!guardReason()) return;
+            const next = !player.is_admin;
+            if (!window.confirm(next ? `Tornar ${player.display_name} administrador?` : `Remover ${player.display_name} de administrador?`)) return;
+            void run(() => setAdmin.mutateAsync({ user: player.id, isAdmin: next, reason }), next ? 'Agora é admin.' : 'Já não é admin.');
+          }}>
+          {player.is_admin ? 'Remover admin' : 'Tornar admin'}
+        </Button>
+      )}
+
       {/* Zona de perigo — repor ou eliminar a conta */}
       <div className="mt-1 space-y-2 rounded-lg border border-negative/30 bg-negative/[0.04] p-3">
         <p className="font-sans text-[10.5px] font-medium uppercase tracking-[0.16em] text-negative/80">
@@ -386,7 +451,7 @@ function PlayerActions({ player, onToast, onDeleted }: { player: Profile; onToas
             {resetPlayer.isPending ? 'A repor…' : 'Repor conta'}
           </Button>
         </div>
-        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-negative/20 pt-2">
+        <div className={`flex flex-wrap items-center justify-between gap-2 border-t border-negative/20 pt-2 ${isSelf ? 'hidden' : ''}`}>
           <span className="font-sans text-xs text-muted-2">Eliminar a conta e todos os dados. Irreversível.</span>
           <Button variant="danger" className="shrink-0 !px-3 !py-1.5"
             disabled={deletePlayer.isPending}
@@ -471,28 +536,32 @@ export function AdminPage() {
       {tab === 'overview' && (
         <div className="space-y-5">
           <Overview stats={stats} />
-          <div className="card flex flex-wrap items-center justify-between gap-3 p-5">
-            <div>
-              <p className="font-display text-base font-medium text-text">Temporada</p>
-              <p className="font-sans text-[12px] text-muted-2">
-                Reinicia a tabela da temporada — o resultado de jogo passa a contar a partir de agora.
-              </p>
+          <div className="grid gap-3 lg:grid-cols-2">
+            <BulkGrant onToast={show} />
+            <div className="card flex flex-col justify-between gap-3 p-5">
+              <div>
+                <p className="font-display text-base font-medium text-text">Temporada</p>
+                <p className="font-sans text-[12px] text-muted-2">
+                  Reinicia a tabela da temporada — o resultado de jogo passa a contar a partir de agora.
+                </p>
+              </div>
+              <Button
+                variant="secondary"
+                className="self-start"
+                disabled={resetSeason.isPending}
+                onClick={async () => {
+                  if (!window.confirm('Reiniciar a temporada agora?')) return;
+                  try {
+                    await resetSeason.mutateAsync();
+                    show('Temporada reiniciada.');
+                  } catch {
+                    show('Não foi possível reiniciar.', 'error');
+                  }
+                }}
+              >
+                {resetSeason.isPending ? 'A reiniciar…' : 'Repor temporada'}
+              </Button>
             </div>
-            <Button
-              variant="secondary"
-              disabled={resetSeason.isPending}
-              onClick={async () => {
-                if (!window.confirm('Reiniciar a temporada agora?')) return;
-                try {
-                  await resetSeason.mutateAsync();
-                  show('Temporada reiniciada.');
-                } catch {
-                  show('Não foi possível reiniciar.', 'error');
-                }
-              }}
-            >
-              {resetSeason.isPending ? 'A reiniciar…' : 'Repor temporada'}
-            </Button>
           </div>
         </div>
       )}
