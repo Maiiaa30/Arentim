@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { Eyebrow } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
@@ -34,17 +35,17 @@ function OceanGrid({
 }) {
   return (
     <div
-      className="inline-grid w-full max-w-[360px] select-none gap-[2px] rounded-lg p-2"
-      style={{ gridTemplateColumns: `0.9rem repeat(${BOARD}, 1fr)`, background: 'linear-gradient(160deg,#0c1320,#0a0f18 60%,#070b12)' }}
+      className="inline-grid w-full max-w-[480px] select-none gap-[3px] rounded-lg p-2.5"
+      style={{ gridTemplateColumns: `1.1rem repeat(${BOARD}, 1fr)`, background: 'linear-gradient(160deg,#0c1320,#0a0f18 60%,#070b12)' }}
       onMouseLeave={onLeave}
     >
       <span />
       {COLS.map((L) => (
-        <span key={L} className="text-center font-mono text-[9px] leading-4 text-muted-2">{L}</span>
+        <span key={L} className="text-center font-mono text-[10px] leading-4 text-muted-2">{L}</span>
       ))}
       {Array.from({ length: BOARD }, (_, r) => (
         <Fragment key={r}>
-          <span className="flex items-center justify-center font-mono text-[9px] text-muted-2">{r + 1}</span>
+          <span className="flex items-center justify-center font-mono text-[10px] text-muted-2">{r + 1}</span>
           {Array.from({ length: BOARD }, (_, c) => {
             const i = r * BOARD + c;
             return (
@@ -53,7 +54,7 @@ function OceanGrid({
                 type="button"
                 onClick={onCell ? () => onCell(i) : undefined}
                 onMouseEnter={onHover ? () => onHover(i) : undefined}
-                className={`flex aspect-square items-center justify-center rounded-[3px] text-[11px] leading-none transition-colors ${cellClass(i)}`}
+                className={`relative flex aspect-square items-center justify-center rounded-[3px] text-[15px] leading-none transition-colors ${cellClass(i)}`}
               >
                 {cellContent?.(i)}
               </button>
@@ -160,7 +161,9 @@ function Placement({ tableId, view }: { tableId: number; view: BattleshipView })
 /** Battle phase — your fleet (incoming fire) + the enemy target grid. */
 function Battle({ tableId, view }: { tableId: number; view: BattleshipView }) {
   const { fire } = useBattleshipActions();
+  const qc = useQueryClient();
   const [error, setError] = useState<string | null>(null);
+  const [firing, setFiring] = useState<number | null>(null);
 
   const myShipCells = useMemo(() => new Set(view.myShips.flat()), [view.myShips]);
   const incoming = useMemo(() => new Set(view.incoming), [view.incoming]);
@@ -171,14 +174,31 @@ function Battle({ tableId, view }: { tableId: number; view: BattleshipView }) {
   const sunkEnemy = useMemo(() => new Set(view.sunkEnemy.flat()), [view.sunkEnemy]);
 
   async function shoot(i: number) {
-    if (!view.isMyTurn || firedCells.has(i) || fire.isPending) return;
+    if (!view.isMyTurn || firedCells.has(i) || fire.isPending || firing != null) return;
     setError(null);
+    setFiring(i); // optimistic crosshair while the server resolves the shot
     try {
-      await fire.mutateAsync({ tableId, cell: i });
+      const res = await fire.mutateAsync({ tableId, cell: i });
+      qc.setQueryData(['battleship-table', tableId], res); // instant board update
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Disparo falhou.');
+    } finally {
+      setFiring(null);
     }
   }
+
+  const blast = (
+    <>
+      <span className="absolute inset-0 rounded-[3px] bg-negative/55 animate-splash" aria-hidden />
+      <span className="relative animate-explode">💥</span>
+    </>
+  );
+  const splash = (
+    <>
+      <span className="absolute left-1/2 top-1/2 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border border-[#8aa0bd]/80 animate-splash" aria-hidden />
+      <span className="relative opacity-50">◦</span>
+    </>
+  );
 
   function myCell(i: number) {
     if (hitsOnMe.has(i)) return 'bg-negative/40 ring-1 ring-negative';
@@ -187,7 +207,7 @@ function Battle({ tableId, view }: { tableId: number; view: BattleshipView }) {
     return 'bg-[#0f1c2e] ring-1 ring-[#2b4a8b]/30';
   }
   function myContent(i: number) {
-    if (hitsOnMe.has(i)) return '💥';
+    if (hitsOnMe.has(i)) return blast;
     if (incoming.has(i)) return <span className="opacity-50">◦</span>;
     return null;
   }
@@ -198,9 +218,10 @@ function Battle({ tableId, view }: { tableId: number; view: BattleshipView }) {
     return `bg-[#0f1c2e] ring-1 ring-[#2b4a8b]/35 ${view.isMyTurn ? 'hover:bg-gold/20 cursor-crosshair' : ''}`;
   }
   function enemyContent(i: number) {
-    if (sunkEnemy.has(i)) return '🚢';
-    if (myHitCells.has(i)) return '💥';
-    if (myMissCells.has(i)) return <span className="opacity-50">◦</span>;
+    if (i === firing) return <span className="absolute inset-0 rounded-[3px] ring-2 ring-gold animate-ping" aria-hidden />;
+    if (sunkEnemy.has(i)) return <span className="animate-explode">🚢</span>;
+    if (myHitCells.has(i)) return blast;
+    if (myMissCells.has(i)) return splash;
     return null;
   }
 
