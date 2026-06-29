@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode, type CSSProperties } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { Eyebrow } from '@/components/ui/primitives';
@@ -11,43 +11,79 @@ import {
 } from '@/features/battleship/useBattleshipTable';
 import {
   BOARD,
+  CELLS,
   COLS,
   FLEET,
   shipCells,
   overlaps,
   randomFleet,
-  shipSegments,
   type BattleshipView,
 } from '@/features/battleship/board';
 
 const TURN_MS = 30_000;
-// Metallic hull fill — combined with a per-cell rounded class so a run of cells
-// reads as one ship rather than separate squares.
-const SHIP_BG = 'bg-[linear-gradient(150deg,#aebfd6,#46566e_55%,#2c3850)] ring-1 ring-[#c2d2e8]/40 shadow-[inset_0_-2px_3px_rgba(0,0,0,0.45)]';
+const WATER = 'bg-[#11243c]/55 ring-1 ring-[#2b4a8b]/25';
+type ShipOverlay = { cells: number[]; sunk?: boolean | undefined };
 
-/** A 10×10 ocean grid with A–J / 1–10 coordinates. */
+const gridPos = (i: number): CSSProperties => ({ gridColumn: (i % BOARD) + 2, gridRow: Math.floor(i / BOARD) + 2 });
+
+/** One ship drawn as a single hull that spans its cells (across the grid gaps),
+ *  so a run of cells reads as a real vessel floating on the water — not squares. */
+function ShipHull({ cells, sunk }: ShipOverlay) {
+  const sorted = [...cells].sort((a, b) => a - b);
+  const size = sorted.length;
+  const horizontal = size < 2 || sorted[1]! === sorted[0]! + 1;
+  const anchor = sorted[0]!;
+  const r = Math.floor(anchor / BOARD);
+  const c = anchor % BOARD;
+  const style: CSSProperties = horizontal
+    ? { gridColumn: `${c + 2} / span ${size}`, gridRow: `${r + 2}` }
+    : { gridColumn: `${c + 2}`, gridRow: `${r + 2} / span ${size}` };
+  const hull = sunk
+    ? 'linear-gradient(150deg,#c8767a,#7e3438 55%,#431d20)'
+    : 'linear-gradient(150deg,#dbe4f0,#8a99b1 45%,#3a4760)';
+  return (
+    <div style={style} className={`pointer-events-none relative z-10 ${sunk ? 'opacity-90' : ''}`}>
+      <div
+        className={`absolute rounded-full ${horizontal ? 'inset-x-[2%] inset-y-[22%]' : 'inset-y-[2%] inset-x-[22%]'}`}
+        style={{ background: hull, boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.55), inset 0 2px 3px rgba(255,255,255,0.3), 0 2px 6px rgba(0,0,0,0.6)' }}
+      />
+      {/* superstructure / bridge */}
+      <div className={`absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-[2px] ${sunk ? 'bg-[#f0d2d2]/55' : 'bg-[#eef3fa]/65'} ${horizontal ? 'h-[24%] w-[16%]' : 'h-[16%] w-[24%]'}`} />
+    </div>
+  );
+}
+
+/**
+ * A 10×10 ocean grid with A–J / 1–10 coordinates. Three stacked layers:
+ * water cells (clickable), ship hull overlays, and shot markers on top.
+ */
 function OceanGrid({
   cellClass,
-  cellContent,
+  ships = [],
+  mark,
   onCell,
   onHover,
   onLeave,
 }: {
   cellClass: (i: number) => string;
-  cellContent?: (i: number) => ReactNode;
+  ships?: ShipOverlay[];
+  mark?: (i: number) => ReactNode;
   onCell?: (i: number) => void;
   onHover?: (i: number) => void;
   onLeave?: () => void;
 }) {
   return (
     <div
-      className="inline-grid w-full max-w-[480px] select-none gap-[3px] rounded-lg p-2.5 shadow-[inset_0_2px_20px_rgba(0,0,0,0.5)] ring-1 ring-[#2b4a8b]/30"
+      className="relative inline-grid w-full max-w-[480px] select-none gap-[3px] rounded-lg p-2.5 shadow-[inset_0_2px_24px_rgba(0,0,0,0.55)] ring-1 ring-[#2b4a8b]/35"
       style={{
         gridTemplateColumns: `1.1rem repeat(${BOARD}, 1fr)`,
         backgroundImage:
-          'repeating-linear-gradient(0deg, rgba(160,190,220,0.035) 0 1px, transparent 1px 16px),' +
-          'radial-gradient(130% 80% at 50% -10%, rgba(43,74,139,0.30), transparent 60%),' +
-          'linear-gradient(160deg,#0e1d33,#0a1422 55%,#070d18)',
+          'radial-gradient(55% 40% at 28% 18%, rgba(125,175,225,0.10), transparent 60%),' +
+          'radial-gradient(50% 35% at 78% 72%, rgba(70,120,180,0.08), transparent 60%),' +
+          'repeating-linear-gradient(0deg, rgba(150,185,220,0.045) 0 1px, transparent 1px 18px),' +
+          'repeating-linear-gradient(90deg, rgba(150,185,220,0.025) 0 1px, transparent 1px 26px),' +
+          'radial-gradient(130% 85% at 50% -10%, rgba(43,74,139,0.30), transparent 62%),' +
+          'linear-gradient(160deg,#102339,#0a1626 55%,#06101c)',
       }}
       onMouseLeave={onLeave}
     >
@@ -66,14 +102,24 @@ function OceanGrid({
                 type="button"
                 onClick={onCell ? () => onCell(i) : undefined}
                 onMouseEnter={onHover ? () => onHover(i) : undefined}
-                className={`relative flex aspect-square items-center justify-center rounded-[3px] text-[15px] leading-none transition-colors ${cellClass(i)}`}
-              >
-                {cellContent?.(i)}
-              </button>
+                className={`aspect-square rounded-[3px] transition-colors ${cellClass(i)}`}
+              />
             );
           })}
         </Fragment>
       ))}
+      {/* Ship hulls (z-10) and shot markers (z-20) — positioned over the cells. */}
+      {ships.map((s, idx) => <ShipHull key={`s${idx}`} cells={s.cells} sunk={s.sunk} />)}
+      {mark &&
+        Array.from({ length: CELLS }, (_, i) => {
+          const m = mark(i);
+          if (!m) return null;
+          return (
+            <div key={`m${i}`} style={gridPos(i)} className="pointer-events-none relative z-20 flex items-center justify-center text-[15px] leading-none">
+              {m}
+            </div>
+          );
+        })}
     </div>
   );
 }
@@ -92,8 +138,6 @@ function Placement({ tableId, view }: { tableId: number; view: BattleshipView })
   }, [view.iPlaced]);
 
   const used = useMemo(() => new Set(ships.flat()), [ships]);
-  const seg = useMemo(() => shipSegments(ships), [ships]);
-  const myFleetSeg = useMemo(() => shipSegments(view.myShips), [view.myShips]);
   const nextSize = FLEET[ships.length];
   const preview = hover != null && nextSize != null ? shipCells(hover, nextSize, horizontal) : null;
   const previewValid = !!preview && !overlaps(preview, used);
@@ -117,10 +161,10 @@ function Placement({ tableId, view }: { tableId: number; view: BattleshipView })
   }
 
   function cellClass(i: number) {
-    if (used.has(i)) return `${SHIP_BG} ${seg.get(i) ?? ''}`;
     if (previewSet.has(i)) return previewValid ? 'bg-positive/40 ring-1 ring-positive' : 'bg-negative/40 ring-1 ring-negative';
-    return 'bg-[#0f1c2e] ring-1 ring-[#2b4a8b]/35 hover:bg-gold/15';
+    return `${WATER} hover:bg-gold/15`;
   }
+  const fleet = ships.map((cells) => ({ cells }));
 
   if (view.iPlaced) {
     return (
@@ -128,7 +172,7 @@ function Placement({ tableId, view }: { tableId: number; view: BattleshipView })
         <p className="font-display text-lg text-gold">Frota a postos.</p>
         <p className="font-sans text-sm text-muted">À espera que {view.oppName ?? 'o adversário'} posicione a frota…</p>
         <div className="flex justify-center">
-          <OceanGrid cellClass={(i) => (myFleetSeg.get(i) !== undefined ? `${SHIP_BG} ${myFleetSeg.get(i)}` : 'bg-[#0f1c2e] ring-1 ring-[#2b4a8b]/30')} />
+          <OceanGrid cellClass={() => WATER} ships={view.myShips.map((cells) => ({ cells }))} />
         </div>
       </div>
     );
@@ -137,7 +181,7 @@ function Placement({ tableId, view }: { tableId: number; view: BattleshipView })
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_240px] lg:items-start">
       <div className="flex justify-center">
-        <OceanGrid cellClass={cellClass} onCell={drop} onHover={setHover} onLeave={() => setHover(null)} />
+        <OceanGrid cellClass={cellClass} ships={fleet} onCell={drop} onHover={setHover} onLeave={() => setHover(null)} />
       </div>
       <div className="card space-y-4 p-5">
         <div>
@@ -181,14 +225,37 @@ function Battle({ tableId, view, serverNow }: { tableId: number; view: Battleshi
   const [firing, setFiring] = useState<number | null>(null);
 
   const finished = view.phase === 'finished';
-  const myShipSeg = useMemo(() => shipSegments(view.myShips), [view.myShips]);
-  const enemyShipSeg = useMemo(() => shipSegments(view.enemyShips ?? []), [view.enemyShips]);
   const incoming = useMemo(() => new Set(view.incoming), [view.incoming]);
   const hitsOnMe = useMemo(() => new Set(view.myHits), [view.myHits]);
   const myHitCells = useMemo(() => new Set(view.myShots.filter((s) => s.hit).map((s) => s.cell)), [view.myShots]);
   const myMissCells = useMemo(() => new Set(view.myShots.filter((s) => !s.hit).map((s) => s.cell)), [view.myShots]);
   const firedCells = useMemo(() => new Set(view.myShots.map((s) => s.cell)), [view.myShots]);
-  const sunkEnemy = useMemo(() => new Set(view.sunkEnemy.flat()), [view.sunkEnemy]);
+
+  // Ship hull overlays. My whole fleet (sunk = every cell hit); the enemy's sunk
+  // ships during play, then the full enemy fleet once revealed at the end.
+  const myFleet = useMemo<ShipOverlay[]>(
+    () => view.myShips.map((cells) => ({ cells, sunk: cells.every((x) => hitsOnMe.has(x)) })),
+    [view.myShips, hitsOnMe],
+  );
+  const enemyFleet = useMemo<ShipOverlay[]>(() => {
+    const src = finished ? view.enemyShips ?? [] : view.sunkEnemy;
+    return src.map((cells) => ({ cells, sunk: cells.every((x) => myHitCells.has(x)) }));
+  }, [finished, view.enemyShips, view.sunkEnemy, myHitCells]);
+
+  // Sink notifications — compare ship-left counts across polls.
+  const [flash, setFlash] = useState<string | null>(null);
+  const prev = useRef<{ mine: number | null; enemy: number | null }>({ mine: null, enemy: null });
+  useEffect(() => {
+    const p = prev.current;
+    if (p.enemy != null && view.enemyShipsLeft != null && view.enemyShipsLeft < p.enemy) setFlash('🚢 Afundaste um navio inimigo!');
+    else if (p.mine != null && view.myShipsLeft != null && view.myShipsLeft < p.mine) setFlash('💥 Perderam-te um navio!');
+    prev.current = { mine: view.myShipsLeft, enemy: view.enemyShipsLeft };
+  }, [view.myShipsLeft, view.enemyShipsLeft]);
+  useEffect(() => {
+    if (!flash) return;
+    const id = setTimeout(() => setFlash(null), 2600);
+    return () => clearTimeout(id);
+  }, [flash]);
 
   // Turn timer, corrected for clock skew using the server's `now` at fetch time.
   const offsetRef = useRef(0);
@@ -245,29 +312,19 @@ function Battle({ tableId, view, serverNow }: { tableId: number; view: Battleshi
     </>
   );
 
-  function myCell(i: number) {
-    const seg = myShipSeg.get(i);
-    if (seg !== undefined) return `${SHIP_BG} ${seg} ${hitsOnMe.has(i) ? 'brightness-[0.7] ring-negative' : ''}`;
-    if (incoming.has(i)) return 'bg-[#13233a] ring-1 ring-[#2b4a8b]/40';
-    return 'bg-[#0f1c2e] ring-1 ring-[#2b4a8b]/30';
-  }
-  function myContent(i: number) {
+  // My board: water everywhere (hulls are overlays); a 💥 marks their hits, ◦ their misses.
+  const myCellClass = (i: number) => (incoming.has(i) && !hitsOnMe.has(i) ? 'bg-[#0a141f]/70 ring-1 ring-[#2b4a8b]/30' : WATER);
+  function myMark(i: number) {
     if (hitsOnMe.has(i)) return blast;
     if (incoming.has(i)) return <span className="opacity-50">◦</span>;
     return null;
   }
-  function enemyCell(i: number) {
-    // Enemy ship cells: only sunk ones show during play; the whole fleet at the end.
-    const seg = finished ? enemyShipSeg.get(i) : sunkEnemy.has(i) ? 'rounded-[3px]' : undefined;
-    if (seg !== undefined) {
-      const hit = myHitCells.has(i) || sunkEnemy.has(i);
-      return `${SHIP_BG} ${seg} ${hit ? 'brightness-[0.7] ring-negative' : 'opacity-80'}`;
-    }
-    if (myHitCells.has(i)) return 'bg-gold/25 ring-1 ring-gold/60';
-    if (myMissCells.has(i)) return 'bg-[#0c1622] ring-1 ring-[#2b4a8b]/30';
-    return `bg-[#0f1c2e] ring-1 ring-[#2b4a8b]/35 ${view.isMyTurn && !finished ? 'hover:bg-gold/20 cursor-crosshair' : ''}`;
-  }
-  function enemyContent(i: number) {
+  // Enemy board: water + crosshair on hover; my hits/misses marked on top.
+  const enemyCellClass = (i: number) =>
+    myMissCells.has(i)
+      ? 'bg-[#0a141f]/70 ring-1 ring-[#2b4a8b]/30'
+      : `${WATER} ${view.isMyTurn && !finished ? 'hover:bg-gold/20 cursor-crosshair' : ''}`;
+  function enemyMark(i: number) {
     if (i === firing) return <span className="absolute inset-0 rounded-[3px] ring-2 ring-gold animate-ping" aria-hidden />;
     if (myHitCells.has(i)) return blast;
     if (myMissCells.has(i)) return splash;
@@ -292,16 +349,22 @@ function Battle({ tableId, view, serverNow }: { tableId: number; view: Battleshi
         </div>
       )}
 
+      {flash && (
+        <div className="animate-pop rounded-lg border border-gold/50 bg-gold/10 px-4 py-2 text-center font-display text-base text-gold">
+          {flash}
+        </div>
+      )}
+
       <div className="grid gap-6 sm:grid-cols-2">
         <div className="space-y-2 text-center">
           <p className="font-sans text-[11px] uppercase tracking-[0.18em] text-muted-2">A tua frota · {view.myShipsLeft ?? '—'} a salvo</p>
-          <div className="flex justify-center"><OceanGrid cellClass={myCell} cellContent={myContent} /></div>
+          <div className="flex justify-center"><OceanGrid cellClass={myCellClass} ships={myFleet} mark={myMark} /></div>
         </div>
         <div className="space-y-2 text-center">
           <p className="font-sans text-[11px] uppercase tracking-[0.18em] text-muted-2">
             {finished ? 'Frota inimiga — revelada' : `Inimigo · ${view.enemyShipsLeft ?? '—'} por afundar`}
           </p>
-          <div className="flex justify-center"><OceanGrid cellClass={enemyCell} cellContent={enemyContent} onCell={shoot} /></div>
+          <div className="flex justify-center"><OceanGrid cellClass={enemyCellClass} ships={enemyFleet} mark={enemyMark} onCell={shoot} /></div>
         </div>
       </div>
       {error && <p className="text-center font-sans text-sm text-negative">{error}</p>}
