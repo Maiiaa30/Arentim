@@ -63,6 +63,21 @@ export function useMySuecaTables() {
   });
 }
 
+export interface PublicSuecaTable { table_id: number; code: string; status: string; host_name: string; players: number }
+
+/** Open public tables anyone can browse and sit at. */
+export function usePublicSuecaTables() {
+  return useQuery({
+    queryKey: ['sueca-public-tables'] as const,
+    refetchInterval: 5000,
+    queryFn: async (): Promise<PublicSuecaTable[]> => {
+      const { data, error } = await supabase.rpc('list_public_sueca_tables');
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+}
+
 export function useSuecaTableState(tableId: number | null) {
   return useQuery({
     queryKey: ['sueca-table', tableId] as const,
@@ -74,8 +89,9 @@ export function useSuecaTableState(tableId: number | null) {
 }
 
 export function useSuecaActions() {
-  const create = useMutation({ mutationFn: () => call({ op: 'create' }) });
+  const create = useMutation({ mutationFn: (isPublic?: boolean) => call({ op: 'create', isPublic: !!isPublic }) });
   const join = useMutation({ mutationFn: (code: string) => call({ op: 'join', code }) });
+  const sit = useMutation({ mutationFn: (tableId: number) => call({ op: 'sit', tableId }) });
   const seat = useMutation({ mutationFn: (v: { tableId: number; seat: number }) => call({ op: 'seat', ...v }) });
   const start = useMutation({ mutationFn: (tableId: number) => call({ op: 'start', tableId }) });
   const play = useMutation({ mutationFn: (v: { tableId: number; card: number }) => call({ op: 'play', ...v }) });
@@ -85,5 +101,5 @@ export function useSuecaActions() {
   const unready = useMutation({ mutationFn: (tableId: number) => call({ op: 'unready', tableId }) });
   const timeout = useMutation({ mutationFn: (tableId: number) => call({ op: 'timeout', tableId }) });
   const leave = useMutation({ mutationFn: (tableId: number) => call({ op: 'leave', tableId }) });
-  return { create, join, seat, start, play, collect, deal, ready, unready, timeout, leave };
+  return { create, join, sit, seat, start, play, collect, deal, ready, unready, timeout, leave };
 }
