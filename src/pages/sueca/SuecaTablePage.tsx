@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { PlayingCardFace, type CardSize } from '@/components/PlayingCardFace';
 import { suitOf, cardLabel, legalMoves, SUIT_SYMBOLS } from '@/features/sueca/sueca';
@@ -44,12 +45,19 @@ export function SuecaTablePage() {
   const [joinCode, setJoinCode] = useState('');
   const [error, setError] = useState<string | null>(null);
   const collecting = useRef(false);
+  const qc = useQueryClient();
 
   const { data } = useSuecaTableState(tableId);
   const view = data?.view ?? null;
 
+  // Auto-resume only a table still in seat-selection ('open'). A leftover
+  // 'playing' table must NOT hijack a fresh "Criar" — resume it explicitly from
+  // the "As suas mesas" list instead. (This was the "creating a room enters
+  // automatically without letting me choose" bug.)
   useEffect(() => {
-    if (tableId == null && myTables && myTables.length > 0) setTableId(myTables[0]!.table_id);
+    if (tableId != null || !myTables) return;
+    const open = myTables.find((t) => t.status === 'open');
+    if (open) setTableId(open.table_id);
   }, [myTables, tableId]);
 
   // When a trick is complete, pause to show it, then ask the server to collect.
@@ -226,7 +234,12 @@ export function SuecaTablePage() {
             const ok = legal.includes(card);
             return (
               <button key={card} disabled={!myTurn || !ok}
-                onClick={() => wrap(() => play.mutateAsync({ tableId: view.table_id, card }))}
+                onClick={() => wrap(async () => {
+                  // Apply the returned state immediately so your own card lands
+                  // without waiting for the next poll.
+                  const r = await play.mutateAsync({ tableId: view.table_id, card });
+                  if (r?.view) qc.setQueryData(['sueca-table', view.table_id], r);
+                })}
                 className={`focus-ring rounded-md transition-transform ${myTurn && ok ? 'cursor-pointer hover:-translate-y-2' : 'cursor-not-allowed opacity-45'}`}>
                 <Card card={card} size="lg" />
               </button>
