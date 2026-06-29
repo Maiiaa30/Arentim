@@ -40,6 +40,24 @@ function genCode(): string {
   return Array.from(crypto.getRandomValues(new Uint8Array(5)), (b) => a[b % a.length]).join('');
 }
 
+const TURN_MS = 30_000; // seconds a player has to fire before the turn auto-passes
+
+/** Set/clear the current turn's deadline (only meaningful while playing). */
+function stamp(state: BattleState): void {
+  state.turnDeadline = state.phase === 'playing' && state.turn
+    ? new Date(Date.now() + TURN_MS).toISOString()
+    : null;
+}
+
+/** A random cell the player hasn't fired at yet (for timeout auto-fire). */
+function randUnfired(shots: number[]): number | null {
+  const free: number[] = [];
+  for (let i = 0; i < 100; i++) if (!shots.includes(i)) free.push(i);
+  if (free.length === 0) return null;
+  const r = crypto.getRandomValues(new Uint32Array(1))[0]! / 4294967296;
+  return free[Math.floor(r * free.length)]!;
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
@@ -55,7 +73,10 @@ Deno.serve(async (req) => {
   const myName = async (): Promise<string> =>
     (await db.from('profiles').select('display_name').eq('id', uid).maybeSingle()).data?.display_name ?? 'Jogador';
 
-  const out = (row: Row) => ({ view: viewFor(row.state, uid), tableId: row.id, code: row.code, isPublic: row.is_public });
+  const out = (row: Row) => ({
+    view: viewFor(row.state, uid), tableId: row.id, code: row.code, isPublic: row.is_public,
+    serverNow: new Date().toISOString(),
+  });
 
   // My current (non-finished) game, optionally a specific id.
   const loadMine = async (id?: number): Promise<Row | null> => {
@@ -181,6 +202,7 @@ Deno.serve(async (req) => {
         if (!v.ok) return json({ error: v.error ?? 'invalid fleet' }, 400);
         row.state.players[uid]!.ships = v.ships!;
         maybeStart(row.state);
+        stamp(row.state);
         const status = row.state.phase === 'playing' ? 'playing' : row.status;
         return { patch: { state: row.state, status }, result: out(row) };
       });
@@ -196,8 +218,26 @@ Deno.serve(async (req) => {
         if (!Number.isInteger(cell) || cell < 0 || cell >= 100) return json({ error: 'invalid cell' }, 400);
         if (row.state.players[uid]!.shots.includes(cell)) return json({ error: 'already fired' }, 409);
         const o = fireAt(row.state, uid, cell);
+        stamp(row.state);
         const status = row.state.phase === 'finished' ? 'finished' : row.status;
         return { patch: { state: row.state, status }, result: { ...out(row), outcome: o } };
+      });
+    }
+
+    // Turn timed out — fire a random shot for whoever's on the clock, then pass.
+    // Either player may call it; it only acts if the deadline has truly passed.
+    case 'timeout': {
+      if (body.tableId == null) return json({ error: 'bad request' }, 400);
+      return withCAS(body.tableId, false, (row) => {
+        const st = row.state;
+        if (st.phase !== 'playing' || !st.turn || !st.turnDeadline) return json(out(row));
+        if (Date.now() <= new Date(st.turnDeadline).getTime()) return json(out(row)); // not expired
+        const cell = randUnfired(st.players[st.turn]!.shots);
+        if (cell == null) return json(out(row));
+        fireAt(st, st.turn, cell);
+        stamp(st);
+        const status = st.phase === 'finished' ? 'finished' : row.status;
+        return { patch: { state: st, status }, result: out(row) };
       });
     }
 

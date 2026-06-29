@@ -72,7 +72,8 @@ export function useBattleshipActions() {
   const join = useMutation({ mutationFn: (code: string) => invokeBattleship({ op: 'join', code }) });
   const place = useMutation({ mutationFn: (v: { tableId: number; ships: number[][] }) => invokeBattleship({ op: 'place', ...v }) });
   const fire = useMutation({ mutationFn: (v: { tableId: number; cell: number }) => invokeBattleship({ op: 'fire', ...v }) });
+  const timeout = useMutation({ mutationFn: (tableId: number) => invokeBattleship({ op: 'timeout', tableId }) });
   const rematch = useMutation({ mutationFn: (tableId: number) => invokeBattleship({ op: 'rematch', tableId }) });
   const leave = useMutation({ mutationFn: (tableId: number) => invokeBattleship({ op: 'leave', tableId }) });
-  return { find, create, join, place, fire, rematch, leave };
+  return { find, create, join, place, fire, timeout, rematch, leave };
 }
