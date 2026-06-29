@@ -16,6 +16,7 @@ const GAME_LABEL: Record<string, string> = {
   plinko: 'no Plinko',
   balatro: 'no Balatró',
   mines: 'nas Mines',
+  batalha_naval: 'na Batalha Naval',
   chicken: 'no Atravessa!',
   tigrinho: 'no Tigrinho',
   chest: 'no Jogo dos Copos',

@@ -26,7 +26,8 @@ export type GameArtKind =
   | 'horse'
   | 'chicken'
   | 'plinko'
-  | 'balatro';
+  | 'balatro'
+  | 'naval';
 
 const GOLD = '#C9A24B';
 const GOLD_LIGHT = '#f3dca0';
@@ -488,6 +489,35 @@ function Balatro() {
   );
 }
 
+function Naval() {
+  // A foggy ocean grid with a torpedo splash and a hit marker — the salvo vibe.
+  const cells = [0, 1, 2, 3, 4, 5, 6, 7, 8];
+  return (
+    <div
+      className="relative flex h-full items-center justify-center"
+      style={{ background: 'radial-gradient(120% 90% at 50% 0%, rgba(43,74,139,0.35), transparent 70%)' }}
+    >
+      <div className="grid grid-cols-3 gap-1.5">
+        {cells.map((i) => {
+          const hit = i === 4;
+          const splash = i === 6;
+          return (
+            <span
+              key={i}
+              className={`flex h-8 w-8 items-center justify-center rounded-md text-sm ${
+                hit ? 'animate-pop bg-gold/20' : 'bg-[#0f1c2e] ring-1 ring-[#2b4a8b]/40'
+              }`}
+            >
+              {hit ? '💥' : splash ? <span className="animate-floaty opacity-60">🌊</span> : ''}
+            </span>
+          );
+        })}
+      </div>
+      <span className="animate-floaty absolute right-2 top-2 text-lg" style={{ filter: 'drop-shadow(0 0 6px rgba(201,162,75,0.5))' }}>🎯</span>
+    </div>
+  );
+}
+
 const SCENES: Record<GameArtKind, () => JSX.Element> = {
   roulette: Roulette,
   blackjack: Blackjack,
@@ -507,6 +537,7 @@ const SCENES: Record<GameArtKind, () => JSX.Element> = {
   chicken: Chicken,
   plinko: Plinko,
   balatro: Balatro,
+  naval: Naval,
 };
 
 export function GameArt({ kind }: { kind: GameArtKind }) {
