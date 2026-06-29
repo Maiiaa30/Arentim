@@ -122,27 +122,6 @@ export function BlackjackPage() {
             {showBetting ? (
               <>
                 <StakeChips stake={stake} onChange={setStake} balance={balance} disabled={busy} />
-                {/* Custom bet — type any amount up to the balance. */}
-                <div className="flex items-center gap-1.5">
-                  <input
-                    type="number"
-                    min={1}
-                    max={balance}
-                    value={stake}
-                    disabled={busy}
-                    onChange={(e) => setStake(Math.max(1, Math.floor(Number(e.target.value) || 0)))}
-                    aria-label="Aposta personalizada"
-                    className="focus-ring w-full rounded border border-border bg-bg px-2.5 py-1.5 text-right font-mono text-sm text-text disabled:opacity-50"
-                  />
-                  <button
-                    type="button"
-                    disabled={busy || balance < 1}
-                    onClick={() => setStake(balance)}
-                    className="focus-ring shrink-0 rounded-full border border-border px-3 py-1.5 font-sans text-[11px] uppercase tracking-wider text-muted-2 hover:text-text disabled:opacity-40"
-                  >
-                    Máx
-                  </button>
-                </div>
                 <Button
                   variant="primary"
                   onClick={onDeal}
