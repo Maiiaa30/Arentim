@@ -5,6 +5,7 @@ import { PlayingCardFace, type CardSize } from '@/components/PlayingCardFace';
 import { suitOf, cardLabel, legalMoves, SUIT_SYMBOLS } from '@/features/sueca/sueca';
 import {
   useMySuecaTables,
+  usePublicSuecaTables,
   useSuecaActions,
   useSuecaTableState,
   type SuecaSeatView,
@@ -46,9 +47,11 @@ function SeatBadge({ s, turn }: { s: SuecaSeatView; turn?: number | undefined })
 
 export function SuecaTablePage() {
   const { data: myTables } = useMySuecaTables();
-  const { create, join, seat, start, play, collect, ready, unready, timeout, leave } = useSuecaActions();
+  const { data: publicTables } = usePublicSuecaTables();
+  const { create, join, sit, seat, start, play, collect, ready, unready, timeout, leave } = useSuecaActions();
   const [tableId, setTableId] = useState<number | null>(null);
   const [joinCode, setJoinCode] = useState('');
+  const [createPublic, setCreatePublic] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const collecting = useRef(false);
   const qc = useQueryClient();
@@ -144,7 +147,11 @@ export function SuecaTablePage() {
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="card space-y-4 p-6">
             <h2 className="font-display text-lg font-semibold text-text">Criar uma mesa</h2>
-            <Button variant="primary" className="w-full" onClick={() => wrap(async () => { const r = await create.mutateAsync(); setTableId(r.view?.table_id ?? null); })}>Criar</Button>
+            <label className="flex cursor-pointer items-center gap-2 font-sans text-sm text-muted">
+              <input type="checkbox" checked={createPublic} onChange={(e) => setCreatePublic(e.target.checked)} className="h-4 w-4 accent-gold" />
+              Pública (aparece na lista para qualquer um entrar)
+            </label>
+            <Button variant="primary" className="w-full" onClick={() => wrap(async () => { const r = await create.mutateAsync(createPublic); setTableId(r.view?.table_id ?? null); })}>Criar</Button>
           </div>
           <div className="card space-y-4 p-6">
             <h2 className="font-display text-lg font-semibold text-text">Entrar com código</h2>
@@ -152,6 +159,17 @@ export function SuecaTablePage() {
             <Button variant="primary" className="w-full" disabled={joinCode.trim().length < 4} onClick={() => wrap(async () => { const r = await join.mutateAsync(joinCode.toUpperCase().trim()); setTableId(r.view?.table_id ?? null); })}>Entrar</Button>
           </div>
         </div>
+        {publicTables && publicTables.length > 0 && (
+          <div className="space-y-2">
+            <h2 className="font-sans text-[10.5px] font-medium uppercase tracking-[0.18em] text-muted-2">Mesas públicas</h2>
+            {publicTables.map((t) => (
+              <button key={t.table_id} onClick={() => wrap(async () => { const r = await sit.mutateAsync(t.table_id); setTableId(r.view?.table_id ?? null); })} className="card card-hover focus-ring flex w-full items-center justify-between p-3 text-left">
+                <span className="font-sans text-sm text-text">Mesa de {t.host_name} · {t.players}/4</span>
+                <span className="font-sans text-xs text-gold">Sentar</span>
+              </button>
+            ))}
+          </div>
+        )}
         {myTables && myTables.length > 0 && (
           <div className="space-y-2">
             <h2 className="font-sans text-[10.5px] font-medium uppercase tracking-[0.18em] text-muted-2">As suas mesas</h2>

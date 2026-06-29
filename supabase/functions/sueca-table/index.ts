@@ -99,7 +99,7 @@ Deno.serve(async (req) => {
   const uid = user.id;
 
   const db = createClient(SUPABASE_URL, SERVICE_KEY);
-  let body: { op?: string; code?: string; tableId?: number; seat?: number; card?: number };
+  let body: { op?: string; code?: string; tableId?: number; seat?: number; card?: number; isPublic?: boolean };
   try { body = await req.json(); } catch { return json({ error: 'bad request' }, 400); }
 
   const name = async () =>
@@ -150,11 +150,31 @@ Deno.serve(async (req) => {
     case 'create': {
       const seats: Seat[] = [{ user: uid, name: await name(), bot: false }, null, null, null];
       const code = genCode();
-      const { data: row, error } = await db.from('sueca_tables').insert({ code, host_id: uid, seats }).select('id').single();
+      const { data: row, error } = await db.from('sueca_tables')
+        .insert({ code, host_id: uid, seats, is_public: !!body.isPublic }).select('id').single();
       if (error) return json({ error: 'could not create table' }, 500);
       await db.from('sueca_table_members').insert({ table_id: row.id, user_id: uid });
       const full = await load(row.id);
       return json({ view: full ? viewFor(full, uid) : null });
+    }
+
+    // Sit at an open PUBLIC table from the lobby (by id).
+    case 'sit': {
+      const { data: row } = await db.from('sueca_tables')
+        .select('id, code, host_id, status, seats, state, match, dealer')
+        .eq('id', Number(body.tableId)).eq('is_public', true).eq('status', 'open').maybeSingle();
+      if (!row) return json({ error: 'mesa não encontrada' }, 404);
+      const r = row as Row;
+      if (r.seats.some((s) => s && s.user === uid)) {
+        await db.from('sueca_table_members').upsert({ table_id: r.id, user_id: uid });
+        return json({ view: viewFor(r, uid) });
+      }
+      const free = r.seats.findIndex((s) => s == null);
+      if (free < 0) return json({ error: 'mesa cheia' }, 409);
+      r.seats[free] = { user: uid, name: await name(), bot: false };
+      await db.from('sueca_table_members').upsert({ table_id: r.id, user_id: uid });
+      await persist(r);
+      return json({ view: viewFor(r, uid) });
     }
 
     case 'join': {
