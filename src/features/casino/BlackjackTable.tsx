@@ -21,12 +21,13 @@ const outcome: Record<string, { text: string; ring: string; badge: string }> = {
   busted: { text: 'Rebentou', ring: 'ring-negative/50', badge: 'bg-negative/15 text-negative' },
 };
 
-/** A single card, sized for the table, that pops in as it's dealt. */
+/** A single card, sized for the table, that slides in from the shoe as it's
+ *  dealt (a flick down from the top) — new cards animate, dealt ones stay put. */
 function TableCard({ card, i, size }: { card: number | null; i: number; size: CardSize }) {
   return (
     <span
-      className="inline-block animate-pop drop-shadow-[0_6px_12px_rgba(0,0,0,0.5)]"
-      style={{ animationDelay: `${i * 80}ms` }}
+      className="inline-block animate-deal drop-shadow-[0_8px_16px_rgba(0,0,0,0.55)]"
+      style={{ animationDelay: `${Math.min(i, 4) * 110}ms` }}
     >
       {card === null ? (
         <PlayingCardFace faceDown size={size} />
