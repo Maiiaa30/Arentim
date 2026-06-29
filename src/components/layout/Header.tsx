@@ -97,7 +97,10 @@ export function Header() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [openMenu, setOpenMenu] = useState<string | null>(null);
 
-  const nav: NavEntry[] = profile?.is_admin ? [...NAV, { to: '/admin', label: 'Admin' }] : NAV;
+  // Admin no longer lives in the primary nav (it crowded the Saldo chip on the
+  // right) — it's in the account menu / mobile drawer instead.
+  const nav: NavEntry[] = NAV;
+  const isAdmin = !!profile?.is_admin;
 
   // Close menus/drawer on navigation.
   useEffect(() => {
@@ -200,18 +203,14 @@ export function Header() {
 
               <NotificationBell />
 
-              {profile && (
-                <NavLink to="/profile" className="focus-ring hidden lg:inline-flex" title="O seu nível">
-                  <LevelBadge level={levelFromWagered(profile.total_wagered)} />
-                </NavLink>
-              )}
-
-              <NavLink to="/profile" className="focus-ring hidden rounded-full sm:inline-flex" title="O seu perfil">
-                <RingAvatar initials={initialsOf(profile?.display_name)} size={40} />
-              </NavLink>
-              <Button variant="ghost" className="hidden !px-4 !py-2 sm:inline-flex" onClick={onSignOut}>
-                Sair
-              </Button>
+              <UserMenu
+                name={profile?.display_name}
+                level={profile ? levelFromWagered(profile.total_wagered) : null}
+                isAdmin={isAdmin}
+                open={openMenu === '__account'}
+                onToggle={() => setOpenMenu((m) => (m === '__account' ? null : '__account'))}
+                onSignOut={onSignOut}
+              />
 
               <button
                 type="button"
@@ -278,6 +277,7 @@ export function Header() {
                 ),
               )}
               <DrawerLink to="/profile" label="Perfil" onNavigate={() => setDrawerOpen(false)} />
+              {isAdmin && <DrawerLink to="/admin" label="Admin" onNavigate={() => setDrawerOpen(false)} />}
             </div>
 
             <div className="mt-auto flex flex-col gap-2 border-t border-border pt-4">
@@ -299,6 +299,96 @@ export function Header() {
         </div>
       )}
     </header>
+  );
+}
+
+/**
+ * Account dropdown anchored on the avatar (sm+). Collapses the level badge,
+ * profile link, admin link and Sair into one tidy menu so the right side of the
+ * bar stays uncluttered. Uses the shared `openMenu` state (key `'__account'`) so
+ * the existing outside-click + route-change handlers close it too.
+ */
+function UserMenu({
+  name,
+  level,
+  isAdmin,
+  open,
+  onToggle,
+  onSignOut,
+}: {
+  name: string | undefined;
+  level: number | null;
+  isAdmin: boolean;
+  open: boolean;
+  onToggle: () => void;
+  onSignOut: () => void;
+}) {
+  return (
+    <div className="relative hidden sm:block">
+      <button
+        type="button"
+        aria-label="Conta"
+        aria-expanded={open}
+        onClick={(e) => {
+          e.stopPropagation();
+          onToggle();
+        }}
+        className={`focus-ring flex items-center gap-1.5 rounded-full p-0.5 pr-1.5 transition-colors ${
+          open ? 'bg-surface-raised' : 'hover:bg-surface-raised'
+        }`}
+      >
+        <RingAvatar initials={initialsOf(name)} size={36} />
+        <svg
+          width="9"
+          height="9"
+          viewBox="0 0 10 10"
+          className={`text-muted-2 transition-transform ${open ? 'rotate-180' : ''}`}
+          aria-hidden
+        >
+          <path d="M2 3.5 L5 6.5 L8 3.5" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+        </svg>
+      </button>
+      {open && (
+        <div className="absolute right-0 top-full z-50 mt-2 w-64 overflow-hidden rounded border border-border bg-surface shadow-modal">
+          <div className="flex items-center gap-3 border-b border-border px-4 py-3.5">
+            <RingAvatar initials={initialsOf(name)} size={42} />
+            <div className="min-w-0">
+              <p className="truncate font-sans text-sm font-medium text-text">{name ?? 'Convidado'}</p>
+              {level != null && <LevelBadge level={level} className="mt-1.5" />}
+            </div>
+          </div>
+          <div className="p-1.5">
+            <MenuRow to="/profile" label="Perfil" />
+            <MenuRow to="/wallet" label="Caixa" />
+            {isAdmin && <MenuRow to="/admin" label="Admin" />}
+          </div>
+          <div className="border-t border-border p-1.5">
+            <button
+              type="button"
+              onClick={onSignOut}
+              className="focus-ring block w-full rounded px-3 py-2 text-left font-sans text-[13px] font-medium text-muted-2 transition-colors hover:bg-surface-raised hover:text-text"
+            >
+              Sair
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MenuRow({ to, label }: { to: string; label: string }) {
+  return (
+    <NavLink
+      to={to}
+      className={({ isActive }) =>
+        `focus-ring block rounded px-3 py-2 font-sans text-[13px] font-medium transition-colors ${
+          isActive ? 'bg-gold/10 text-gold' : 'text-muted-2 hover:bg-surface-raised hover:text-text'
+        }`
+      }
+    >
+      {label}
+    </NavLink>
   );
 }
 
