@@ -162,6 +162,19 @@ export function RoulettePage() {
     return m;
   }, [bets]);
 
+  // Everyone else's wagers per cell, so you can see where the table is betting.
+  const othersStakeMap = useMemo(() => {
+    const m: Record<string, number> = {};
+    for (const row of roomBets) {
+      if (row.user_id === profile?.id) continue;
+      for (const b of row.bets) {
+        const k = betCellKey(b.kind as RouletteBetKind, b.selection, b.numbers);
+        m[k] = (m[k] ?? 0) + b.stake;
+      }
+    }
+    return m;
+  }, [roomBets, profile?.id]);
+
   const bonusSet = useMemo(() => new Set(state?.bonus?.numbers ?? []), [state?.bonus]);
   const boardDisabled = !betting || !!mine;
 
@@ -208,6 +221,15 @@ export function RoulettePage() {
       else next[idx] = { ...next[idx]!, stake };
       return next;
     });
+    setError(null);
+  }
+
+  /** Remove just one bet (e.g. you bet 3, 4, 19 and want to drop only the 4). */
+  function removeChip(kind: RouletteBetKind, selection: number | null, numbers?: number[]) {
+    if (boardDisabled) return;
+    const k = betCellKey(kind, selection, numbers);
+    setBets((prev) => prev.filter((b) => betCellKey(b.kind, b.selection, b.numbers) !== k));
+    setChipHistory((h) => h.filter((c) => c.key !== k));
     setError(null);
   }
 
@@ -312,9 +334,38 @@ export function RoulettePage() {
 
           <div className="felt felt-rail overflow-x-auto rounded-lg p-3 sm:p-4">
             <div className="min-w-[300px]">
-              <BettingBoard onPlace={placeChip} stakes={stakeMap} bonus={bonusSet} disabled={boardDisabled} />
+              <BettingBoard onPlace={placeChip} onRemove={removeChip} stakes={stakeMap} othersStakes={othersStakeMap} bonus={bonusSet} disabled={boardDisabled} />
             </div>
           </div>
+
+          {/* Your staged slip — remove a single bet before confirming. */}
+          {betting && !mine && bets.length > 0 && (
+            <div className="card p-4">
+              <div className="mb-2 flex items-center justify-between">
+                <span className="font-display text-sm font-medium text-text">A tua aposta</span>
+                <span className="font-sans text-[11px] text-muted-2">clica direito numa casa ou no ✕ para remover</span>
+              </div>
+              <ul className="flex flex-wrap gap-1.5">
+                {bets.map((b) => {
+                  const k = betCellKey(b.kind, b.selection, b.numbers);
+                  return (
+                    <li key={k} className="flex items-center gap-1.5 rounded-full border border-border bg-surface px-2.5 py-1 font-mono text-xs">
+                      <span className="text-text">{betLabel(b)}</span>
+                      <span className="text-gold">{b.stake}</span>
+                      <button
+                        type="button"
+                        onClick={() => removeChip(b.kind, b.selection, b.numbers)}
+                        className="focus-ring -mr-1 rounded-full px-1 text-muted-2 hover:text-negative"
+                        aria-label={`Remover aposta ${betLabel(b)}`}
+                      >
+                        ✕
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          )}
 
           {/* Live bets from everyone */}
           {roomBets.length > 0 && (
