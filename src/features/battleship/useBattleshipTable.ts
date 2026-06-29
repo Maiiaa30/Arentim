@@ -60,7 +60,8 @@ export function useBattleshipState(tableId: number | null) {
   return useQuery({
     queryKey: ['battleship-table', tableId] as const,
     enabled: tableId != null,
-    refetchInterval: 1500,
+    // Back off once the match is over (still polled so a rematch is picked up).
+    refetchInterval: (q) => (q.state.data?.view?.phase === 'finished' ? 5000 : 1500),
     refetchIntervalInBackground: true,
     queryFn: () => invokeBattleship({ op: 'state', tableId }),
   });

@@ -57,7 +57,8 @@ export function useSuecaTableState(tableId: number | null) {
   return useQuery({
     queryKey: ['sueca-table', tableId] as const,
     enabled: tableId != null,
-    refetchInterval: 1500,
+    // Stop polling a closed table; keep the live cadence otherwise.
+    refetchInterval: (q) => (q.state.data?.view?.status === 'closed' ? false : 1500),
     queryFn: () => call({ op: 'state', tableId }),
   });
 }
