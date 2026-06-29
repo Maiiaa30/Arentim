@@ -42,6 +42,7 @@ const ScoresPage = lazy(() => named(import('@/pages/ScoresPage'), 'ScoresPage'))
 const OnzePage = lazy(() => named(import('@/pages/OnzePage'), 'OnzePage'));
 const PokerPage = lazy(() => named(import('@/pages/PokerPage'), 'PokerPage'));
 const PokerHome = lazy(() => named(import('@/pages/poker/PokerHome'), 'PokerHome'));
+const BattleshipOnline = lazy(() => named(import('@/pages/battleship/BattleshipOnline'), 'BattleshipOnline'));
 const SuecaHome = lazy(() => named(import('@/pages/sueca/SuecaHome'), 'SuecaHome'));
 const SuecaPage = lazy(() => named(import('@/pages/sueca/SuecaPage'), 'SuecaPage'));
 const SuecaTablePage = lazy(() => named(import('@/pages/sueca/SuecaTablePage'), 'SuecaTablePage'));
@@ -105,6 +106,7 @@ export default function App() {
             <Route path="onze" element={<OnzePage />} />
             <Route path="poker" element={<PokerHome />} />
             <Route path="sueca" element={<SuecaHome />} />
+            <Route path="batalha-naval" element={<BattleshipOnline />} />
             <Route path="sueca/bots" element={<SuecaPage />} />
             <Route path="sueca/mesa" element={<SuecaTablePage />} />
             <Route path="poker/bots" element={<PokerPage />} />

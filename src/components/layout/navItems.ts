@@ -29,6 +29,7 @@ export const NAV: NavEntry[] = [
   },
   { to: '/poker', label: 'Poker' },
   { to: '/sueca', label: 'Sueca' },
+  { to: '/batalha-naval', label: 'Batalha Naval' },
   { to: '/friends', label: 'Amigos' },
   { to: '/challenges', label: 'Desafios' },
   { to: '/rifa', label: 'Rifa' },
