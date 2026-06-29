@@ -34,6 +34,7 @@ const POPULAR: GameTile[] = [
   { to: '/poker', name: 'Poker', desc: 'Texas Hold’em contra bots ou amigos.', art: 'poker', tone: 'from-chip-navy/40 to-bg', range: '100+ tós' },
   { to: '/casino/plinko', name: 'Plinko', desc: 'Larga a bola pelos pinos.', art: 'plinko', badge: 'Novo', tone: 'from-chip-ruby/40 to-bg', range: '5 – 100 tós' },
   { to: '/casino/mines', name: 'Mines', desc: 'Revela diamantes e foge das minas.', art: 'mines', badge: 'Novo', tone: 'from-positive-felt/40 to-bg', range: '5 – 100 tós' },
+  { to: '/casino/batalha-naval', name: 'Batalha Naval', desc: 'Salva de torpedos — afunda a frota.', art: 'naval', badge: 'Novo', tone: 'from-chip-navy/40 to-bg', range: '5 – 100 tós' },
 ];
 
 const ARCADE: GameTile[] = [

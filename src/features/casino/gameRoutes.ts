@@ -23,6 +23,7 @@ const EXACT: Record<string, GameMeta> = {
   '/casino/frango': { keys: ['chicken'], label: 'Atravessa!' },
   '/casino/plinko': { keys: ['plinko'], label: 'Plinko' },
   '/casino/balatro': { keys: ['balatro'], label: 'Balatró' },
+  '/casino/batalha-naval': { keys: ['batalha_naval'], label: 'Batalha Naval' },
 };
 
 /** Resolve a pathname to its mini-game, or null if it isn't a tracked game. */

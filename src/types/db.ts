@@ -794,6 +794,36 @@ export type MinesCurrent = {
   next_multiplier: number;
 };
 
+/** Batalha Naval: fresh round, per-shot result, and masked resume snapshot. */
+export type NavalState = {
+  ships: number;
+  salvo: number;
+  shots: number[];
+  hits: number;
+  balance: number;
+};
+export type NavalFireResult = {
+  hit: boolean;
+  cell: number;
+  shots: number[];
+  hits: number;
+  done: boolean;
+  shots_left?: number;
+  multiplier?: number;
+  payout?: number;
+  ships?: number[];
+  balance?: number;
+};
+/** In-progress salvo for resume — only the fired cells + their hit/miss. */
+export type NavalCurrent = {
+  stake: number;
+  ships: number;
+  salvo: number;
+  shots: number[];
+  hit_flags: boolean[];
+  hits: number;
+};
+
 /** Tigrinho (3×3 tiger slot). */
 export type TigrinhoResult = {
   grid: number[];
@@ -1040,6 +1070,18 @@ export type Database = {
       mines_current: {
         Args: Record<string, never>;
         Returns: MinesCurrent | null;
+      };
+      naval_start: {
+        Args: { p_stake: number };
+        Returns: NavalState;
+      };
+      naval_fire: {
+        Args: { p_cell: number };
+        Returns: NavalFireResult;
+      };
+      naval_current: {
+        Args: Record<string, never>;
+        Returns: NavalCurrent | null;
       };
       chicken_current: {
         Args: Record<string, never>;

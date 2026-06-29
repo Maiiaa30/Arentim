@@ -19,6 +19,9 @@ import type {
   MinesPickResult,
   MinesCashoutResult,
   MinesCurrent,
+  NavalState,
+  NavalFireResult,
+  NavalCurrent,
   TigrinhoResult,
   HorseResult,
   ChickenState,
@@ -224,6 +227,45 @@ export function useMinesCurrent() {
     queryKey: ['mines-current'],
     queryFn: async (): Promise<MinesCurrent | null> => {
       const { data, error } = await supabase.rpc('mines_current');
+      if (error) throw error;
+      return data;
+    },
+    staleTime: 0,
+  });
+}
+
+/** Batalha Naval: start a salvo (debit + draw the hidden fleet). */
+export function useNavalStart() {
+  const invalidate = useInvalidateWallet();
+  return useMutation({
+    mutationFn: async (stake: number): Promise<NavalState> => {
+      const { data, error } = await supabase.rpc('naval_start', { p_stake: stake });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: invalidate,
+  });
+}
+
+/** Batalha Naval: fire one torpedo (reveals hit/miss; settles on the last shot). */
+export function useNavalFire() {
+  const invalidate = useInvalidateWallet();
+  return useMutation({
+    mutationFn: async (cell: number): Promise<NavalFireResult> => {
+      const { data, error } = await supabase.rpc('naval_fire', { p_cell: cell });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: invalidate,
+  });
+}
+
+/** Batalha Naval: the in-progress salvo (or null), so the page can resume. */
+export function useNavalCurrent() {
+  return useQuery({
+    queryKey: ['naval-current'],
+    queryFn: async (): Promise<NavalCurrent | null> => {
+      const { data, error } = await supabase.rpc('naval_current');
       if (error) throw error;
       return data;
     },
