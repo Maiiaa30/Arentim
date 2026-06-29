@@ -96,6 +96,14 @@ Deno.serve(async (req) => {
 
   // Look up the sender's referral code + name with the service role.
   const db = createClient(SUPABASE_URL, SERVICE_KEY);
+
+  // Anti-spam: cap invites per sender (10/hour). Fail-open if the limiter isn't
+  // available yet, fail-closed once over the cap.
+  const { data: allowed } = await db.rpc('rate_limit_hit', {
+    p_user: user.id, p_action: 'invite', p_max: 10, p_window_secs: 3600,
+  });
+  if (allowed === false) return json({ error: 'demasiados convites — tenta mais tarde' }, 429);
+
   const { data: profile, error: pErr } = await db
     .from('profiles')
     .select('referral_code, display_name')
