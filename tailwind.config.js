@@ -158,6 +158,16 @@ export default {
           '74%': { opacity: '1' },
           '100%': { opacity: '0', transform: 'translate(-50%, -52px) scale(0.94)' },
         },
+        // Battleship — a torpedo splash ring (miss) and a hit blast.
+        splash: {
+          '0%': { transform: 'scale(0.3)', opacity: '0.85' },
+          '100%': { transform: 'scale(1.85)', opacity: '0' },
+        },
+        explode: {
+          '0%': { transform: 'scale(0.4)', opacity: '0' },
+          '55%': { transform: 'scale(1.3)', opacity: '1' },
+          '100%': { transform: 'scale(1)', opacity: '1' },
+        },
       },
       animation: {
         'fade-in': 'fade-in 0.25s cubic-bezier(0.22,0.61,0.36,1)',
@@ -185,6 +195,8 @@ export default {
         'symbol-throb': 'symbol-throb 0.65s ease-in-out infinite',
         'plinko-bin': 'plinko-bin 0.4s ease-out',
         'plinko-rise': 'plinko-rise 1.5s cubic-bezier(0.22,0.61,0.36,1) forwards',
+        splash: 'splash 0.6s ease-out forwards',
+        explode: 'explode 0.45s cubic-bezier(0.22,0.61,0.36,1)',
       },
     },
   },
