@@ -38,6 +38,7 @@ export interface SuecaState {
   done: boolean;
   result: SuecaResult | null;
   turnDeadline: string | null; // ISO — when the current human turn auto-plays (stamped by the Edge Fn)
+  readyNext: boolean[]; // per-seat "ready for the next hand" flags (used while done)
 }
 
 export interface SuecaResult {
@@ -125,6 +126,7 @@ export function deal(rand: Rand, dealer: number): SuecaState {
     done: false,
     result: null,
     turnDeadline: null,
+    readyNext: [false, false, false, false],
   };
 }
 
