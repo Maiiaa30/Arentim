@@ -26,6 +26,9 @@ verify_jwt = true
 [functions.sueca-table]
 verify_jwt = true
 
+[functions.battleship-table]
+verify_jwt = true
+
 [functions.send-invite]
 verify_jwt = true
 
