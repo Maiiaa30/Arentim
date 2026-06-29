@@ -26,6 +26,7 @@ export interface BattleState {
   players: Record<string, PlayerState>;
   turn: string | null; // whose turn to fire (during 'playing')
   winner: string | null;
+  turnDeadline: string | null; // ISO — when the current turn auto-passes (stamped by the Edge Fn)
 }
 
 export const other = (s: BattleState, id: string): string => s.order.find((x) => x !== id) ?? '';
@@ -37,6 +38,7 @@ export function freshState(hostId: string, hostName: string): BattleState {
     players: { [hostId]: { name: hostName, ships: null, shots: [] } },
     turn: null,
     winner: null,
+    turnDeadline: null,
   };
 }
 
@@ -132,6 +134,7 @@ export function forfeit(s: BattleState, quitterId: string): void {
   s.phase = 'finished';
   s.winner = other(s, quitterId) || null;
   s.turn = null;
+  s.turnDeadline = null;
 }
 
 /** Reset both boards for a rematch, keeping the same two players. */
@@ -139,6 +142,7 @@ export function rematch(s: BattleState): void {
   s.phase = 'placing';
   s.winner = null;
   s.turn = null;
+  s.turnDeadline = null;
   for (const id of s.order) {
     const p = s.players[id];
     if (p) {
@@ -183,6 +187,9 @@ export function viewFor(s: BattleState, uid: string) {
     enemyShipsLeft,
     myShipsLeft: me.ships ? me.ships.filter((sh) => !sunk(sh, opp?.shots ?? [])).length : null,
     isMyTurn: s.turn === uid,
+    turnDeadline: s.phase === 'playing' ? s.turnDeadline : null,
+    // Reveal the opponent's full fleet only once the game is over.
+    enemyShips: s.phase === 'finished' ? oppShipCells.map((sh) => sh.cells) : null,
     winner: s.winner ? (s.winner === uid ? 'me' : 'opp') : null,
   };
 }

@@ -68,6 +68,8 @@ export type BattleshipView = {
   enemyShipsLeft: number | null;
   myShipsLeft: number | null;
   isMyTurn: boolean;
+  turnDeadline: string | null; // ISO — current turn's auto-pass time
+  enemyShips: number[][] | null; // revealed only when the game is finished
   winner: 'me' | 'opp' | null;
 };
 
@@ -76,5 +78,29 @@ export type BattleshipResponse = {
   tableId?: number;
   code?: string;
   isPublic?: boolean;
+  serverNow?: string;
   outcome?: { hit: boolean; sunk: { cells: number[]; size: number } | null; win: boolean };
 };
+
+/**
+ * Map each ship cell to a rounded-corner class so a run of cells reads as one
+ * hull (bow/stern rounded, middle square). Used with a metallic gradient fill.
+ */
+export function shipSegments(ships: number[][]): Map<number, string> {
+  const map = new Map<number, string>();
+  for (const cells of ships) {
+    if (cells.length === 0) continue;
+    const sorted = [...cells].sort((a, b) => a - b);
+    const horizontal = sorted.length < 2 || sorted[1]! === sorted[0]! + 1;
+    sorted.forEach((c, idx) => {
+      const first = idx === 0;
+      const last = idx === sorted.length - 1;
+      let rounded = '';
+      if (sorted.length === 1) rounded = 'rounded-md';
+      else if (horizontal) rounded = first ? 'rounded-l-md' : last ? 'rounded-r-md' : '';
+      else rounded = first ? 'rounded-t-md' : last ? 'rounded-b-md' : '';
+      map.set(c, rounded);
+    });
+  }
+  return map;
+}

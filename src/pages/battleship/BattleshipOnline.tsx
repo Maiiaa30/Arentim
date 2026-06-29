@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { Eyebrow } from '@/components/ui/primitives';
@@ -16,8 +16,14 @@ import {
   shipCells,
   overlaps,
   randomFleet,
+  shipSegments,
   type BattleshipView,
 } from '@/features/battleship/board';
+
+const TURN_MS = 30_000;
+// Metallic hull fill — combined with a per-cell rounded class so a run of cells
+// reads as one ship rather than separate squares.
+const SHIP_BG = 'bg-[linear-gradient(150deg,#aebfd6,#46566e_55%,#2c3850)] ring-1 ring-[#c2d2e8]/40 shadow-[inset_0_-2px_3px_rgba(0,0,0,0.45)]';
 
 /** A 10×10 ocean grid with A–J / 1–10 coordinates. */
 function OceanGrid({
@@ -35,8 +41,14 @@ function OceanGrid({
 }) {
   return (
     <div
-      className="inline-grid w-full max-w-[480px] select-none gap-[3px] rounded-lg p-2.5"
-      style={{ gridTemplateColumns: `1.1rem repeat(${BOARD}, 1fr)`, background: 'linear-gradient(160deg,#0c1320,#0a0f18 60%,#070b12)' }}
+      className="inline-grid w-full max-w-[480px] select-none gap-[3px] rounded-lg p-2.5 shadow-[inset_0_2px_20px_rgba(0,0,0,0.5)] ring-1 ring-[#2b4a8b]/30"
+      style={{
+        gridTemplateColumns: `1.1rem repeat(${BOARD}, 1fr)`,
+        backgroundImage:
+          'repeating-linear-gradient(0deg, rgba(160,190,220,0.035) 0 1px, transparent 1px 16px),' +
+          'radial-gradient(130% 80% at 50% -10%, rgba(43,74,139,0.30), transparent 60%),' +
+          'linear-gradient(160deg,#0e1d33,#0a1422 55%,#070d18)',
+      }}
       onMouseLeave={onLeave}
     >
       <span />
@@ -80,6 +92,8 @@ function Placement({ tableId, view }: { tableId: number; view: BattleshipView })
   }, [view.iPlaced]);
 
   const used = useMemo(() => new Set(ships.flat()), [ships]);
+  const seg = useMemo(() => shipSegments(ships), [ships]);
+  const myFleetSeg = useMemo(() => shipSegments(view.myShips), [view.myShips]);
   const nextSize = FLEET[ships.length];
   const preview = hover != null && nextSize != null ? shipCells(hover, nextSize, horizontal) : null;
   const previewValid = !!preview && !overlaps(preview, used);
@@ -103,7 +117,7 @@ function Placement({ tableId, view }: { tableId: number; view: BattleshipView })
   }
 
   function cellClass(i: number) {
-    if (used.has(i)) return 'bg-[#5a6b82] ring-1 ring-[#8aa0bd]';
+    if (used.has(i)) return `${SHIP_BG} ${seg.get(i) ?? ''}`;
     if (previewSet.has(i)) return previewValid ? 'bg-positive/40 ring-1 ring-positive' : 'bg-negative/40 ring-1 ring-negative';
     return 'bg-[#0f1c2e] ring-1 ring-[#2b4a8b]/35 hover:bg-gold/15';
   }
@@ -114,7 +128,7 @@ function Placement({ tableId, view }: { tableId: number; view: BattleshipView })
         <p className="font-display text-lg text-gold">Frota a postos.</p>
         <p className="font-sans text-sm text-muted">À espera que {view.oppName ?? 'o adversário'} posicione a frota…</p>
         <div className="flex justify-center">
-          <OceanGrid cellClass={(i) => (new Set(view.myShips.flat()).has(i) ? 'bg-[#5a6b82] ring-1 ring-[#8aa0bd]' : 'bg-[#0f1c2e] ring-1 ring-[#2b4a8b]/30')} />
+          <OceanGrid cellClass={(i) => (myFleetSeg.get(i) !== undefined ? `${SHIP_BG} ${myFleetSeg.get(i)}` : 'bg-[#0f1c2e] ring-1 ring-[#2b4a8b]/30')} />
         </div>
       </div>
     );
@@ -158,14 +172,17 @@ function Placement({ tableId, view }: { tableId: number; view: BattleshipView })
   );
 }
 
-/** Battle phase — your fleet (incoming fire) + the enemy target grid. */
-function Battle({ tableId, view }: { tableId: number; view: BattleshipView }) {
-  const { fire } = useBattleshipActions();
+/** Battle phase — your fleet (incoming fire) + the enemy target grid, with a
+ *  shared per-turn countdown. Both fleets are revealed once the game ends. */
+function Battle({ tableId, view, serverNow }: { tableId: number; view: BattleshipView; serverNow?: string | undefined }) {
+  const { fire, timeout } = useBattleshipActions();
   const qc = useQueryClient();
   const [error, setError] = useState<string | null>(null);
   const [firing, setFiring] = useState<number | null>(null);
 
-  const myShipCells = useMemo(() => new Set(view.myShips.flat()), [view.myShips]);
+  const finished = view.phase === 'finished';
+  const myShipSeg = useMemo(() => shipSegments(view.myShips), [view.myShips]);
+  const enemyShipSeg = useMemo(() => shipSegments(view.enemyShips ?? []), [view.enemyShips]);
   const incoming = useMemo(() => new Set(view.incoming), [view.incoming]);
   const hitsOnMe = useMemo(() => new Set(view.myHits), [view.myHits]);
   const myHitCells = useMemo(() => new Set(view.myShots.filter((s) => s.hit).map((s) => s.cell)), [view.myShots]);
@@ -173,8 +190,36 @@ function Battle({ tableId, view }: { tableId: number; view: BattleshipView }) {
   const firedCells = useMemo(() => new Set(view.myShots.map((s) => s.cell)), [view.myShots]);
   const sunkEnemy = useMemo(() => new Set(view.sunkEnemy.flat()), [view.sunkEnemy]);
 
+  // Turn timer, corrected for clock skew using the server's `now` at fetch time.
+  const offsetRef = useRef(0);
+  useEffect(() => { if (serverNow) offsetRef.current = Date.now() - new Date(serverNow).getTime(); }, [serverNow]);
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    if (view.phase !== 'playing') return;
+    const id = setInterval(() => setTick((t) => t + 1), 250);
+    return () => clearInterval(id);
+  }, [view.phase]);
+  const deadlineMs = view.turnDeadline ? new Date(view.turnDeadline).getTime() : null;
+  const remainingMs = deadlineMs != null ? Math.max(0, deadlineMs - (Date.now() - offsetRef.current)) : null;
+  const secs = remainingMs != null ? Math.ceil(remainingMs / 1000) : null;
+  const pct = remainingMs != null ? Math.min(100, (remainingMs / TURN_MS) * 100) : 0;
+
+  // When the clock hits zero, ask the server to auto-pass (either client may
+  // trigger it; the server only acts if the deadline has truly elapsed).
+  const timingOut = useRef(false);
+  useEffect(() => {
+    if (view.phase === 'playing' && view.turnDeadline && remainingMs === 0 && !timingOut.current) {
+      timingOut.current = true;
+      timeout
+        .mutateAsync(tableId)
+        .then((res) => qc.setQueryData(['battleship-table', tableId], res))
+        .catch(() => {})
+        .finally(() => { timingOut.current = false; });
+    }
+  }, [remainingMs, view.phase, view.turnDeadline, tableId, qc, timeout]);
+
   async function shoot(i: number) {
-    if (!view.isMyTurn || firedCells.has(i) || fire.isPending || firing != null) return;
+    if (!view.isMyTurn || finished || firedCells.has(i) || fire.isPending || firing != null) return;
     setError(null);
     setFiring(i); // optimistic crosshair while the server resolves the shot
     try {
@@ -201,9 +246,9 @@ function Battle({ tableId, view }: { tableId: number; view: BattleshipView }) {
   );
 
   function myCell(i: number) {
-    if (hitsOnMe.has(i)) return 'bg-negative/40 ring-1 ring-negative';
+    const seg = myShipSeg.get(i);
+    if (seg !== undefined) return `${SHIP_BG} ${seg} ${hitsOnMe.has(i) ? 'brightness-[0.7] ring-negative' : ''}`;
     if (incoming.has(i)) return 'bg-[#13233a] ring-1 ring-[#2b4a8b]/40';
-    if (myShipCells.has(i)) return 'bg-[#5a6b82] ring-1 ring-[#8aa0bd]';
     return 'bg-[#0f1c2e] ring-1 ring-[#2b4a8b]/30';
   }
   function myContent(i: number) {
@@ -212,14 +257,18 @@ function Battle({ tableId, view }: { tableId: number; view: BattleshipView }) {
     return null;
   }
   function enemyCell(i: number) {
-    if (sunkEnemy.has(i)) return 'bg-negative/30 ring-1 ring-negative/60';
+    // Enemy ship cells: only sunk ones show during play; the whole fleet at the end.
+    const seg = finished ? enemyShipSeg.get(i) : sunkEnemy.has(i) ? 'rounded-[3px]' : undefined;
+    if (seg !== undefined) {
+      const hit = myHitCells.has(i) || sunkEnemy.has(i);
+      return `${SHIP_BG} ${seg} ${hit ? 'brightness-[0.7] ring-negative' : 'opacity-80'}`;
+    }
     if (myHitCells.has(i)) return 'bg-gold/25 ring-1 ring-gold/60';
     if (myMissCells.has(i)) return 'bg-[#0c1622] ring-1 ring-[#2b4a8b]/30';
-    return `bg-[#0f1c2e] ring-1 ring-[#2b4a8b]/35 ${view.isMyTurn ? 'hover:bg-gold/20 cursor-crosshair' : ''}`;
+    return `bg-[#0f1c2e] ring-1 ring-[#2b4a8b]/35 ${view.isMyTurn && !finished ? 'hover:bg-gold/20 cursor-crosshair' : ''}`;
   }
   function enemyContent(i: number) {
     if (i === firing) return <span className="absolute inset-0 rounded-[3px] ring-2 ring-gold animate-ping" aria-hidden />;
-    if (sunkEnemy.has(i)) return <span className="animate-explode">🚢</span>;
     if (myHitCells.has(i)) return blast;
     if (myMissCells.has(i)) return splash;
     return null;
@@ -227,13 +276,21 @@ function Battle({ tableId, view }: { tableId: number; view: BattleshipView }) {
 
   return (
     <div className="space-y-5">
-      <div
-        className={`rounded-lg border px-4 py-2.5 text-center font-display text-base ${
-          view.isMyTurn ? 'border-gold/50 bg-gold/10 text-gold' : 'border-border bg-surface-raised/50 text-muted'
-        }`}
-      >
-        {view.isMyTurn ? '🎯 É a tua vez — escolhe um alvo' : `À espera de ${view.oppName ?? 'o adversário'}…`}
-      </div>
+      {!finished && (
+        <div className={`rounded-lg border px-4 py-2.5 ${view.isMyTurn ? 'border-gold/50 bg-gold/10' : 'border-border bg-surface-raised/50'}`}>
+          <div className="flex items-center justify-between gap-3">
+            <span className={`font-display text-base ${view.isMyTurn ? 'text-gold' : 'text-muted'}`}>
+              {view.isMyTurn ? '🎯 É a tua vez — escolhe um alvo' : `Vez de ${view.oppName ?? 'o adversário'}…`}
+            </span>
+            {secs != null && <span className={`font-mono text-lg tabular-nums ${secs <= 5 ? 'text-negative' : 'text-text'}`}>{secs}s</span>}
+          </div>
+          {remainingMs != null && (
+            <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-bg/60">
+              <div className={`h-full rounded-full transition-[width] duration-200 ${secs != null && secs <= 5 ? 'bg-negative' : 'bg-gold'}`} style={{ width: `${pct}%` }} />
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="grid gap-6 sm:grid-cols-2">
         <div className="space-y-2 text-center">
@@ -241,7 +298,9 @@ function Battle({ tableId, view }: { tableId: number; view: BattleshipView }) {
           <div className="flex justify-center"><OceanGrid cellClass={myCell} cellContent={myContent} /></div>
         </div>
         <div className="space-y-2 text-center">
-          <p className="font-sans text-[11px] uppercase tracking-[0.18em] text-muted-2">Inimigo · {view.enemyShipsLeft ?? '—'} por afundar</p>
+          <p className="font-sans text-[11px] uppercase tracking-[0.18em] text-muted-2">
+            {finished ? 'Frota inimiga — revelada' : `Inimigo · ${view.enemyShipsLeft ?? '—'} por afundar`}
+          </p>
           <div className="flex justify-center"><OceanGrid cellClass={enemyCell} cellContent={enemyContent} onCell={shoot} /></div>
         </div>
       </div>
@@ -387,7 +446,7 @@ export function BattleshipOnline() {
           )}
 
           {view.oppJoined && view.phase === 'placing' && <Placement tableId={tableId!} view={view} />}
-          {view.phase === 'playing' && <Battle tableId={tableId!} view={view} />}
+          {(view.phase === 'playing' || view.phase === 'finished') && <Battle tableId={tableId!} view={view} serverNow={res?.serverNow} />}
 
           {view.phase === 'finished' && (
             <div className="card space-y-4 p-8 text-center">
