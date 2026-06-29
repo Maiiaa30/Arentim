@@ -29,13 +29,18 @@ That's the whole loop — bet, win, climb the leaderboard, repeat. It's all make
   **Tigrinho**, and the flagship 5×3 **Fortuna de Ouro** video slot), **Plinko**,
   **Balatró** (poker-hand skill game), **Mines**, **Atravessa!**, **Corrida de
   Cavalos** (live), **Moeda**, **Dados**, **Maior ou Menor**, **Sobe e Desce**,
-  **Fita da Sorte** and **Jogo dos Copos**. Every outcome is settled server-side
-  with a CSPRNG — the client never decides money.
+  **Fita da Sorte**, **Jogo dos Copos** and **Batalha Naval** (a keno-style torpedo
+  salvo at a hidden fleet). Every outcome is settled server-side with a CSPRNG — the
+  client never decides money, and every single-stake game takes a custom bet amount.
 - **Sportsbook (Futebol)** — fixtures with 1·X·2 / over-under / both-teams-to-score
   markets, singles and accumulators (the **Boletim**), early cash-out, live scores,
   automatic settlement and a betting leaderboard.
 - **Poker** & **Sueca** — Texas Hold'em vs bots or private friend tables, and the
-  Portuguese trick-taking game vs bots or 2v2.
+  Portuguese trick-taking game vs bots or at a 4-seat table (bot turn delays, a
+  per-turn timer, ready-up between hands, and public tables to browse and join).
+- **Batalha Naval (online)** — 1v1 multiplayer: place your fleet on a 10×10 board,
+  take turns firing, and sink the enemy first. Play a friend by invite code or get
+  matched from the public queue, with a per-turn timer and an end-game fleet reveal.
 - **Onze de Ouro** — build a Portuguese XI from real Liga Portugal squads (2005–2026).
 - **Social** — friend requests and presence, gifting/requesting tós, head-to-head
   duels, a notification bell, and realtime updates with no reloads.
