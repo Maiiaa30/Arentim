@@ -68,13 +68,17 @@ function isStraightRun(cells: number[]): boolean {
   return false;
 }
 
-/** Validate a submitted fleet: exact ship sizes, in bounds, straight, no overlap. */
-export function validateFleet(ships: unknown): { ok: boolean; error?: string; ships?: Ship[] } {
-  if (!Array.isArray(ships) || ships.length !== FLEET.length) return { ok: false, error: 'invalid fleet' };
+/**
+ * Validate a submitted fleet: exact ship sizes, in bounds, straight, no overlap.
+ * The wire format is an array of cell-arrays (number[][]) — each ship is just
+ * the list of cells it occupies. (Tolerates the {cells:[...]} object form too.)
+ */
+export function validateFleet(fleet: unknown): { ok: boolean; error?: string; ships?: Ship[] } {
+  if (!Array.isArray(fleet) || fleet.length !== FLEET.length) return { ok: false, error: 'invalid fleet' };
   const parsed: Ship[] = [];
   const used = new Set<number>();
-  for (const raw of ships) {
-    const cells = (raw as Ship)?.cells;
+  for (const raw of fleet) {
+    const cells: unknown = Array.isArray(raw) ? raw : (raw as { cells?: unknown })?.cells;
     if (!Array.isArray(cells)) return { ok: false, error: 'invalid fleet' };
     if (cells.some((c) => !Number.isInteger(c) || c < 0 || c >= CELLS)) return { ok: false, error: 'invalid fleet' };
     if (new Set(cells).size !== cells.length) return { ok: false, error: 'invalid fleet' };
