@@ -86,7 +86,9 @@ export function usePokerTableState(tableId: number | null) {
   return useQuery({
     queryKey: ['poker-table', tableId] as const,
     enabled: tableId != null,
-    refetchInterval: 1300,
+    // Fast during a live hand; back off between hands so an idle/background tab
+    // isn't billing an Edge invocation every 1.3s forever.
+    refetchInterval: (q) => (q.state.data?.view?.handOver ? 4000 : 1300),
     refetchIntervalInBackground: true,
     queryFn: () => call({ op: 'state', tableId }),
   });
