@@ -37,6 +37,7 @@ export interface SuecaState {
   log: string[];
   done: boolean;
   result: SuecaResult | null;
+  turnDeadline: string | null; // ISO — when the current human turn auto-plays (stamped by the Edge Fn)
 }
 
 export interface SuecaResult {
@@ -123,6 +124,7 @@ export function deal(rand: Rand, dealer: number): SuecaState {
     log: [],
     done: false,
     result: null,
+    turnDeadline: null,
   };
 }
 
