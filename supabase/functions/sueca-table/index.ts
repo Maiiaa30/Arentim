@@ -35,20 +35,36 @@ function genCode(): string {
   return Array.from(crypto.getRandomValues(new Uint8Array(5)), (b) => a[b % a.length]).join('');
 }
 
-/** Play out bot turns until a human is to act, a trick completes, or the hand ends. */
-function advance(state: SuecaState, isBot: (seat: number) => boolean): SuecaState {
+const TURN_MS = 30_000; // a human has this long to play before the turn auto-plays
+
+/**
+ * Play out bot turns until a human is to act, a trick completes, or the hand
+ * ends — collecting a snapshot after EACH bot card so the client can replay
+ * them one at a time (a visible "thinking" delay) instead of all at once.
+ */
+function advance(state: SuecaState, isBot: (seat: number) => boolean): { state: SuecaState; trail: SuecaState[] } {
   let s = state;
+  const trail: SuecaState[] = [];
   let guard = 0;
   while (!s.done && !s.trickComplete && guard++ < 100) {
     if (!isBot(s.turn)) break;
     s = playTurn(s, -1);
+    trail.push(s);
   }
-  return s;
+  return { state: s, trail };
 }
 
-function viewFor(t: Row, uid: string) {
+/** Set/clear the current turn's deadline — only while a HUMAN is to act. */
+function stamp(row: Row): void {
+  const st = row.state;
+  if (!st) return;
+  const humanToAct = st.turn >= 0 && !row.seats[st.turn]?.bot && !st.done && !st.trickComplete;
+  st.turnDeadline = humanToAct ? new Date(Date.now() + TURN_MS).toISOString() : null;
+}
+
+function viewFor(t: Row, uid: string, stOverride?: SuecaState) {
   const mySeat = t.seats.findIndex((s) => s && s.user === uid);
-  const st = t.state;
+  const st = stOverride ?? t.state;
   const base = {
     table_id: t.id, code: t.code, status: t.status, host: t.host_id === uid, mySeat,
     match: t.match,
@@ -67,6 +83,7 @@ function viewFor(t: Row, uid: string) {
     done: st.done, result: st.result, dealer: st.dealer,
     log: st.log.slice(-6),
     myHand: mySeat >= 0 ? st.hands[mySeat] : [],
+    turnDeadline: st.turnDeadline,
   };
 }
 
@@ -102,6 +119,15 @@ Deno.serve(async (req) => {
     }).eq('id', row.id);
 
   const isBot = (row: Row) => (seat: number) => !!row.seats[seat]?.bot;
+
+  // Standard response: the caller's masked view, an optional bot-replay trail,
+  // and the server clock (so the client countdown corrects for skew).
+  const respond = (row: Row, trail: SuecaState[] = []) =>
+    json({
+      view: viewFor(row, uid),
+      trail: trail.map((st) => viewFor(row, uid, st)),
+      serverNow: new Date().toISOString(),
+    });
 
   switch (body.op) {
     case 'create': {
@@ -160,12 +186,12 @@ Deno.serve(async (req) => {
           row.seats[i] = { user: null, name: bn, bot: true };
         }
       }
-      let state = deal(rand, row.dealer);
-      state = advance(state, isBot(row));
-      row.state = state;
+      const adv = advance(deal(rand, row.dealer), isBot(row));
+      row.state = adv.state;
       row.status = 'playing';
+      stamp(row);
       await persist(row);
-      return json({ view: viewFor(row, uid) });
+      return respond(row, adv.trail);
     }
 
     case 'play': {
@@ -174,24 +200,29 @@ Deno.serve(async (req) => {
       const mySeat = row.seats.findIndex((s) => s && s.user === uid);
       const card = Number(body.card);
       if (mySeat >= 0 && row.state.turn === mySeat && !row.state.trickComplete && !row.state.done) {
-        let state = playTurn(row.state, mySeat, card);
-        state = advance(state, isBot(row));
-        row.state = state;
+        const afterHuman = playTurn(row.state, mySeat, card);
+        const adv = advance(afterHuman, isBot(row));
+        row.state = adv.state;
+        stamp(row);
         await persist(row);
+        // Lead with the human's own card, then each bot card, then the rest.
+        return respond(row, [afterHuman, ...adv.trail]);
       }
-      return json({ view: viewFor(row, uid) });
+      return respond(row);
     }
 
     case 'collect': {
       const row = await load(body.tableId);
       if (!row || !row.state) return json({ error: 'sem jogo' }, 404);
       if (row.state.trickComplete) {
-        let state = collectTrick(row.state);
-        state = advance(state, isBot(row));
-        row.state = state;
+        const afterCollect = collectTrick(row.state);
+        const adv = advance(afterCollect, isBot(row));
+        row.state = adv.state;
+        stamp(row);
         await persist(row);
+        return respond(row, [afterCollect, ...adv.trail]);
       }
-      return json({ view: viewFor(row, uid) });
+      return respond(row);
     }
 
     case 'deal': {
@@ -202,11 +233,27 @@ Deno.serve(async (req) => {
       const r = row.state.result;
       if (r && r.winner !== null) row.match[r.winner] += r.games;
       row.dealer = (row.dealer + 1) % 4;
-      let state = deal(rand, row.dealer);
-      state = advance(state, isBot(row));
-      row.state = state;
+      const adv = advance(deal(rand, row.dealer), isBot(row));
+      row.state = adv.state;
+      stamp(row);
       await persist(row);
-      return json({ view: viewFor(row, uid) });
+      return respond(row, adv.trail);
+    }
+
+    // Turn timed out — auto-play a legal card for the human on the clock, then
+    // pass. Any client may call it; the server only acts once expired.
+    case 'timeout': {
+      const row = await load(body.tableId);
+      if (!row || !row.state) return json({ error: 'sem jogo' }, 404);
+      const st = row.state;
+      if (st.done || st.trickComplete || st.turn < 0 || row.seats[st.turn]?.bot) return respond(row);
+      if (!st.turnDeadline || Date.now() <= Date.parse(st.turnDeadline)) return respond(row);
+      const afterAuto = playTurn(st, -1); // current human seat auto-plays via bot heuristic
+      const adv = advance(afterAuto, isBot(row));
+      row.state = adv.state;
+      stamp(row);
+      await persist(row);
+      return respond(row, [afterAuto, ...adv.trail]);
     }
 
     case 'leave': {
@@ -224,7 +271,7 @@ Deno.serve(async (req) => {
     case 'state': {
       const row = await load(body.tableId);
       if (!row) return json({ view: null });
-      return json({ view: viewFor(row, uid) });
+      return respond(row);
     }
 
     default:

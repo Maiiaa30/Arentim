@@ -8,10 +8,16 @@ import {
   useSuecaActions,
   useSuecaTableState,
   type SuecaSeatView,
+  type SuecaTableView,
+  type SuecaCallResult,
 } from '@/features/sueca/useSuecaTable';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Eyebrow } from '@/components/ui/primitives';
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+/** Randomised pause between each replayed bot card, so they don't act at once. */
+const botDelay = () => 480 + Math.random() * 1120;
 
 const Card = ({ card, size = 'md' }: { card: number; size?: CardSize }) => (
   <PlayingCardFace rank={cardLabel(card)} suit={suitOf(card)} size={size} />
@@ -40,7 +46,7 @@ function SeatBadge({ s, turn }: { s: SuecaSeatView; turn?: number | undefined })
 
 export function SuecaTablePage() {
   const { data: myTables } = useMySuecaTables();
-  const { create, join, seat, start, play, collect, deal, leave } = useSuecaActions();
+  const { create, join, seat, start, play, collect, deal, timeout, leave } = useSuecaActions();
   const [tableId, setTableId] = useState<number | null>(null);
   const [joinCode, setJoinCode] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -48,7 +54,50 @@ export function SuecaTablePage() {
   const qc = useQueryClient();
 
   const { data } = useSuecaTableState(tableId);
-  const view = data?.view ?? null;
+  // While replaying a bot trail, `override` holds the frame being shown; else the
+  // live polled state drives the board.
+  const [override, setOverride] = useState<SuecaTableView | null>(null);
+  const animating = useRef(false);
+  const view = override ?? data?.view ?? null;
+
+  /** Replay a response's bot trail one card at a time, then commit the final state. */
+  async function applyResult(res: SuecaCallResult) {
+    const trail = res.trail ?? [];
+    if (trail.length > 1) {
+      animating.current = true;
+      for (const frame of trail) {
+        setOverride(frame);
+        await sleep(botDelay());
+      }
+    }
+    animating.current = false;
+    setOverride(null);
+    if (tableId != null) qc.setQueryData(['sueca-table', tableId], res);
+  }
+
+  // Turn timer — clock-skew corrected from the server's `now`.
+  const offsetRef = useRef(0);
+  useEffect(() => { if (data?.serverNow) offsetRef.current = Date.now() - new Date(data.serverNow).getTime(); }, [data?.serverNow]);
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    if (view?.status !== 'playing') return undefined;
+    const id = window.setInterval(() => setTick((t) => t + 1), 250);
+    return () => window.clearInterval(id);
+  }, [view?.status]);
+  const deadlineMs = !animating.current && view?.turnDeadline ? new Date(view.turnDeadline).getTime() : null;
+  const remainingMs = deadlineMs != null ? Math.max(0, deadlineMs - (Date.now() - offsetRef.current)) : null;
+  const secs = remainingMs != null ? Math.ceil(remainingMs / 1000) : null;
+
+  // Auto-play when the clock runs out (any client may trigger; the server only
+  // acts if the deadline truly elapsed).
+  const timingOut = useRef(false);
+  useEffect(() => {
+    if (view?.status === 'playing' && view.turnDeadline && remainingMs === 0 && !animating.current && !timingOut.current && tableId != null) {
+      timingOut.current = true;
+      timeout.mutateAsync(tableId).then(applyResult).catch(() => {}).finally(() => { timingOut.current = false; });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [remainingMs, view?.status, view?.turnDeadline, tableId]);
 
   // Auto-resume only a table still in seat-selection ('open'). A leftover
   // 'playing' table must NOT hijack a fresh "Criar" — resume it explicitly from
@@ -61,17 +110,19 @@ export function SuecaTablePage() {
   }, [myTables, tableId]);
 
   // When a trick is complete, pause to show it, then ask the server to collect.
+  // Triggered off the committed state (not mid-animation override frames).
   useEffect(() => {
-    if (view?.status === 'playing' && view.trickComplete && tableId != null && !collecting.current) {
+    const v = data?.view;
+    if (v?.status === 'playing' && v.trickComplete && tableId != null && !collecting.current && !animating.current) {
       collecting.current = true;
       const t = window.setTimeout(() => {
-        void collect.mutateAsync(tableId).finally(() => { collecting.current = false; });
+        void collect.mutateAsync(tableId).then(applyResult).finally(() => { collecting.current = false; });
       }, 1400);
       return () => window.clearTimeout(t);
     }
     return undefined;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [view?.trickComplete, view?.status, tableId]);
+  }, [data?.view?.trickComplete, data?.view?.status, tableId]);
 
   const wrap = async (fn: () => Promise<unknown>) => {
     setError(null);
@@ -154,7 +205,7 @@ export function SuecaTablePage() {
         </div>
         <div className="flex items-center gap-3">
           {view.host ? (
-            <Button variant="primary" onClick={() => wrap(() => start.mutateAsync(view.table_id))}>Encher com bots e começar</Button>
+            <Button variant="primary" onClick={() => wrap(async () => { const r = await start.mutateAsync(view.table_id); await applyResult(r); })}>Encher com bots e começar</Button>
           ) : (
             <p className="font-sans text-sm text-muted">À espera de o anfitrião começar…</p>
           )}
@@ -173,6 +224,13 @@ export function SuecaTablePage() {
   const ledSuit = view.trick && view.trick.length ? suitOf(view.trick[0]!.card) : null;
   const myHand = [...(view.myHand ?? [])].sort((a, b) => suitOf(a) - suitOf(b) || (a % 10) - (b % 10));
   const legal = myTurn ? legalMoves(view.myHand ?? [], ledSuit) : [];
+  // The trunfo belongs to the dealer (who kept it in hand) — show it by their seat.
+  const trumpFor = (d: number) =>
+    view.trumpCard != null && view.dealer != null && seatAt(d).seat === view.dealer ? (
+      <span className="-mt-1 rotate-[-8deg] drop-shadow-[0_4px_10px_rgba(0,0,0,0.5)]" title="Trunfo do baralhador">
+        <Card card={view.trumpCard} size="sm" />
+      </span>
+    ) : null;
 
   return (
     <div className="animate-fade-in space-y-5">
@@ -192,17 +250,18 @@ export function SuecaTablePage() {
       </div>
 
       <div className="felt felt-rail relative mx-auto h-[540px] w-full max-w-4xl overflow-hidden rounded-[28px] p-4 sm:h-[580px]">
-        {/* Trump card */}
-        <div className="absolute left-3 top-3 flex flex-col items-center gap-1">
-          <span className="font-sans text-[10px] uppercase tracking-[0.2em] text-gold-light">Trunfo {view.trump != null ? SUIT_SYMBOLS[view.trump] : ''}</span>
-          {view.trumpCard != null && <span className="rotate-[-8deg] drop-shadow-[0_4px_10px_rgba(0,0,0,0.5)]"><Card card={view.trumpCard} size="lg" /></span>}
+        {/* Trump suit indicator (the card itself sits with the dealer below). */}
+        <div className="absolute left-3 top-3">
+          <span className="rounded-full border border-gold/40 bg-black/45 px-2.5 py-1 font-sans text-[11px] uppercase tracking-[0.16em] text-gold-light">
+            Trunfo {view.trump != null ? SUIT_SYMBOLS[view.trump] : ''}
+          </span>
         </div>
 
-        {/* Seats */}
-        <div className="absolute left-1/2 top-3 -translate-x-1/2 flex flex-col items-center gap-1.5"><SeatBadge s={seatAt(2)} turn={view.turn} /><Backs n={seatAt(2).cards} /></div>
-        <div className="absolute right-3 top-1/2 -translate-y-1/2 flex flex-col items-center gap-1.5"><SeatBadge s={seatAt(1)} turn={view.turn} /><Backs n={seatAt(1).cards} /></div>
-        <div className="absolute left-3 top-1/2 -translate-y-1/2 flex flex-col items-center gap-1.5"><SeatBadge s={seatAt(3)} turn={view.turn} /><Backs n={seatAt(3).cards} /></div>
-        <div className="absolute bottom-2 left-1/2 -translate-x-1/2"><SeatBadge s={seatAt(0)} turn={view.turn} /></div>
+        {/* Seats — the dealer shows the trunfo card by their badge. */}
+        <div className="absolute left-1/2 top-3 -translate-x-1/2 flex flex-col items-center gap-1.5"><SeatBadge s={seatAt(2)} turn={view.turn} />{trumpFor(2)}<Backs n={seatAt(2).cards} /></div>
+        <div className="absolute right-3 top-1/2 -translate-y-1/2 flex flex-col items-center gap-1.5"><SeatBadge s={seatAt(1)} turn={view.turn} />{trumpFor(1)}<Backs n={seatAt(1).cards} /></div>
+        <div className="absolute left-3 top-1/2 -translate-y-1/2 flex flex-col items-center gap-1.5"><SeatBadge s={seatAt(3)} turn={view.turn} />{trumpFor(3)}<Backs n={seatAt(3).cards} /></div>
+        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-2"><SeatBadge s={seatAt(0)} turn={view.turn} />{trumpFor(0)}</div>
 
         {/* Trick */}
         <div className="absolute left-1/2 top-1/2 h-[260px] w-[260px] -translate-x-1/2 -translate-y-1/2">
@@ -219,15 +278,18 @@ export function SuecaTablePage() {
               {view.result.winner === null ? 'Empate' : teamOfSeat(view.result.winner, mySeat) ? 'Ganhámos!' : 'Perdemos.'}
             </p>
             <p className="mt-1 font-sans text-sm text-muted">{view.result.teamAPoints}–{view.result.teamBPoints}{view.result.margin !== 'normal' && ` · ${view.result.margin === 'capote' ? 'Capote!' : 'Dupla'}`}</p>
-            {view.host && <Button variant="primary" className="mt-3" onClick={() => wrap(() => deal.mutateAsync(view.table_id))}>Próxima mão</Button>}
+            {view.host && <Button variant="primary" className="mt-3" onClick={() => wrap(async () => { const r = await deal.mutateAsync(view.table_id); await applyResult(r); })}>Próxima mão</Button>}
           </div>
         )}
       </div>
 
       {/* My hand */}
       <div className="mx-auto max-w-4xl">
-        <p className="mb-2 text-center font-sans text-[11px] uppercase tracking-[0.2em] text-muted-2">
-          {myTurn ? 'A sua vez' : view.done ? 'Mão terminada' : `Vez de ${seatAt(dpos(view.turn ?? 0)).name}`}
+        <p className="mb-2 flex items-center justify-center gap-2 text-center font-sans text-[11px] uppercase tracking-[0.2em] text-muted-2">
+          <span>{myTurn ? 'A sua vez' : view.done ? 'Mão terminada' : `Vez de ${seatAt(dpos(view.turn ?? 0)).name}`}</span>
+          {secs != null && !view.done && (
+            <span className={`font-mono text-xs ${secs <= 5 ? 'text-negative' : 'text-gold'}`}>{secs}s</span>
+          )}
         </p>
         <div className="flex flex-wrap justify-center gap-1.5">
           {myHand.map((card) => {
@@ -238,7 +300,7 @@ export function SuecaTablePage() {
                   // Apply the returned state immediately so your own card lands
                   // without waiting for the next poll.
                   const r = await play.mutateAsync({ tableId: view.table_id, card });
-                  if (r?.view) qc.setQueryData(['sueca-table', view.table_id], r);
+                  await applyResult(r);
                 })}
                 className={`focus-ring rounded-md transition-transform ${myTurn && ok ? 'cursor-pointer hover:-translate-y-2' : 'cursor-not-allowed opacity-45'}`}>
                 <Card card={card} size="lg" />

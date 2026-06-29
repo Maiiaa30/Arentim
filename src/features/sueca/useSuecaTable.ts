@@ -34,9 +34,18 @@ export interface SuecaTableView {
   dealer?: number;
   log?: string[];
   myHand?: number[];
+  turnDeadline?: string | null;
 }
 
-const call = (body: Record<string, unknown>) => invokePoker<{ view: SuecaTableView | null }>('sueca-table', body);
+/** A sueca-table response: the caller's view, an optional bot-replay trail, and
+ *  the server clock for the turn-timer countdown. */
+export interface SuecaCallResult {
+  view: SuecaTableView | null;
+  trail?: SuecaTableView[];
+  serverNow?: string;
+}
+
+const call = (body: Record<string, unknown>) => invokePoker<SuecaCallResult>('sueca-table', body);
 
 export interface MySuecaTable { table_id: number; code: string; status: string; player_count: number; is_host: boolean }
 
@@ -71,6 +80,7 @@ export function useSuecaActions() {
   const play = useMutation({ mutationFn: (v: { tableId: number; card: number }) => call({ op: 'play', ...v }) });
   const collect = useMutation({ mutationFn: (tableId: number) => call({ op: 'collect', tableId }) });
   const deal = useMutation({ mutationFn: (tableId: number) => call({ op: 'deal', tableId }) });
+  const timeout = useMutation({ mutationFn: (tableId: number) => call({ op: 'timeout', tableId }) });
   const leave = useMutation({ mutationFn: (tableId: number) => call({ op: 'leave', tableId }) });
-  return { create, join, seat, start, play, collect, deal, leave };
+  return { create, join, seat, start, play, collect, deal, timeout, leave };
 }
