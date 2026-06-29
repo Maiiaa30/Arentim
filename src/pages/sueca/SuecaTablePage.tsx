@@ -46,7 +46,7 @@ function SeatBadge({ s, turn }: { s: SuecaSeatView; turn?: number | undefined })
 
 export function SuecaTablePage() {
   const { data: myTables } = useMySuecaTables();
-  const { create, join, seat, start, play, collect, deal, timeout, leave } = useSuecaActions();
+  const { create, join, seat, start, play, collect, ready, unready, timeout, leave } = useSuecaActions();
   const [tableId, setTableId] = useState<number | null>(null);
   const [joinCode, setJoinCode] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -271,16 +271,32 @@ export function SuecaTablePage() {
           <div className="absolute left-0 top-1/2 -translate-y-1/2">{trickAt(3) != null && <Card card={trickAt(3)!} size="lg" />}</div>
         </div>
 
-        {/* Result */}
-        {view.done && view.result && (
-          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-xl border border-gold bg-bg/90 px-6 py-4 text-center shadow-[0_12px_50px_rgba(0,0,0,0.6)]">
-            <p className="font-display text-2xl font-bold text-gold">
-              {view.result.winner === null ? 'Empate' : teamOfSeat(view.result.winner, mySeat) ? 'Ganhámos!' : 'Perdemos.'}
-            </p>
-            <p className="mt-1 font-sans text-sm text-muted">{view.result.teamAPoints}–{view.result.teamBPoints}{view.result.margin !== 'normal' && ` · ${view.result.margin === 'capote' ? 'Capote!' : 'Dupla'}`}</p>
-            {view.host && <Button variant="primary" className="mt-3" onClick={() => wrap(async () => { const r = await deal.mutateAsync(view.table_id); await applyResult(r); })}>Próxima mão</Button>}
-          </div>
-        )}
+        {/* Result + ready-up for the next hand */}
+        {view.done && view.result && (() => {
+          const flags = view.readyNext ?? [];
+          const iAmReady = !!flags[mySeat];
+          const waitingFor = view.seats.filter((s) => s.present && !s.bot && !flags[s.seat]).map((s) => s.name);
+          return (
+            <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-xl border border-gold bg-bg/90 px-6 py-4 text-center shadow-[0_12px_50px_rgba(0,0,0,0.6)]">
+              <p className="font-display text-2xl font-bold text-gold">
+                {view.result.winner === null ? 'Empate' : teamOfSeat(view.result.winner, mySeat) ? 'Ganhámos!' : 'Perdemos.'}
+              </p>
+              <p className="mt-1 font-sans text-sm text-muted">{view.result.teamAPoints}–{view.result.teamBPoints}{view.result.margin !== 'normal' && ` · ${view.result.margin === 'capote' ? 'Capote!' : 'Dupla'}`}</p>
+              <div className="mt-3 flex flex-col items-center gap-2">
+                {!iAmReady ? (
+                  <Button variant="primary" onClick={() => wrap(async () => { const r = await ready.mutateAsync(view.table_id); await applyResult(r); })}>Pronto para a próxima</Button>
+                ) : (
+                  <>
+                    <p className="font-sans text-sm text-muted">
+                      {waitingFor.length ? `À espera de ${waitingFor.join(', ')}…` : 'A começar…'}
+                    </p>
+                    <Button variant="secondary" onClick={() => wrap(async () => { const r = await unready.mutateAsync(view.table_id); await applyResult(r); })}>Cancelar</Button>
+                  </>
+                )}
+              </div>
+            </div>
+          );
+        })()}
       </div>
 
       {/* My hand */}

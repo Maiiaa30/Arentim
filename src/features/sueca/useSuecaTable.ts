@@ -35,6 +35,7 @@ export interface SuecaTableView {
   log?: string[];
   myHand?: number[];
   turnDeadline?: string | null;
+  readyNext?: boolean[];
 }
 
 /** A sueca-table response: the caller's view, an optional bot-replay trail, and
@@ -80,7 +81,9 @@ export function useSuecaActions() {
   const play = useMutation({ mutationFn: (v: { tableId: number; card: number }) => call({ op: 'play', ...v }) });
   const collect = useMutation({ mutationFn: (tableId: number) => call({ op: 'collect', tableId }) });
   const deal = useMutation({ mutationFn: (tableId: number) => call({ op: 'deal', tableId }) });
+  const ready = useMutation({ mutationFn: (tableId: number) => call({ op: 'ready', tableId }) });
+  const unready = useMutation({ mutationFn: (tableId: number) => call({ op: 'unready', tableId }) });
   const timeout = useMutation({ mutationFn: (tableId: number) => call({ op: 'timeout', tableId }) });
   const leave = useMutation({ mutationFn: (tableId: number) => call({ op: 'leave', tableId }) });
-  return { create, join, seat, start, play, collect, deal, timeout, leave };
+  return { create, join, seat, start, play, collect, deal, ready, unready, timeout, leave };
 }

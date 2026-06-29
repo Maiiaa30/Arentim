@@ -84,6 +84,7 @@ function viewFor(t: Row, uid: string, stOverride?: SuecaState) {
     log: st.log.slice(-6),
     myHand: mySeat >= 0 ? st.hands[mySeat] : [],
     turnDeadline: st.turnDeadline,
+    readyNext: st.readyNext,
   };
 }
 
@@ -128,6 +129,22 @@ Deno.serve(async (req) => {
       trail: trail.map((st) => viewFor(row, uid, st)),
       serverNow: new Date().toISOString(),
     });
+
+  // Score the finished hand, rotate the dealer, deal the next one and play out any
+  // opening bot turns. Returns the bot-replay trail.
+  const dealNext = (row: Row): SuecaState[] => {
+    const r = row.state!.result;
+    if (r && r.winner !== null) row.match[r.winner] += r.games;
+    row.dealer = (row.dealer + 1) % 4;
+    const adv = advance(deal(rand, row.dealer), isBot(row));
+    row.state = adv.state;
+    stamp(row);
+    return adv.trail;
+  };
+
+  // Every present human must be ready before the next hand deals (bots auto-ready).
+  const allReady = (row: Row): boolean =>
+    row.seats.every((s, i) => !s || s.bot || !!row.state?.readyNext[i]);
 
   switch (body.op) {
     case 'create': {
@@ -230,14 +247,32 @@ Deno.serve(async (req) => {
       if (!row || !row.state) return json({ error: 'sem jogo' }, 404);
       if (row.host_id !== uid) return json({ error: 'só o anfitrião' }, 403);
       if (!row.state.done) return json({ error: 'mão a decorrer' }, 409);
-      const r = row.state.result;
-      if (r && r.winner !== null) row.match[r.winner] += r.games;
-      row.dealer = (row.dealer + 1) % 4;
-      const adv = advance(deal(rand, row.dealer), isBot(row));
-      row.state = adv.state;
-      stamp(row);
+      const trail = dealNext(row);
       await persist(row);
-      return respond(row, adv.trail);
+      return respond(row, trail);
+    }
+
+    // Mark myself ready for the next hand; deal once every present human is ready.
+    case 'ready': {
+      const row = await load(body.tableId);
+      if (!row || !row.state) return json({ error: 'sem jogo' }, 404);
+      if (!row.state.done) return json({ error: 'mão a decorrer' }, 409);
+      const mySeat = row.seats.findIndex((s) => s && s.user === uid);
+      if (mySeat < 0) return json({ error: 'não está sentado' }, 403);
+      row.state.readyNext[mySeat] = true;
+      const trail = allReady(row) ? dealNext(row) : [];
+      await persist(row);
+      return respond(row, trail);
+    }
+
+    // Cancel my ready status (while still waiting for the others).
+    case 'unready': {
+      const row = await load(body.tableId);
+      if (!row || !row.state) return json({ error: 'sem jogo' }, 404);
+      const mySeat = row.seats.findIndex((s) => s && s.user === uid);
+      if (mySeat >= 0 && row.state.done) row.state.readyNext[mySeat] = false;
+      await persist(row);
+      return respond(row);
     }
 
     // Turn timed out — auto-play a legal card for the human on the clock, then
