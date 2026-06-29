@@ -44,24 +44,40 @@ verify_jwt = true
 [functions.poll-live-scores]
 verify_jwt = true
 
-# --- Recommended hardening — verify against the Dashboard before enabling. -----
-# [api]
-# # Bound PostgREST result sets so a forgotten .limit() can't pull huge pages.
-# max_rows = 1000
-#
+# --- Hardening ----------------------------------------------------------------
+# These are SAFE to apply (they only tighten, never loosen, and don't change
+# signup UX or invalidate existing sessions). Apply with `supabase config push`,
+# or mirror them in the Dashboard. Verify against the Dashboard first if unsure.
+
+[api]
+# Bound PostgREST result sets so a forgotten .limit() can't pull huge pages.
+max_rows = 1000
+
+[auth]
+# Short-lived access tokens (1h); the refresh token keeps users signed in.
+jwt_expiry = 3600
+# Reject reused refresh tokens (replay protection).
+enable_refresh_token_rotation = true
+refresh_token_reuse_interval = 10
+# Enforce a reasonable minimum password length on NEW passwords.
+minimum_password_length = 8
+
+[auth.email]
+# OTP / magic-link links expire in <= 1h, not the 24h default.
+otp_expiry = 3600
+
+[auth.rate_limit]
+# Cap auth abuse (brute force, email/OTP flooding, token churn).
+email_sent = 10
+sign_in_sign_ups = 30
+token_refresh = 150
+
+# --- UX-affecting choices — decide deliberately, then uncomment. --------------
 # [auth]
-# # Keep signups on only if you intend open registration.
-# enable_signup = true
-# # Require email confirmation before a session is issued.
-# enable_confirmations = true
-# # Short-lived access tokens (1h); refresh handles longevity.
-# jwt_expiry = 3600
+# enable_signup = true              # turn OFF to stop open registration
+# enable_confirmations = true       # require email confirmation before a session
 #
-# [auth.email]
-# # OTP / magic-link links should expire in <= 1h, not the 24h default.
-# otp_expiry = 3600
-#
-# [auth.rate_limit]
-# email_sent = 10
-# sign_in_sign_ups = 30
-# token_refresh = 150
+# NOTE: the single biggest account-security toggle — "Leaked password protection"
+# (checks new passwords against HaveIBeenPwned) — is Dashboard-only:
+#   Authentication → Policies → "Prevent use of leaked passwords". Turn it ON.
+# Consider enabling MFA (TOTP) there too when you're ready.
