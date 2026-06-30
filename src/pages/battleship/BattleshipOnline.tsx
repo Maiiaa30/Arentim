@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode, type CSSProperties } from 'react';
+import { useEffect, useId, useMemo, useRef, useState, type ReactNode, type CSSProperties } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { Eyebrow } from '@/components/ui/primitives';
@@ -26,8 +26,91 @@ type ShipOverlay = { cells: number[]; sunk?: boolean | undefined };
 
 const gridPos = (i: number): CSSProperties => ({ gridColumn: (i % BOARD) + 2, gridRow: Math.floor(i / BOARD) + 2 });
 
-/** One ship drawn as a single hull that spans its cells (across the grid gaps),
- *  so a run of cells reads as a real vessel floating on the water — not squares. */
+/** A proper little warship drawn as SVG: pointed bow, stern, gun turrets, a
+ *  bridge/superstructure, funnel and mast — scaled to the ship's length. Drawn
+ *  horizontally; vertical ships reuse the same art via a 90° transform. */
+function ShipSvg({ size, horizontal, sunk }: { size: number; horizontal: boolean; sunk: boolean }) {
+  const gid = useId().replace(/:/g, '');
+  const W = size * 100;
+  // Tones: cool steel normally, charred crimson once sunk.
+  const tone = sunk
+    ? { top: '#9a5054', mid: '#5e2a2e', deep: '#34191c', win: '#3a1c1e', cap: '#2a1416' }
+    : { top: '#e6edf6', mid: '#92a1b8', deep: '#3a4760', win: '#0c1626', cap: '#1a2230' };
+  const bridgeX = Math.max(36, W * 0.3);
+  const bridgeW = Math.min(76, Math.max(34, W * 0.2));
+  const turrets = [W - 76, ...(size >= 3 ? [60] : [])];
+  const windows = Math.max(2, Math.round(bridgeW / 16));
+  const art = (
+    <>
+      {/* waterline shadow */}
+      <ellipse cx={W / 2} cy={80} rx={W / 2 - 6} ry={9} fill="rgba(0,0,0,0.32)" />
+      {/* hull — squared stern (left), pointed bow (right) */}
+      <path
+        d={`M 8 30 L ${W - 54} 26 Q ${W - 12} 26 ${W - 4} 50 Q ${W - 12} 74 ${W - 54} 74 L 8 70 Q 0 50 8 30 Z`}
+        fill={`url(#h${gid})`}
+        stroke="rgba(0,0,0,0.42)"
+        strokeWidth="1.5"
+      />
+      {/* deck highlight + centre line */}
+      <path d={`M 14 33 L ${W - 54} 30 Q ${W - 24} 31 ${W - 22} 42 L 16 45 Z`} fill="rgba(255,255,255,0.16)" />
+      <path d={`M 12 50 L ${W - 28} 50`} stroke="rgba(0,0,0,0.22)" strokeWidth="1.1" />
+      {/* gun turrets with barrels pointing to the bow */}
+      {turrets.map((tx, i) => (
+        <g key={i}>
+          <line x1={tx} y1={50} x2={tx + 30} y2={50} stroke={tone.deep} strokeWidth="4" strokeLinecap="round" />
+          <ellipse cx={tx} cy={50} rx={11} ry={9} fill={tone.mid} stroke="rgba(0,0,0,0.4)" strokeWidth="1" />
+        </g>
+      ))}
+      {/* superstructure + windows */}
+      <rect x={bridgeX} y={20} width={bridgeW} height={32} rx={3} fill={tone.mid} stroke="rgba(0,0,0,0.4)" strokeWidth="1" />
+      {Array.from({ length: windows }, (_, i) => (
+        <rect key={i} x={bridgeX + 6 + i * 14} y={28} width={6} height={5} rx={1} fill={tone.win} opacity="0.85" />
+      ))}
+      {/* funnel + cap */}
+      <path d={`M ${bridgeX + bridgeW + 6} 24 L ${bridgeX + bridgeW + 10} 9 L ${bridgeX + bridgeW + 26} 9 L ${bridgeX + bridgeW + 30} 24 Z`} fill={tone.deep} />
+      <rect x={bridgeX + bridgeW + 8} y={7} width={22} height={4} rx={2} fill={tone.cap} />
+      {/* mast */}
+      <line x1={bridgeX + 9} y1={20} x2={bridgeX + 9} y2={3} stroke={tone.deep} strokeWidth="2" />
+      <line x1={bridgeX + 2} y1={9} x2={bridgeX + 16} y2={9} stroke={tone.deep} strokeWidth="1.5" />
+    </>
+  );
+  return (
+    <svg
+      className="h-full w-full overflow-visible"
+      viewBox={horizontal ? `0 0 ${W} 100` : `0 0 100 ${W}`}
+      preserveAspectRatio="none"
+      aria-hidden
+    >
+      <defs>
+        <linearGradient id={`h${gid}`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor={tone.top} />
+          <stop offset="0.5" stopColor={tone.mid} />
+          <stop offset="1" stopColor={tone.deep} />
+        </linearGradient>
+      </defs>
+      {horizontal ? art : <g transform="translate(100,0) rotate(90)">{art}</g>}
+    </svg>
+  );
+}
+
+/** Smoke + flame that lingers over a sunk wreck. */
+function SinkSmoke() {
+  return (
+    <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+      <span className="absolute left-1/2 top-1/2 h-1.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#ff8a3d]/80 blur-[1px] animate-pulse" />
+      {[0, 1, 2].map((i) => (
+        <span
+          key={i}
+          className="absolute h-2.5 w-2.5 rounded-full bg-[#2f2f2f]/80 animate-smoke-slow"
+          style={{ left: `${28 + i * 22}%`, top: '24%', animationDelay: `${i * 0.55}s` }}
+        />
+      ))}
+    </div>
+  );
+}
+
+/** One ship spanning its cells (across the grid gaps) so a run of cells reads as
+ *  a real vessel. Lists + smokes when sunk. */
 function ShipHull({ cells, sunk }: ShipOverlay) {
   const sorted = [...cells].sort((a, b) => a - b);
   const size = sorted.length;
@@ -38,17 +121,10 @@ function ShipHull({ cells, sunk }: ShipOverlay) {
   const style: CSSProperties = horizontal
     ? { gridColumn: `${c + 2} / span ${size}`, gridRow: `${r + 2}` }
     : { gridColumn: `${c + 2}`, gridRow: `${r + 2} / span ${size}` };
-  const hull = sunk
-    ? 'linear-gradient(150deg,#c8767a,#7e3438 55%,#431d20)'
-    : 'linear-gradient(150deg,#dbe4f0,#8a99b1 45%,#3a4760)';
   return (
-    <div style={style} className={`pointer-events-none relative z-10 ${sunk ? 'opacity-90' : ''}`}>
-      <div
-        className={`absolute rounded-full ${horizontal ? 'inset-x-[2%] inset-y-[22%]' : 'inset-y-[2%] inset-x-[22%]'}`}
-        style={{ background: hull, boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.55), inset 0 2px 3px rgba(255,255,255,0.3), 0 2px 6px rgba(0,0,0,0.6)' }}
-      />
-      {/* superstructure / bridge */}
-      <div className={`absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-[2px] ${sunk ? 'bg-[#f0d2d2]/55' : 'bg-[#eef3fa]/65'} ${horizontal ? 'h-[24%] w-[16%]' : 'h-[16%] w-[24%]'}`} />
+    <div style={style} className={`pointer-events-none relative z-10 ${sunk ? 'animate-ship-sink' : ''}`}>
+      <ShipSvg size={size} horizontal={horizontal} sunk={!!sunk} />
+      {sunk && <SinkSmoke />}
     </div>
   );
 }
@@ -303,17 +379,35 @@ function Battle({ tableId, view, serverNow }: { tableId: number; view: Battleshi
     }
   }
 
+  // A hit: a persistent charred crater + a one-shot fireball, shockwave, sparks
+  // and a wisp of smoke (the one-shot layers play once when the mark first
+  // mounts, then settle, so a hit cell ends up reading as a scorched mark).
   const blast = (
-    <>
-      <span className="absolute inset-0 rounded-[3px] bg-negative/55 animate-splash" aria-hidden />
-      <span className="relative animate-explode">💥</span>
-    </>
+    <span className="relative inline-flex h-full w-full items-center justify-center" aria-hidden>
+      <span
+        className="absolute h-2.5 w-2.5 rounded-full"
+        style={{ background: 'radial-gradient(circle,#ff7a2d 0%,#7a2a12 60%,#3a1408 100%)', boxShadow: '0 0 6px rgba(255,120,40,0.5)' }}
+      />
+      <span
+        className="absolute h-5 w-5 rounded-full animate-hit-flash"
+        style={{ background: 'radial-gradient(circle,#fff 0%,#ffd23d 32%,#ff6a00 68%,rgba(178,34,34,0) 100%)' }}
+      />
+      <span className="absolute h-4 w-4 rounded-full ring-2 ring-[#ffb066]/80 animate-splash" />
+      {[0, 1, 2, 3, 4, 5].map((k) => (
+        <span key={k} className="absolute" style={{ transform: `rotate(${k * 60}deg)` }}>
+          <span className="block h-1 w-1 rounded-full bg-[#ffd270] animate-ember" style={{ animationDelay: `${k * 15}ms` }} />
+        </span>
+      ))}
+      <span className="absolute bottom-1/2 h-2 w-2 rounded-full bg-[#3b3b3b]/70 animate-smoke" />
+    </span>
   );
+  // A miss: a small ripple + a persistent water dot.
   const splash = (
-    <>
-      <span className="absolute left-1/2 top-1/2 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border border-[#8aa0bd]/80 animate-splash" aria-hidden />
-      <span className="relative opacity-50">◦</span>
-    </>
+    <span className="relative inline-flex h-full w-full items-center justify-center" aria-hidden>
+      <span className="absolute h-1.5 w-1.5 rounded-full bg-[#7fb0e0]/55" />
+      <span className="absolute h-4 w-4 rounded-full border border-[#8aa0bd]/80 animate-splash" />
+      <span className="absolute h-5 w-5 rounded-full border border-[#8aa0bd]/40 animate-splash" style={{ animationDelay: '90ms' }} />
+    </span>
   );
 
   // My board: water everywhere (hulls are overlays); a 💥 marks their hits, ◦ their misses.
@@ -329,7 +423,15 @@ function Battle({ tableId, view, serverNow }: { tableId: number; view: Battleshi
       ? 'bg-[#0a141f]/70 ring-1 ring-[#2b4a8b]/30'
       : `${WATER} ${view.isMyTurn && !finished ? 'hover:bg-gold/20 cursor-crosshair' : ''}`;
   function enemyMark(i: number) {
-    if (i === firing) return <span className="absolute inset-0 rounded-[3px] ring-2 ring-gold animate-ping" aria-hidden />;
+    if (i === firing)
+      return (
+        <span className="absolute inset-0" aria-hidden>
+          <span className="absolute inset-0 rounded-[3px] ring-2 ring-gold animate-ping" />
+          <span className="absolute left-1/2 top-1/2 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border border-gold/90" />
+          <span className="absolute left-1/2 top-1/2 h-px w-5 -translate-x-1/2 -translate-y-1/2 bg-gold/80" />
+          <span className="absolute left-1/2 top-1/2 h-5 w-px -translate-x-1/2 -translate-y-1/2 bg-gold/80" />
+        </span>
+      );
     if (myHitCells.has(i)) return blast;
     if (myMissCells.has(i)) return splash;
     return null;
