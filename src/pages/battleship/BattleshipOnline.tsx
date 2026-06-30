@@ -74,9 +74,10 @@ function OceanGrid({
 }) {
   return (
     <div
-      className="relative inline-grid w-full max-w-[480px] select-none gap-[3px] rounded-lg p-2.5 shadow-[inset_0_2px_24px_rgba(0,0,0,0.55)] ring-1 ring-[#2b4a8b]/35"
+      className="relative mx-auto grid aspect-square w-full max-w-[480px] select-none gap-[3px] rounded-lg p-2.5 shadow-[inset_0_2px_24px_rgba(0,0,0,0.55)] ring-1 ring-[#2b4a8b]/35"
       style={{
         gridTemplateColumns: `1.1rem repeat(${BOARD}, 1fr)`,
+        gridTemplateRows: `1.1rem repeat(${BOARD}, 1fr)`,
         backgroundImage:
           'radial-gradient(55% 40% at 28% 18%, rgba(125,175,225,0.10), transparent 60%),' +
           'radial-gradient(50% 35% at 78% 72%, rgba(70,120,180,0.08), transparent 60%),' +
@@ -102,7 +103,7 @@ function OceanGrid({
                 type="button"
                 onClick={onCell ? () => onCell(i) : undefined}
                 onMouseEnter={onHover ? () => onHover(i) : undefined}
-                className={`aspect-square rounded-[3px] transition-colors ${cellClass(i)}`}
+                className={`h-full w-full rounded-[3px] transition-colors ${cellClass(i)}`}
               />
             );
           })}
