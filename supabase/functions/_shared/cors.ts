@@ -3,10 +3,12 @@
 // browser fire a preflight OPTIONS — without these headers (and an OPTIONS
 // handler) the call is blocked before the function ever runs.
 //
-// Origin lock-down: set the `ALLOWED_ORIGIN` secret to your site origin
-// (e.g. https://arentim.app) to restrict which web origin may call the
-// functions from a browser. Defaults to `*` when unset, so nothing breaks until
-// you opt in (`supabase secrets set ALLOWED_ORIGIN=https://your-site`).
+// Origin lock-down: set the `ALLOWED_ORIGIN` secret to your site origin to
+// restrict which web origin may call the functions from a browser. Defaults to
+// `*` when unset, so nothing breaks until you opt in. The prod site redirects
+// the apex to www, so the browser origin is always the www host:
+//   supabase secrets set ALLOWED_ORIGIN=https://www.arentim.com
+//   npm run deploy:functions   # redeploy all so the new value takes effect
 const ALLOW_ORIGIN = Deno.env.get('ALLOWED_ORIGIN') ?? '*';
 
 export const corsHeaders: Record<string, string> = {
