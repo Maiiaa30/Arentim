@@ -1369,6 +1369,10 @@ export type Database = {
         Args: Record<string, never>;
         Returns: { table_id: number; code: string; status: string; host_name: string; players: number }[];
       };
+      prune_stale_public_tables: {
+        Args: Record<string, never>;
+        Returns: undefined;
+      };
       username_available: {
         Args: { p_name: string };
         Returns: boolean;

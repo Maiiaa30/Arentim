@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/lib/supabase';
+import { supabase, pruneStalePublicTablesOnce } from '@/lib/supabase';
 import { useAuth } from '@/features/auth/AuthProvider';
 import { profileKey } from '@/features/profile/useProfile';
 import { invokePoker } from './invoke';
@@ -57,6 +57,10 @@ export function usePublicPokerTables() {
     queryKey: ['poker-public-tables'] as const,
     refetchInterval: 5000,
     queryFn: async (): Promise<PublicPokerTable[]> => {
+      // Opportunistically retire abandoned, empty, stale public tables once per
+      // session so the lobby doesn't fill up with week-old rows (no cron). Fire
+      // and forget — list-freshness already hides stale tables regardless.
+      pruneStalePublicTablesOnce();
       const { data, error } = await supabase.rpc('list_public_poker_tables');
       if (error) throw error;
       return data ?? [];

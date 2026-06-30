@@ -1,5 +1,5 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { supabase } from '@/lib/supabase';
+import { supabase, pruneStalePublicTablesOnce } from '@/lib/supabase';
 import { useAuth } from '@/features/auth/AuthProvider';
 import { invokePoker } from '@/features/poker/invoke';
 
@@ -71,6 +71,10 @@ export function usePublicSuecaTables() {
     queryKey: ['sueca-public-tables'] as const,
     refetchInterval: 5000,
     queryFn: async (): Promise<PublicSuecaTable[]> => {
+      // Opportunistically retire abandoned, empty, stale public tables once per
+      // session so the lobby doesn't fill up with week-old rows (no cron). Fire
+      // and forget — list-freshness already hides stale tables regardless.
+      pruneStalePublicTablesOnce();
       const { data, error } = await supabase.rpc('list_public_sueca_tables');
       if (error) throw error;
       return data ?? [];
