@@ -168,6 +168,29 @@ export default {
           '55%': { transform: 'scale(1.3)', opacity: '1' },
           '100%': { transform: 'scale(1)', opacity: '1' },
         },
+        // A one-shot hit fireball that flares then fades (leaving a char mark).
+        'hit-flash': {
+          '0%': { transform: 'scale(0.3)', opacity: '0' },
+          '30%': { transform: 'scale(1.15)', opacity: '1' },
+          '100%': { transform: 'scale(1.6)', opacity: '0' },
+        },
+        // Sparks flying outward from a hit (each ember sits in a pre-rotated span).
+        ember: {
+          '0%': { transform: 'translateY(0) scale(1)', opacity: '1' },
+          '100%': { transform: 'translateY(-14px) scale(0.2)', opacity: '0' },
+        },
+        // Rising smoke puff — fast (one hit) or looped (a burning wreck).
+        smoke: {
+          '0%': { transform: 'translateY(3px) scale(0.5)', opacity: '0' },
+          '25%': { opacity: '0.5' },
+          '100%': { transform: 'translateY(-20px) scale(1.7)', opacity: '0' },
+        },
+        // A struck ship listing and slipping under as it goes down.
+        'ship-sink': {
+          '0%': { transform: 'rotate(0) translateY(0)', opacity: '1' },
+          '45%': { transform: 'rotate(-5deg) translateY(1px)' },
+          '100%': { transform: 'rotate(-9deg) translateY(4px)', opacity: '0.92' },
+        },
       },
       animation: {
         'fade-in': 'fade-in 0.25s cubic-bezier(0.22,0.61,0.36,1)',
@@ -197,6 +220,11 @@ export default {
         'plinko-rise': 'plinko-rise 1.5s cubic-bezier(0.22,0.61,0.36,1) forwards',
         splash: 'splash 0.6s ease-out forwards',
         explode: 'explode 0.45s cubic-bezier(0.22,0.61,0.36,1)',
+        'hit-flash': 'hit-flash 0.55s ease-out forwards',
+        ember: 'ember 0.6s ease-out forwards',
+        smoke: 'smoke 1.6s ease-out forwards',
+        'smoke-slow': 'smoke 2.6s ease-out infinite',
+        'ship-sink': 'ship-sink 0.9s cubic-bezier(0.3,0.7,0.4,1) forwards',
       },
     },
   },
