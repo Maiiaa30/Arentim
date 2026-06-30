@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode, type CSSProperties } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode, type CSSProperties } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { Eyebrow } from '@/components/ui/primitives';
@@ -88,27 +88,30 @@ function OceanGrid({
       }}
       onMouseLeave={onLeave}
     >
-      <span />
-      {COLS.map((L) => (
-        <span key={L} className="text-center font-mono text-[10px] leading-4 text-muted-2">{L}</span>
+      {/* Column (A–J) + row (1–10) labels — explicitly placed so they never
+          get bumped by the auto-placement algorithm around the ship overlays. */}
+      {COLS.map((L, c) => (
+        <span key={L} style={{ gridColumn: c + 2, gridRow: 1 }} className="flex items-center justify-center font-mono text-[10px] text-muted-2">{L}</span>
       ))}
       {Array.from({ length: BOARD }, (_, r) => (
-        <Fragment key={r}>
-          <span className="flex items-center justify-center font-mono text-[10px] text-muted-2">{r + 1}</span>
-          {Array.from({ length: BOARD }, (_, c) => {
-            const i = r * BOARD + c;
-            return (
-              <button
-                key={i}
-                type="button"
-                onClick={onCell ? () => onCell(i) : undefined}
-                onMouseEnter={onHover ? () => onHover(i) : undefined}
-                className={`h-full w-full rounded-[3px] transition-colors ${cellClass(i)}`}
-              />
-            );
-          })}
-        </Fragment>
+        <span key={`r${r}`} style={{ gridColumn: 1, gridRow: r + 2 }} className="flex items-center justify-center font-mono text-[10px] text-muted-2">{r + 1}</span>
       ))}
+      {/* Water cells — also explicitly placed, so ship hulls (below) can overlap
+          them as overlays instead of displacing them out of the grid. */}
+      {Array.from({ length: CELLS }, (_, i) => {
+        const r = Math.floor(i / BOARD);
+        const c = i % BOARD;
+        return (
+          <button
+            key={i}
+            type="button"
+            style={{ gridColumn: c + 2, gridRow: r + 2 }}
+            onClick={onCell ? () => onCell(i) : undefined}
+            onMouseEnter={onHover ? () => onHover(i) : undefined}
+            className={`h-full w-full rounded-[3px] transition-colors ${cellClass(i)}`}
+          />
+        );
+      })}
       {/* Ship hulls (z-10) and shot markers (z-20) — positioned over the cells. */}
       {ships.map((s, idx) => <ShipHull key={`s${idx}`} cells={s.cells} sunk={s.sunk} />)}
       {mark &&
