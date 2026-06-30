@@ -28,15 +28,37 @@ system — don't run `supabase db push` against these.
 - **Filename = version.** `<14-digit version>_<slug>.sql`; the version is a
   `<date><6-digit-seq>` that increments by 100000 (`db:new` handles this).
 
-## "There are so many files"
+## Layout: baseline + archive
 
-That's normal — it's a ledger, and git keeps the full history regardless. The
-count isn't a problem on its own; `db:status` is how you get a quick overview of
-what matters (pending vs applied).
+The history was squashed once (2026-06-30). The active folder now holds a single
+**`<version>_baseline.sql`** — the concatenation of every migration applied up to
+that point — plus any newer dated migrations added since. The original per-step
+files live in **`archive/`** (the runner reads this folder flat, so anything in a
+subfolder is ignored) and in git history. They are never deleted.
 
-If the folder ever genuinely needs collapsing, the safe path is a **one-time
-baseline squash**: move the existing files into an `archive/` subfolder (the
-runner reads this directory flat, so archived files are ignored), add a single
-`…_baseline.sql` that recreates the current schema, and mark it applied on prod.
-This requires auditing every migration for idempotency and a coordinated prod
-step — do it deliberately, not casually.
+How the runner handles the baseline (`scripts/migrate.mjs`):
+
+- **Existing database** (`arentim_migrations` already has rows): the baseline is
+  **recorded as applied without running** — the schema is already there from the
+  archived steps. `db:migrate` prints `• adopt …`. Nothing in prod changes.
+- **Brand-new database** (no rows yet): the baseline runs in one transaction to
+  build the whole schema, then any newer dated migrations apply on top.
+- **Catch-up:** if any *archived* migration was still pending when the squash
+  landed (not yet applied to that DB), the runner applies those individually
+  before adopting the baseline — so no pending change is ever lost to the squash.
+
+So `npm run db:migrate` is safe to run on prod after the squash — there is no
+manual step. `db:status` shows the baseline as "recorded without running" until
+the first `db:migrate` adopts it, and does not flag the archived files.
+
+### Adding migrations after the squash
+
+Nothing changes: `npm run db:new "…"` scaffolds the next dated file (it sorts
+after the baseline), you write it idempotently, and `db:migrate` applies it.
+
+### Squashing again later
+
+When the active folder grows large again, repeat the one-time squash: regenerate
+`…_baseline.sql` from the (already-applied) dated files, move those into
+`archive/`, and commit. Because the runner adopts the baseline on existing DBs,
+no coordinated prod step is needed — just merge and run `db:migrate`.

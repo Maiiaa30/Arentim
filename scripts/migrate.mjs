@@ -21,7 +21,7 @@
  *
  * Usage: npm run db:migrate
  */
-import { readFileSync, readdirSync } from 'node:fs';
+import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { connectWithFallback, migrationsDir } from './lib/db.mjs';
 
@@ -47,13 +47,21 @@ async function main() {
     const { rows } = await client.query('select version from public.arentim_migrations');
     const applied = new Set(rows.map((r) => r.version));
 
+    // The active folder holds one squashed baseline plus any newer dated files;
+    // the pre-squash migrations were moved to ./archive (ignored by this scan).
+    const isBaseline = (f) => /_baseline\.sql$/.test(f);
+    const dbInitialized = applied.size > 0;
+    const archiveDir = join(migrationsDir, 'archive');
+    const archivedPending = (
+      existsSync(archiveDir) ? readdirSync(archiveDir).filter((f) => f.endsWith('.sql')).sort() : []
+    ).filter((f) => !applied.has(f));
+
     let count = 0;
-    for (const file of files) {
-      if (applied.has(file)) {
-        console.log(`• skip   ${file} (already applied)`);
-        continue;
-      }
-      const sql = readFileSync(join(migrationsDir, file), 'utf8');
+    let adopted = 0;
+
+    // Apply one file in its own transaction and record it.
+    const applyFile = async (dir, file) => {
+      const sql = readFileSync(join(dir, file), 'utf8');
       process.stdout.write(`→ apply  ${file} … `);
       try {
         await client.query('begin');
@@ -67,8 +75,39 @@ async function main() {
         console.log('FAILED');
         throw err;
       }
+    };
+
+    for (const file of files) {
+      if (applied.has(file)) {
+        console.log(`• skip   ${file} (already applied)`);
+        continue;
+      }
+      if (isBaseline(file)) {
+        if (dbInitialized) {
+          // Existing DB: the schema is already there from the archived steps, so
+          // record the baseline WITHOUT running it. But first catch up any
+          // archived migrations that were still pending when the squash landed —
+          // their changes aren't applied yet and the baseline won't run, so apply
+          // each one individually (idempotent, runs exactly once).
+          for (const af of archivedPending) await applyFile(archiveDir, af);
+          await client.query(
+            'insert into public.arentim_migrations (version) values ($1) on conflict do nothing',
+            [file],
+          );
+          console.log(`• adopt  ${file} (existing database — recorded without running)`);
+          adopted += 1;
+        } else {
+          // Fresh DB: run the baseline to build the whole schema in one go.
+          await applyFile(migrationsDir, file);
+        }
+        continue;
+      }
+      await applyFile(migrationsDir, file);
     }
-    console.log(count === 0 ? 'Up to date — nothing to apply.' : `Applied ${count} migration(s).`);
+    const adoptedNote = adopted > 0 ? ` Adopted ${adopted} baseline file(s) without running.` : '';
+    console.log(
+      (count === 0 ? 'Up to date — nothing to apply.' : `Applied ${count} migration(s).`) + adoptedNote,
+    );
   } finally {
     await client.end();
   }
