@@ -28,3 +28,20 @@ export const supabase = createClient<Database>(
     },
   },
 );
+
+let prunedThisSession = false;
+
+/**
+ * Fire-and-forget cleanup of abandoned, empty, stale public game tables (poker /
+ * sueca / battleship) so the lobbies don't fill up with week-old rows. Runs at
+ * most once per page session and ignores errors — the lobby list functions also
+ * hide stale tables, so this is purely housekeeping. Safe to call from any
+ * lobby hook on mount.
+ */
+export function pruneStalePublicTablesOnce() {
+  if (prunedThisSession) return;
+  prunedThisSession = true;
+  void supabase.rpc('prune_stale_public_tables').then(undefined, () => {
+    // Ignore — housekeeping only.
+  });
+}
