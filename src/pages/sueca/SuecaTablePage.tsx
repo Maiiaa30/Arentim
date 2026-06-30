@@ -268,11 +268,17 @@ export function SuecaTablePage() {
       </div>
 
       <div className="felt felt-rail relative mx-auto h-[540px] w-full max-w-4xl overflow-hidden rounded-[28px] p-4 sm:h-[580px]">
-        {/* Trump suit indicator (the card itself sits with the dealer below). */}
-        <div className="absolute left-3 top-3">
+        {/* Trump indicator — label + the actual trunfo card, always visible
+            top-left (it also sits with the dealer below). */}
+        <div className="absolute left-3 top-3 flex flex-col items-start gap-2">
           <span className="rounded-full border border-gold/40 bg-black/45 px-2.5 py-1 font-sans text-[11px] uppercase tracking-[0.16em] text-gold-light">
             Trunfo {view.trump != null ? SUIT_SYMBOLS[view.trump] : ''}
           </span>
+          {view.trumpCard != null && (
+            <span className="rotate-[-6deg] drop-shadow-[0_4px_10px_rgba(0,0,0,0.5)]" title="Carta de trunfo">
+              <Card card={view.trumpCard} size="sm" />
+            </span>
+          )}
         </div>
 
         {/* Seats — the dealer shows the trunfo card by their badge. */}
